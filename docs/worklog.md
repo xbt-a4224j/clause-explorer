@@ -26,6 +26,7 @@ are judged by whether they make one of those three scripts land.
 | D9 | Inferred values flagged **in the schema** (`is_inferred_*`), not only in docs | CUAD ships no industry metadata, so FOLIO codes there are classifier output. Unflagged, they are indistinguishable from MAUD gold and every aggregate silently mixes them | A flag column per inferrable field |
 | D10 | Trigger uses **`clock_timestamp()`**, not `now()` | `now()` is transaction-start time and constant within a transaction, so insert-then-update in one ingest transaction would leave `updated_at` unchanged — Cube's `refresh_key` would serve stale aggregates with no way to notice | Timestamps are not transaction-consistent, which is correct here |
 | D11 | Plain `schema.sql` + a tiny runner instead of Alembic | One schema, no release history to migrate across; a single readable SQL file reviews better than a generated revision chain | If the schema starts evolving across releases, this must become Alembic |
+| D13 | Internal errors return a **generic** message; the cause is logged instead | A traceback can carry the DSN or an API key and these endpoints are unauthenticated | Callers lose detail; the request id is the bridge to the real cause |
 | D12 | FOLIO ancestry **denormalized** into `level_1/2/3_code` | Cube facet queries read them directly instead of walking a recursive CTE per query (#13) | Must be recomputed if the ontology reloads |
 
 ---
@@ -201,6 +202,42 @@ caught it asserts `after > before`, not merely that the column exists.
   Added a `make migrate` target so the path is not a thing to remember.
 - Schema tests **skip** rather than fail when Postgres is unreachable, so CI stays green on an
   environment problem rather than reporting a false schema failure.
+
+### Not done
+
+- No dependencies added.
+
+---
+
+## #4 — Uniform error envelope
+
+Every non-2xx response is `{"error": {"code", "message", "detail"}}`, so the frontend has one
+error path instead of three (FastAPI's `detail` string, its validation array, and whatever an
+unhandled exception renders as). Validation errors name the offending field — a bare
+"validation error" is unactionable.
+
+### Verification
+
+```
+$ pytest backend/tests/test_errors.py -q
+8 passed in 0.30s
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+39 passed
+
+$ curl -s localhost:8000/nope            # live, from the container
+{"error":{"code":"not_found","message":"Not Found","detail":null}}
+```
+
+A test asserts the 500 path does **not** leak exception text (D13).
+
+### A test bug worth recording
+
+`test_validation_error_uses_the_envelope` failed with `PydanticUndefinedAnnotation`. Cause: the
+request model was defined *inside* the test function, and under `from __future__ import
+annotations` the parameter annotation is a string that pydantic cannot resolve against a local
+name. Moved to module scope. The implementation was correct throughout — worth noting because
+the first instinct was to change the handler.
 
 ### Not done
 

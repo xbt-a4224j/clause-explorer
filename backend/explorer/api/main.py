@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from explorer import __version__
+from explorer.api.errors import install_error_handlers
 from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.settings import settings
 
@@ -30,6 +31,8 @@ app = FastAPI(
         "was negotiated across them, and know where experience is thin."
     ),
 )
+
+install_error_handlers(app)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
