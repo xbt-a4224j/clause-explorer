@@ -99,8 +99,8 @@ cubes:
           never characterise it as a multi-year sample.
 
       - name: signing_year
-        sql: "EXTRACT(YEAR FROM {CUBE}.signing_date)"
-        type: number
+        sql: "to_char({CUBE}.signing_date, 'YYYY')"
+        type: string
         description: >-
           Signing year, for the coverage grid's time axis. Only 2020 and 2021 exist in this
           corpus; a year facet therefore has exactly two non-empty values.
@@ -206,7 +206,11 @@ cubes:
         sql: code
         type: string
         primary_key: true
-        public: false
+        description: >-
+          The FOLIO concept code — the stable identifier behind the label. Exposed because the
+          facet rail must hand this, not the label, to /comparables: matching a filter by its
+          display string is the silent-empty-result failure (#25), and a code cannot drift from
+          "Health Care" to "Healthcare". Not for display; show `label` instead.
 
       - name: label
         sql: label
@@ -262,6 +266,7 @@ views:
           - with_industry_n
       - join_path: matters.folio_concepts
         includes:
+          - code
           - label
           - level_1_code
           - level_2_code

@@ -50,6 +50,9 @@ are judged by whether they make one of those three scripts land.
 | D34 | Embeddings are **256-dim float16**, not the model's native 1536-dim float32 | The cache is committed to a public repo; native size would be ~86 MB against a measured 9.5 MB | Some retrieval quality, unmeasured until #17's ablation quantifies it |
 | D35 | The committed cache is written **only** by `warm_cache`, never by a query path | A developer with a key would otherwise rewrite a version-controlled artefact just by searching, producing a diff from nowhere | A miss with a key is cached in memory only, so it is re-embedded next process start |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
+| D36 | The facet rail carries the **FOLIO code** beside every industry label, and `/comparables` is filtered by the code | The label is a display string; matching on it is the silent-empty-result failure #25 exists for. A code is the join key and cannot drift from "Health Care Industry" to "Healthcare" | `comparable_deals.code` had to become public in the Cube view, widening the agent's selectable surface by one dimension it should never display |
+| D37 | A facet group whose only values are `unknown`/`unclassified` renders **disabled with a stated reason**, not hidden | Omitting deal size claims the corpus has no size axis; showing it enabled offers a filter that cannot narrow anything. Both are false in different directions | A `REASONS` map in `facets.py` keyed by group — one hand-written string that must be deleted when #9 lands, and nothing fails if it is not |
+| D38 | Explore does **no** client-side filtering of the ranked response | The server is the authority on the slice. Filtering the response in the browser put the visible list and `candidate_count` into disagreement, and ranked against a corpus the partner never asked about | The UI cannot cheaply preview a filter without a round trip |
 
 ---
 
@@ -1257,3 +1260,210 @@ never a bare 500.
 - `deal_size_band` is accepted and only matches `'unknown'`, because that is the only value any
   matter has (#9). It is wired so it works the day values land, and it cannot silently match
   everything in the meantime.
+
+## #19 — Explore tab: faceted search with live counts from Cube
+
+Picked this up mid-flight: the view, rail, card and `/facets` endpoint were already written but
+uncommitted, with two gate failures, one failing spec, no backend test for `facets.py` at all,
+and a correctness bug in how the tab filtered. All four are dealt with below.
+
+### The facet rail against real data
+
+```
+$ docker compose up -d --build && curl -s localhost:8000/healthz
+{"status":"ok","db":"ok","cube":"ok","version":"0.1.0"}
+
+$ curl -s -X POST localhost:8000/facets -H 'content-type: application/json' -d '{}'
+total_n=152  unfiltered_n=152
+
+[industry] Industry  total_n=152
+   Finance and Insurance Services Industry    n=25   code=RCksXAlY9lRN16wERqZZ8Tk
+   Health Care Industry                       n=25   code=RCSG4k3ah1Pu5YgPexPgOmL
+   Manufacturing Industry                     n=22   code=RBOjgvcq6Z33XxMhTxWiiDS
+   unclassified                               n=18   code=None
+   Information Industry                       n=18   code=RHwCmZ2yKrJobzC86GC6Ep
+   Real Estate, Rental and Leasing Industry   n=12   code=RjKL1UdfWL1FCPVhnbIFSF
+
+[year] Signing year  total_n=152
+   2021  n=111    2020  n=38    unclassified  n=3
+
+[band] Deal size  total_n=152
+  UNAVAILABLE: Deal size is not filterable: no deal values have been enriched yet, so all 152
+               matters sit in one bucket. Tracked as issue #9.
+   unknown                                    n=152  code=None
+```
+
+111 + 38 = 149, which is exactly the enriched `signing_date` count from #9; the remaining 3
+are `unclassified` rather than dropped. Health Care is 25 under the D30 grouping.
+
+### A facet group must not filter itself
+
+Selecting Health Care and re-reading the rail:
+
+```
+$ curl -s -X POST localhost:8000/facets -d '{"folio_industry_label":"Health Care Industry"}'
+total_n=25 of unfiltered_n=152
+industry group still offers 15 values (must NOT collapse to 1):
+   Finance and Insurance Services Industry    n=25   selected=False
+   Health Care Industry                       n=25   selected=True
+   Manufacturing Industry                     n=22   selected=False
+year, now narrowed by the industry filter:
+   2021  n=19    2020  n=5    unclassified  n=1
+```
+
+The industry group keeps all 15 values so the partner can switch; every *other* group narrows.
+19 + 5 + 1 = 25 = `total_n`, so the groups agree with each other and with the header.
+
+### The bug that mattered: Explore filtered in the browser
+
+The tab held the industry **label**, but `/comparables` filters by FOLIO **code**, so the label
+had nowhere to go. The uncommitted code compensated by filtering `results.matters` client-side.
+Measured against the running stack, that is what the partner would have seen:
+
+```
+$ curl -s -X POST localhost:8000/comparables -d '{"limit":25}'      # the old request shape
+candidate_count reported to the partner : 152
+rows the browser would have kept        : 6 of 25
+```
+
+**Six healthcare deals shown, under a header reading "showing 6 of 152", when the corpus holds
+25.** Two independent failures: the denominator counted matters nobody asked about, and the
+hybrid scores were normalized over the whole corpus — the exact property #18 was built to
+guarantee, undone one layer up.
+
+Fixed at the root rather than in the view. `comparable_deals.code` is now public in the Cube
+view, `/facets` groups it alongside the label, and the rail hands the code to `/comparables`:
+
+```
+$ curl -s -X POST localhost:8000/comparables \
+    -d '{"folio_industry_code":"RCSG4k3ah1Pu5YgPexPgOmL","limit":25}'
+candidate_count=25  returned_count=25
+industries present in the ranked list: {'Health Care Industry'}
+applied: {"folio_industry_code": "RCSG4k3ah1Pu5YgPexPgOmL",
+          "folio_industry_label": "Health Care Industry",
+          "rolled_up_to_descendants": 91, ...}
+```
+
+25 = the facet count, all 25 in-slice, ranked within the slice. The client-side filter is gone.
+
+Passing the code rather than the label also pre-empts #25 on this path: there is no label to
+mis-resolve, so "Health Care" vs "Healthcare" cannot arise from a facet click at all. `code` is
+`None` for the `unclassified` bucket — a real bucket with no concept behind it, and a fabricated
+code there would return nothing while looking like a filter.
+
+### Deal size ships disabled, with the reason
+
+`deal_value_usd` is NULL on all 152 (D25, #9 open). The group renders with its single `unknown`
+value, disabled, carrying the sentence above. Hiding it would claim the corpus has no size axis;
+enabling it would offer a filter that cannot narrow anything. The reason is emitted only when a
+group has no informative value, so it disappears on its own when #9 lands — pinned by a test
+asserting industry and year carry no reason.
+
+### A dead Cube is not an empty result
+
+```
+$ docker compose stop cube
+$ curl -s -X POST localhost:8000/facets -d '{}'
+HTTP 503
+{"error":{"code":"unavailable","message":"The semantic layer (Cube) did not answer. Facet
+ counts and deal-term rollups come from it, so this is reported rather than shown as zero
+ results.","detail":null}}
+```
+
+The UI renders that as "Counts unavailable" under `role="alert"`, visually distinct from the
+empty state, and a spec asserts the empty-state copy is *absent* when the error state shows.
+
+Cube's long-poll cost a live 503 on the first facet request: it answers 200 with
+`{"error": "Continue wait"}` and expects the same request re-issued. Reading any body with
+"error" in it as failure — the obvious reading — turns every cold-start query into a 503.
+`cube_client.py` retries up to 10 times and is the single place the API talks to Cube, so the
+logging contract holds:
+
+```
+  event: cube_query   request_id: 8412f45293f4
+  measures: ['comparable_deals.n']   row_count: 1   duration_ms: 8.5
+```
+
+### `facets.py` had no test, and passing proved nothing
+
+It was written ahead of its test — a TDD deviation in the work I inherited, recorded here rather
+than papered over. Writing 16 specs after the fact does not establish they bite, so each of the
+three load-bearing claims was mutation-checked:
+
+| mutation | result |
+|---|---|
+| `_filters(exclude=key)` → `exclude=""` (let each group filter itself) | `TestSelfFiltering::test_the_industry_group_is_not_filtered_by_the_selected_industry` failed, 10 passed |
+| drop zero-count rows from `values` | `TestZeroCounts::test_a_zero_count_value_is_returned_not_dropped` failed, 10 passed |
+| send `signing_year` as an int | `TestYearIsComparedAsAString::test_an_int_year_reaches_cube_as_a_string` failed, 10 passed |
+
+Each mutation killed exactly its own test and nothing else. Cube is stubbed in these, so they
+run in the no-key gate with no container up; the live checks are the curl output above.
+
+### Two defects in the inherited work
+
+**`signing_year and str(signing_year)` types as `Literal[0] | str | None`** — it returns `0`,
+not `None`, for a falsy year. mypy caught it. The class of bug matters more than year 0 ever
+will: a falsy-but-present filter silently dropping is how rails come back empty.
+
+**`signing_year` is a string dimension now**, `to_char(signing_date, 'YYYY')`, because Cube's
+`equals` does not coerce across types — an int 2021 against a string dimension matches nothing
+and returns an empty rail that reads as "no 2021 deals". The request still accepts an int.
+
+### The failing spec was the spec's fault
+
+`Explore.test.tsx`'s "does not steal keys while typing" awaited `findByLabelText('describe the
+deal')`, which resolves on first render because the search input sits outside the loading
+branch — so the following `getByTestId` ran before any card existed. The guard it was actually
+testing is correct. It now awaits the list first and additionally asserts the cursor did *not*
+move to the second card. Diagnosed before changing anything, per the rule; the implementation
+was never at fault.
+
+### Gates
+
+```
+$ ruff format --check . && ruff check .
+47 files already formatted
+All checks passed!
+
+$ mypy backend/explorer --ignore-missing-imports
+Success: no issues found in 30 source files
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+204 passed in 78.32s          # was 188 at #18
+
+$ cd frontend && npx tsc --noEmit && npx vitest run && npm run build
+Tests  25 passed (25)         # was 21 passed, 1 failed
+✓ built in 293ms
+```
+
+### Not done
+
+- **Expandable FOLIO hierarchy in the rail — not built, because this corpus has no hierarchy
+  to expand.** Measured before deciding:
+
+  ```
+  $ curl -sG localhost:4000/cubejs-api/v1/load --data-urlencode 'query={"measures":
+      ["comparable_deals.n"],"dimensions":["comparable_deals.level_1_code",
+      "comparable_deals.level_2_code","comparable_deals.level_3_code"]}'
+  distinct level_1: 2      # one real code + None for the 18 unclassified
+  distinct level_2: 2      # same
+  distinct level_3: 15
+  ```
+
+  Every classified matter shares the same level-1 and level-2 parent
+  (`R8f4qGdjxuiQary8OBpq8W9` → `RDIwFaFcH4KY0gwEY0QlMTp`, "Industry"). All branching is at
+  level 3, and those 15 values are exactly what the rail already lists. A tree here renders one
+  root containing all 15 leaves: an extra click that reveals nothing and implies a structure the
+  data does not have. Left flat deliberately.
+
+  This does not affect filtering, which rolls up correctly through the denormalized level
+  columns — a Health Care selection still matches `rolled_up_to_descendants: 91`. The AC is
+  unmet on the *interaction*; the capability behind it works. It becomes worth building if a
+  corpus arrives with matters at more than one level-2 industry.
+- **Transaction type facet.** Named in the AC; no such field exists in MAUD or EDGAR, so there
+  is nothing to count. Same category as "sponsor-side" from the #11 checkpoint.
+- **`?` shortcut overlay** is the shell's (#5); `f` and `Esc` are wired here and covered by
+  specs, `j`/`k`/`Enter` likewise.
+- Docker's daemon was wedged at the start of this session (socket accepting connections but
+  never answering `/_ping`); it needed a hard restart before any of the live verification above
+  could run.

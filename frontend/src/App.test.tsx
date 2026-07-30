@@ -8,13 +8,44 @@ import { TABS } from './tabs'
  * mouse (docs/demo-scripts.md). If these fail, script 1 cannot be run as written.
  */
 
+/**
+ * Explore now renders inside the shell (#19) and calls /api/facets and /api/comparables, so
+ * the shell's own tests have to answer those too — otherwise every shell test fails on an
+ * unmocked fetch, which says nothing about the shell.
+ */
 function mockHealth(status = 'ok', cube = 'ok') {
-  globalThis.fetch = vi.fn(() =>
-    Promise.resolve({
+  globalThis.fetch = vi.fn((url: string) => {
+    if (String(url).includes('/healthz')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status, db: 'ok', cube, version: '0.1.0' }),
+      })
+    }
+    if (String(url).includes('/facets')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ groups: [], total_n: 0, unfiltered_n: 0 }),
+      })
+    }
+    return Promise.resolve({
       ok: true,
-      json: () => Promise.resolve({ status, db: 'ok', cube, version: '0.1.0' }),
-    }),
-  ) as unknown as typeof fetch
+      json: () =>
+        Promise.resolve({
+          matters: [],
+          candidate_count: 0,
+          returned_count: 0,
+          applied_filters: {
+            folio_industry_code: null,
+            folio_industry_label: null,
+            rolled_up_to_descendants: 0,
+            deal_size_band: null,
+            signed_from: null,
+            signed_to: null,
+            ranked_by: 'matter id (no description given)',
+          },
+        }),
+    })
+  }) as unknown as typeof fetch
 }
 
 describe('shell', () => {

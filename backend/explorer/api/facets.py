@@ -1,0 +1,202 @@
+"""`POST /facets` — live facet counts from Cube for the Explore rail (#19).
+
+Counts are Cube queries, not precomputed and not counted in Python. The point of the semantic
+layer is that the number in the facet rail and the number in a deal-terms rollup come from the
+same definition; computing facets here with `SELECT count(*)` would quietly create a second
+definition that drifts.
+
+**Zero-count values are returned, not dropped.** A facet value that disappears when it hits
+zero tells the user nothing; one that renders disabled with `n=0` tells them the corpus has
+nothing there, which is a real answer and the Coverage tab's entire thesis.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from explorer.api.cube_client import CubeUnavailable
+from explorer.api.cube_client import query as cube_query
+
+router = APIRouter()
+
+INDUSTRY_DIMENSION = "comparable_deals.label"
+# The stable identifier behind the label. /comparables filters by code, so the rail must hand
+# one back — resolving a display string to a code later is the failure #25 exists to prevent.
+CODE_DIMENSION = "comparable_deals.code"
+YEAR_DIMENSION = "comparable_deals.signing_year"
+BAND_DIMENSION = "comparable_deals.deal_size_band"
+COUNT_MEASURE = "comparable_deals.n"
+
+
+class FacetRequest(BaseModel):
+    folio_industry_label: str | None = Field(default=None)
+    signing_year: int | None = Field(default=None)
+    deal_size_band: str | None = Field(default=None)
+
+
+class FacetValue(BaseModel):
+    value: str
+    n: int
+    selected: bool
+    code: str | None = Field(
+        default=None,
+        description=(
+            "The stable identifier to filter by, where the dimension has one. None for a "
+            "bucket with no concept behind it (unclassified) — inventing a code there would "
+            "silently return nothing."
+        ),
+    )
+
+
+class FacetGroup(BaseModel):
+    key: str
+    label: str
+    values: list[FacetValue]
+    total_n: int
+    unavailable: str | None = Field(
+        default=None,
+        description=(
+            "Set when the group has no value worth filtering on, with the reason. The group "
+            "still renders, disabled — omitting it would claim the corpus has no such axis, "
+            "when the axis exists and the data behind it does not."
+        ),
+    )
+
+
+# A dimension whose only value is this carries no information: every matter is in one bucket,
+# so selecting it filters nothing. Distinct from a value that is genuinely zero.
+UNINFORMATIVE = {"unknown", "unclassified"}
+
+REASONS = {
+    "band": (
+        "Deal size is not filterable: no deal values have been enriched yet, so all 152 "
+        "matters sit in one bucket. Tracked as issue #9."
+    ),
+}
+
+
+class FacetsResponse(BaseModel):
+    groups: list[FacetGroup]
+    total_n: int
+    unfiltered_n: int
+
+
+def _filters(request: FacetRequest, exclude: str) -> list[dict[str, Any]]:
+    """Every active filter except this group's own.
+
+    A facet group must not filter itself, or selecting "Health Care" collapses the industry
+    rail to a single value and the user cannot see what else is available or switch. This is
+    the standard faceted-search rule and it is easy to get wrong by filtering uniformly.
+    """
+    active: list[dict[str, Any]] = []
+    if request.folio_industry_label and exclude != "industry":
+        active.append(
+            {
+                "member": INDUSTRY_DIMENSION,
+                "operator": "equals",
+                "values": [request.folio_industry_label],
+            }
+        )
+    if request.signing_year and exclude != "year":
+        active.append(
+            {
+                "member": YEAR_DIMENSION,
+                "operator": "equals",
+                "values": [str(request.signing_year)],
+            }
+        )
+    if request.deal_size_band and exclude != "band":
+        active.append(
+            {
+                "member": BAND_DIMENSION,
+                "operator": "equals",
+                "values": [request.deal_size_band],
+            }
+        )
+    return active
+
+
+def _group(
+    key: str,
+    label: str,
+    dimension: str,
+    request: FacetRequest,
+    selected: str | None,
+    code_dimension: str | None = None,
+) -> FacetGroup:
+    """One facet group.
+
+    `code_dimension` is grouped alongside the label where the dimension has a stable
+    identifier, so the client can filter by the code rather than the display string.
+    """
+    rows = cube_query(
+        {
+            "measures": [COUNT_MEASURE],
+            "dimensions": [dimension] + ([code_dimension] if code_dimension else []),
+            "filters": _filters(request, exclude=key),
+            "order": {COUNT_MEASURE: "desc"},
+        }
+    )
+    values = [
+        FacetValue(
+            value=str(row[dimension]) if row[dimension] is not None else "unclassified",
+            n=int(row[COUNT_MEASURE]),
+            selected=selected is not None and str(row[dimension]) == str(selected),
+            code=(
+                str(row[code_dimension])
+                if code_dimension and row.get(code_dimension) is not None
+                else None
+            ),
+        )
+        for row in rows
+    ]
+    informative = [v for v in values if v.value.lower() not in UNINFORMATIVE]
+    unavailable = None
+    if values and not informative:
+        unavailable = REASONS.get(key, "no values have been loaded for this dimension yet")
+
+    return FacetGroup(
+        key=key,
+        label=label,
+        values=values,
+        total_n=sum(v.n for v in values),
+        unavailable=unavailable,
+    )
+
+
+@router.post("/facets", response_model=FacetsResponse)
+def facets(request: FacetRequest) -> FacetsResponse:
+    try:
+        groups = [
+            _group(
+                "industry",
+                "Industry",
+                INDUSTRY_DIMENSION,
+                request,
+                request.folio_industry_label,
+                code_dimension=CODE_DIMENSION,
+            ),
+            _group(
+                "year",
+                "Signing year",
+                YEAR_DIMENSION,
+                request,
+                str(request.signing_year) if request.signing_year is not None else None,
+            ),
+            _group("band", "Deal size", BAND_DIMENSION, request, request.deal_size_band),
+        ]
+        selected = cube_query(
+            {"measures": [COUNT_MEASURE], "filters": _filters(request, exclude="")}
+        )
+        unfiltered = cube_query({"measures": [COUNT_MEASURE]})
+    except CubeUnavailable as unavailable:
+        raise HTTPException(status_code=503, detail=str(unavailable)) from unavailable
+
+    return FacetsResponse(
+        groups=groups,
+        total_n=int(selected[0][COUNT_MEASURE]) if selected else 0,
+        unfiltered_n=int(unfiltered[0][COUNT_MEASURE]) if unfiltered else 0,
+    )

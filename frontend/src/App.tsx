@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
+import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
 import './styles/shell.css'
 
@@ -66,13 +67,15 @@ export function App() {
           ))}
         </nav>
 
-        <input
-          ref={searchRef}
-          type="search"
-          className="shell__search"
-          placeholder="search  /"
-          aria-label="search"
-        />
+        {active !== 'explore' && (
+          <input
+            ref={searchRef}
+            type="search"
+            className="shell__search"
+            placeholder="search  /"
+            aria-label="search"
+          />
+        )}
       </header>
 
       <main
@@ -83,10 +86,14 @@ export function App() {
       >
         <h1 className="shell__title">{activeTab.label}</h1>
         <p className="shell__hint">{activeTab.hint}</p>
-        <p className="shell__pending">
-          This view lands in its own issue. The shell, keyboard contract and health strip are
-          what ship here.
-        </p>
+        {active === 'explore' ? (
+          <Explore searchRef={searchRef} />
+        ) : (
+          <p className="shell__pending">
+            This view lands in its own issue. The shell, keyboard contract and health strip are
+            what ship here.
+          </p>
+        )}
       </main>
 
       <footer className="shell__status">

@@ -139,3 +139,117 @@ kbd {
   background: transparent; color: var(--ink-subtle); font: inherit; cursor: pointer;
 }
 .shell__close:hover { color: var(--ink); border-color: var(--accent); }
+
+/* ── Explore (#19) ───────────────────────────────────────────────────────────────────────
+   Tokens only, no literal colours. The accent is on focus rings and the selected facet —
+   nowhere decorative. */
+
+.explore { display: flex; flex-direction: column; gap: var(--pad-md); min-height: 0; }
+.explore__search { display: flex; flex-direction: column; gap: var(--pad-sm); }
+
+.explore__input {
+  width: 100%;
+  padding: var(--pad-md) var(--pad-md);
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-size: 14px;
+}
+.explore__input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* the resolved query, above every answer, so a domain expert can catch a misinterpretation */
+.explore__resolved {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.01em;
+}
+
+.explore__body { display: grid; grid-template-columns: 15rem 1fr; gap: var(--pad-lg); align-items: start; }
+
+.facets { display: flex; flex-direction: column; gap: var(--pad-md); }
+.facets__total { font-size: 11px; color: var(--ink-muted); }
+.facets__totalnum { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.facet__title {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-muted); margin-bottom: var(--pad-sm);
+}
+.facet__n { font-family: var(--font-mono); text-transform: none; letter-spacing: 0; }
+.facet__values { display: flex; flex-direction: column; gap: 1px; }
+
+.facet__value {
+  display: flex; justify-content: space-between; gap: var(--pad-md); width: 100%;
+  padding: var(--pad-sm) var(--pad-sm);
+  background: transparent; border: 0; border-radius: var(--radius);
+  color: var(--ink); font-size: 13px; text-align: left; cursor: pointer;
+}
+.facet__value:hover:not(:disabled) { background: var(--surface-2); }
+.facet__value:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.facet__value.is-selected { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
+/* zero-count values stay visible and disabled: what the corpus lacks is information */
+.facet__value:disabled { color: var(--ink-tertiary); cursor: not-allowed; }
+/* a dimension with no filterable data: dimmed but present, with the reason stated. It is not
+   an error and not an empty result — the axis exists, the data behind it has not landed. */
+.facet--unavailable .facet__title { color: var(--ink-tertiary); }
+.facet__unavailable {
+  margin: calc(var(--pad-sm) * -1) 0 var(--pad-sm);
+  padding: var(--pad-sm);
+  border-left: 2px solid var(--hairline);
+  color: var(--ink-tertiary); font-size: 11px; line-height: 1.45;
+}
+.facet__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facet__count { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+.explore__count { font-size: 11px; color: var(--ink-muted); margin-bottom: var(--pad-md); }
+.explore__list { display: flex; flex-direction: column; gap: 1px; }
+
+.card { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius); }
+.card.is-focused { box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
+.card__hit {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--pad-md);
+  width: 100%; padding: var(--pad-md) var(--pad-md);
+  background: transparent; border: 0; color: var(--ink); text-align: left; cursor: pointer;
+}
+.card__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.card__title { font-size: 13px; }
+.card__acquirer { color: var(--ink-muted); }
+.card__meta { display: flex; align-items: center; gap: var(--pad-md); font-size: 11px; color: var(--ink-muted); }
+.card__date, .card__score { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.tag { display: inline-flex; align-items: center; gap: var(--pad-sm); }
+/* inferred data is marked wherever it appears — never presented beside gold labels unflagged */
+.tag__inferred {
+  font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 1px 4px; border: 1px dashed var(--hairline); border-radius: 2px; color: var(--ink-tertiary);
+}
+
+.card__detail { padding: 0 var(--pad-md) var(--pad-md); border-top: 1px solid var(--hairline); }
+.card__dl { display: grid; grid-template-columns: auto 1fr; gap: var(--pad-sm) var(--pad-md); font-size: 11px; padding-top: var(--pad-md); }
+.card__dl dt { color: var(--ink-muted); }
+.card__dl dd { font-family: var(--font-mono); }
+.card__note { font-size: 11px; color: var(--ink-tertiary); margin-top: var(--pad-sm); }
+
+/* loading / empty / refusal are three distinct designed states */
+.state { padding: var(--pad-lg) var(--pad-lg); border: 1px dashed var(--hairline); border-radius: var(--radius); text-align: center; }
+.state__title { font-size: 13px; margin-bottom: var(--pad-sm); }
+.state__body { font-size: 11px; color: var(--ink-muted); }
+.state__hint { font-size: 11px; color: var(--ink-tertiary); margin-top: var(--pad-sm); }
+.state--error { border-style: solid; }
+.state__action {
+  margin-top: var(--pad-md); padding: var(--pad-sm) var(--pad-md);
+  background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius);
+  color: var(--ink); font-size: 11px; cursor: pointer;
+}
+.state__action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.skeleton { background: var(--surface-2); border-radius: var(--radius); animation: pulse 1.6s ease-in-out infinite; }
+.skeleton--facet { height: 1.5rem; margin-bottom: 2px; }
+.skeleton--card { padding: var(--pad-md); margin-bottom: 1px; background: var(--surface-1); animation: none; }
+.skeleton--line { height: 0.6rem; margin-bottom: var(--pad-sm); }
+.skeleton--title { width: 40%; height: 0.8rem; }
+.skeleton--short { width: 25%; }
+@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none } }
