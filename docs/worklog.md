@@ -30,6 +30,10 @@ are judged by whether they make one of those three scripts land.
 | D15 | Global shortcuts are **suppressed inside editable targets** (except Escape) | Without the guard, typing "3" into search jumps to Coverage — the demo dies on camera | Escape needs an explicit carve-out to still close overlays from an input |
 | D13 | Internal errors return a **generic** message; the cause is logged instead | A traceback can carry the DSN or an API key and these endpoints are unauthenticated | Callers lose detail; the request id is the bridge to the real cause |
 | D12 | FOLIO ancestry **denormalized** into `level_1/2/3_code` | Cube facet queries read them directly instead of walking a recursive CTE per query (#13) | Must be recomputed if the ontology reloads |
+| D16 | FOLIO `code` is the **IRI suffix**, not the label or `dc:identifier` | IRIs are opaque and stable across releases; labels get retitled and `dc:identifier` is present on only part of the ontology | Codes are unreadable in psql; every display needs a join to `label` |
+| D17 | Multi-parent concepts keep **one** parent — the lexicographically smallest code | FOLIO is a DAG: 830 of 18,327 classes declare 2+ `rdfs:subClassOf`. `parent_code` holds one, and the tie-break must be deterministic or reloads reshuffle the hierarchy | For those concepts the roll-up path in the UI is *one* true path, not the only one. A closure table would fix it at the price of a join in every Cube dimension — revisit if a mapped dimension (#9) lands on a multi-parent branch |
+| D18 | **DEPRECATED and SANDBOX subtrees excluded** from the load | Dead vocabulary that nothing is tagged with; `resolve()` returning one of those codes produces zero rows that read as "no comparable deals" — the exact failure #25 exists to prevent | Row count is 18,259 not 18,327; if FOLIO revives a deprecated branch we silently miss it |
+| D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
 
@@ -289,3 +293,76 @@ until someone types a digit on camera (D15).
 - `j`/`k` result navigation is declared in the shortcut overlay but only becomes meaningful
   once Explore has a result list (#19). Listed there deliberately so the contract is fixed
   before views are written against it.
+
+## #6 — FOLIO.owl loaded into folio_concepts with hierarchy
+
+`rdflib` parse of the published `FOLIO.owl` into `folio_concepts` + a new `folio_aliases`
+table, with ancestry denormalized at load time into `level_1_code`/`level_2_code`/
+`level_3_code` so Cube dimensions (#13) read columns rather than walking a recursive CTE.
+
+`resolve(text) -> code | None` is exact label → unique alias → `None`. **No fuzzy matching**
+— that is #25's job, where a near-match is paired with an explicit "did you mean" instead of
+a silent substitution.
+
+### Verification
+
+```
+$ curl -sL -o data/folio/FOLIO.owl \
+    https://raw.githubusercontent.com/alea-institute/FOLIO/main/FOLIO.owl
+$ ls -l data/folio/FOLIO.owl
+-rw-r--r--@ 1 daj staff 18335854 Jul 30 13:46 data/folio/FOLIO.owl
+$ shasum -a 256 data/folio/FOLIO.owl
+44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239
+
+$ PYTHONPATH=backend python -m explorer.ingest.folio
+{"source": "folio", "rows_read": 18259, "rows_upserted": 18259, "concepts_total": 18259,
+ "aliases_total": 47523, "duration_ms": 4881.8,
+ "sha256": "44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239",
+ "event": "ingest_folio"}
+
+$ PYTHONPATH=backend python -m explorer.ingest.folio    # second run — idempotent
+{'rows_read': 18259, 'concepts_total': 18259, 'aliases_total': 47523}
+
+$ # hand-checked branch, via explorer.folio.resolve
+resolve('Health Care Industry') -> RCSG4k3ah1Pu5YgPexPgOmL
+resolve('Hospitals Industry')   -> REDA36d2F98543EBb23B69ba
+ancestors -> ['Industry and Market', 'Industry', 'Health Care Industry']
+descendants of Health Care Industry: 91
+level histogram: [(1,24),(2,858),(3,1328),(4,5630),(5,3035),(6,2962),(7,3708),(8,577),(9,117),(10,20)]
+
+$ ruff format --check . && ruff check .     -> 22 files already formatted / All checks passed!
+$ mypy backend/explorer --ignore-missing-imports  -> Success: no issues found in 16 source files
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+58 passed          # was 39; 19 new
+```
+
+### Row counts, stated exactly
+
+The file declares **18,327** `owl:Class` nodes. **18,259** loaded. The 68 missing are
+unlabelled classes (a class with no `rdfs:label` cannot be displayed or resolved) plus the
+DEPRECATED and ZZZ-SANDBOX subtrees (D18). 47,523 aliases from `skos:altLabel`, which
+includes FOLIO's translations — `resolve('Gesundheitswesen')` returns the Health Care
+Industry code, verified above, at no extra cost.
+
+### A finding that matters for #9 and #25
+
+`resolve('healthcare')` returns **`None`**. The ontology's label is "Health Care Industry"
+and "healthcare" is not among its altLabels. This is the CLAUDE.md filter-value failure mode
+appearing at the very first opportunity, and it is *correct* behaviour for #6 — a miss is
+visible, a fuzzy guess is not. Two consequences to carry forward:
+
+- #9 must map SIC → FOLIO codes explicitly, never by matching industry name strings.
+- #25 must handle the demo phrase "healthcare" (demo script 1's literal wording) via the
+  alias/embedding resolution path, or script 1 returns zero rows.
+
+### Schema change
+
+Added `folio_aliases(alias, code)` and a `lower(label)` index on `folio_concepts`. Applied
+with `make migrate`; `migrate down` drops `folio_aliases` before `folio_concepts` so the FK
+does not block teardown.
+
+### Not done
+
+- No `dc:identifier` short codes (e.g. `AFS`) stored. NAICS-aligned identifiers are on the
+  Industry branch and may be useful for #9's SIC mapping; deferred until #9 shows it needs
+  them rather than guessing now.

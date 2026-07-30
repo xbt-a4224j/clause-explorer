@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS folio_concepts (
 );
 CREATE INDEX IF NOT EXISTS idx_folio_parent ON folio_concepts (parent_code);
 CREATE INDEX IF NOT EXISTS idx_folio_level2 ON folio_concepts (level_2_code);
+-- lowercased label lookup for resolve() (#6); the ontology is loaded once and read constantly
+CREATE INDEX IF NOT EXISTS idx_folio_label_lower ON folio_concepts (lower(label));
+
+-- skos:altLabel, kept out of folio_concepts because it is many-per-concept. resolve() checks
+-- the exact label first and only then aliases, and refuses an alias that maps to more than one
+-- concept rather than picking one (#6). FOLIO ships translated altLabels, so an alias table is
+-- also where multilingual input gets resolved for free.
+CREATE TABLE IF NOT EXISTS folio_aliases (
+    alias       TEXT NOT NULL,
+    code        TEXT NOT NULL REFERENCES folio_concepts (code) ON DELETE CASCADE,
+    PRIMARY KEY (alias, code)
+);
+CREATE INDEX IF NOT EXISTS idx_folio_alias_lower ON folio_aliases (lower(alias));
 
 CREATE TABLE IF NOT EXISTS matters (
     id                      TEXT PRIMARY KEY,

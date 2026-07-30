@@ -26,7 +26,20 @@ Every corpus records the exact acquisition command, the resulting filename, byte
 - Source: https://github.com/alea-institute/FOLIO
 - License: CC BY
 - Contents: 18,000+ legal concepts, OWL
-- Command / file / bytes / sha256: _not yet recorded_
+- Attribution: FOLIO is published by the ALEA Institute under CC BY 4.0.
+- Command (run 2026-07-30):
+  ```
+  curl -sL -o data/folio/FOLIO.owl \
+    https://raw.githubusercontent.com/alea-institute/FOLIO/main/FOLIO.owl
+  ```
+- File: `data/folio/FOLIO.owl`
+- Bytes: 18,335,854 (`ls -l`)
+- sha256: `44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239`
+  (`shasum -a 256 data/folio/FOLIO.owl`)
+- Loaded by `python -m explorer.ingest.folio` → 18,259 concepts, 47,523 aliases. The file
+  declares 18,327 `owl:Class` nodes; the difference is unlabelled classes and the
+  DEPRECATED / SANDBOX subtrees, which are excluded deliberately (see
+  `backend/explorer/folio/loader.py`).
 
 ## SEC EDGAR
 

@@ -19,7 +19,15 @@ from explorer.api.settings import settings
 
 SCHEMA = Path(__file__).with_name("schema.sql")
 
-TABLES = ["deal_points", "clauses", "labels", "ingest_runs", "matters", "folio_concepts"]
+TABLES = [
+    "deal_points",
+    "clauses",
+    "labels",
+    "ingest_runs",
+    "matters",
+    "folio_aliases",
+    "folio_concepts",
+]
 
 
 def up(dsn: str | None = None) -> None:
