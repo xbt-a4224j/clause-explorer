@@ -112,6 +112,11 @@ ON CONFLICT (id) DO UPDATE SET
     char_end = EXCLUDED.char_end,
     folio_industry_code = EXCLUDED.folio_industry_code,
     is_inferred_industry = EXCLUDED.is_inferred_industry
+WHERE (clauses.clause_type, clauses.text, clauses.source_file, clauses.char_start,
+       clauses.char_end, clauses.folio_industry_code, clauses.is_inferred_industry)
+  IS DISTINCT FROM
+      (EXCLUDED.clause_type, EXCLUDED.text, EXCLUDED.source_file, EXCLUDED.char_start,
+       EXCLUDED.char_end, EXCLUDED.folio_industry_code, EXCLUDED.is_inferred_industry)
 """
 
 

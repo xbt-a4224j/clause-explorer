@@ -233,6 +233,8 @@ ON CONFLICT (id) DO UPDATE SET
     source_file = EXCLUDED.source_file,
     source_contract_title = EXCLUDED.source_contract_title,
     corpus = EXCLUDED.corpus
+WHERE (matters.source_file, matters.source_contract_title, matters.corpus)
+  IS DISTINCT FROM (EXCLUDED.source_file, EXCLUDED.source_contract_title, EXCLUDED.corpus)
 """
 
 UPSERT_DEAL_POINT = """
@@ -244,6 +246,11 @@ ON CONFLICT (matter_id, deal_point_name) DO UPDATE SET
     source_span_start = EXCLUDED.source_span_start,
     source_span_end = EXCLUDED.source_span_end,
     is_inferred = EXCLUDED.is_inferred
+WHERE (deal_points.position, deal_points.source_span_start, deal_points.source_span_end,
+       deal_points.is_inferred)
+  IS DISTINCT FROM
+      (EXCLUDED.position, EXCLUDED.source_span_start, EXCLUDED.source_span_end,
+       EXCLUDED.is_inferred)
 """
 
 

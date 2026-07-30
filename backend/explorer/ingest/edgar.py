@@ -426,6 +426,9 @@ UPDATE matters SET
     folio_industry_code = %s,
     is_inferred_industry = %s
 WHERE id = %s
+  AND (target_name, acquirer_name, signing_date, sic_code, folio_industry_code,
+       is_inferred_industry)
+      IS DISTINCT FROM (%s, %s, %s, %s, %s, %s)
 """
 
 
@@ -442,6 +445,15 @@ def upsert_enrichment(conn: psycopg.Connection, rows: list[Enrichment]) -> int:
                     r.folio_industry_code,
                     r.folio_industry_code is not None,
                     r.matter_id,
+                    # repeated for the IS DISTINCT FROM guard: an unconditional UPDATE bumps
+                    # updated_at on all 152 rows every run, and Cube's refresh_key is
+                    # MAX(updated_at) — every re-ingest would invalidate every aggregate (#14)
+                    r.target_name,
+                    r.acquirer_name,
+                    r.signing_date,
+                    r.sic_code,
+                    r.folio_industry_code,
+                    r.folio_industry_code is not None,
                 )
                 for r in rows
             ],

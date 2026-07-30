@@ -42,6 +42,7 @@ are judged by whether they make one of those three scripts land.
 | D26 | CUAD contracts are **not** rows in `matters`; their clauses carry `matter_id` NULL | `matters` is the comparable-deals universe a partner filters. 510 commercial contracts in there would inflate every facet count that reads as "comparable deals" | CUAD clauses have no matter card to drill into; they stand on `source_contract_title` and `source_file` |
 | D27 | CUAD clause id includes **`char_end`** | 242 annotations share a start offset with another of the same category and differ only in length; keying on start alone collapsed 244 distinct expert spans | Ids change if CUAD re-cuts an annotation — which is why the load prunes rows the corpus no longer produces |
 | D28 | The CUAD load **prunes** `corpus='cuad'` rows the parse no longer produces | Upsert alone is not idempotent across a corpus revision: a superseded row survives forever and keeps answering drill-throughs with text nothing points at | A parse bug that drops rows also deletes them from the table; the scope is limited to `corpus='cuad'` so MAUD can never be touched |
+| D29 | Every upsert carries an **`IS DISTINCT FROM` guard**; only genuinely changed rows are rewritten | Cube's `refresh_key` is `MAX(updated_at)`, so an unconditional upsert makes a no-op re-ingest invalidate every cached aggregate | Longer, noisier SQL in four loaders, and the guard column list must be kept in step with the column list above it |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -666,3 +667,112 @@ accuracy is published. README's new Limitations section states this plainly, as 
 ### Not done
 
 - CUAD clauses have `matter_id` NULL. See D26 — they are a clause corpus, not deals.
+
+## #11 — Idempotent ingest CLI with run tracking
+
+`python -m explorer.ingest --source {folio,maud,edgar,cuad,all}`, run in dependency order
+(FOLIO before MAUD because `matters.folio_industry_code` is a foreign key into it; MAUD before
+EDGAR because enrichment updates rows MAUD creates).
+
+### Verification
+
+```
+$ make ingest
+PYTHONPATH=backend python -m explorer.ingest --source all
+{"source": "folio", "rows_read": 18259, "rows_upserted": 18259, "duration_ms": 3893.0,
+ "sha256": "44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239"}
+{"source": "maud", "matters": 152, "deal_points": 12937, "spans_located": 12442, "duration_ms": 7298.4}
+{"source": "edgar", "matters": 152, "with_sic": 134, "network_requests": 0, "duration_ms": 1245.0}
+{"source": "cuad", "contracts": 510, "clauses": 13823, "duration_ms": 353.2}
+{"sources": ["folio","maud","edgar","cuad"], "duration_ms": 12839.9, "event": "ingest_complete"}
+real 13.3s
+
+$ PYTHONPATH=backend python -m explorer.ingest --source nope
+error: argument --source: invalid choice: 'nope' (choose from 'folio','maud','edgar','cuad','all')
+
+$ mv data/cuad/CUADv1.json /tmp/ && python -m explorer.ingest --source cuad
+ingest failed: .../data/cuad/CUADv1.json not found — run scripts/download_cuad.sh
+exit=2
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+115 passed in 61.46s          # was 108
+$ ruff format --check . && ruff check . && mypy backend/explorer --ignore-missing-imports
+All checks passed! / Success: no issues found in 22 source files
+```
+
+`network_requests: 0` on the EDGAR step is the cache doing its job — a full re-ingest touches
+sec.gov not at all.
+
+### The AC that found a real defect: updated_at
+
+"Bumps `updated_at` only on rows that actually changed" was failing on all four loaders.
+Every upsert was an unconditional `DO UPDATE SET`, so a second identical run rewrote all
+45,000 rows and moved `max(updated_at)` forward. Cube's `refresh_key` is `SELECT
+MAX(updated_at)` (#14) — so every re-ingest would have invalidated every cached aggregate
+while changing nothing. The fix is an `IS DISTINCT FROM` guard on each upsert (and on the
+EDGAR `UPDATE`), with two tests: one asserting `max(updated_at)` is unchanged after a
+no-op run, and one asserting a genuine edit *does* move it, so the guard cannot be tightened
+into never noticing anything.
+
+---
+
+# CHECKPOINT after #11 — does the corpus support the product?
+
+**Partly. Two of the three questions the product promises to answer are supported by real
+data today; the third is not, and demo script 1 cannot run as written.**
+
+Loaded, verified by querying the database after `make ingest`:
+
+| table | rows |
+|---|---|
+| `folio_concepts` | 18,259 (+47,523 aliases) |
+| `matters` | 152 |
+| `deal_points` | 12,937 over 92 deal-point names |
+| `clauses` | 13,823 over 41 clause types |
+| `ingest_runs` | 54 |
+
+### Supported
+
+**"What was negotiated across them" — yes, strongly.** A real rollup, run against the loaded
+data, over the fiduciary exception to the no-shop:
+
+```
+None                                                                    47
+"Inconsistent" with fiduciary duties                                    44
+"Reasonably likely/expected to be inconsistent" with fiduciary duties   35
+Other specified standard                                                 9
+```
+
+n=135 of 152 for that deal point, 92 deal points available, and 96.2% of rows carry a source
+span to drill into. This is the product's central claim and it works.
+
+**"Where are we thick or thin" — yes.** The industry × year grid has genuinely populated cells
+(Manufacturing 2021 n=34, Finance 2021 n=19, Information 2021 n=13) and genuinely thin ones,
+which is what the Coverage tab exists to show.
+
+### Not supported
+
+**"Find comparables" as demo script 1 words it — no.** That script asks for *healthcare,
+sponsor-side, $200M–1B, last five years*. Against this corpus:
+
+- **healthcare → n=3.** Below any honest reporting threshold. Pharma and biotech, which a
+  partner means by "healthcare", file under SIC 2834/2836 → Manufacturing (42 matters).
+- **$200M–1B → no data at all.** `deal_size_band` is NULL for all 152 (#9, still open).
+- **last five years → the corpus is 20 months**, 2020-03-13 to 2021-11-21.
+- **sponsor-side → not a field we have.** Nothing in MAUD or EDGAR marks financial-sponsor
+  buyers; it would have to be inferred from acquirer names.
+
+So the demo script's filter chain returns nothing, and three of its four filters are
+unbacked. **This is the finding, and it is a scoping problem, not a bug.** Options, none of
+which I am choosing unilaterally:
+
+1. **Rewrite demo script 1 against what the corpus has** — e.g. "Manufacturing, 2021, n=34"
+   drilling into deal points. Honest, works today, less evocative than the healthcare pitch.
+2. **Widen the industry crosswalk** so pharma/biotech route to Health Care, taking healthcare
+   from 3 to roughly 20 (D22 would need revising, and the UI must say the definition is ours,
+   not NAICS's).
+3. **Populate deal value** (#9's open half) to restore the size axis, accepting an
+   `is_inferred_deal_value` estimate with a published method.
+
+Doing 2 and 3 makes script 1 approximately runnable. Doing neither means script 1 needs
+rewriting. Either way the "last five years" phrasing has to go — the data is 20 months.

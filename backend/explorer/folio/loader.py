@@ -179,6 +179,12 @@ ON CONFLICT (code) DO UPDATE SET
     level_1_code = EXCLUDED.level_1_code,
     level_2_code = EXCLUDED.level_2_code,
     level_3_code = EXCLUDED.level_3_code
+WHERE (folio_concepts.label, folio_concepts.parent_code, folio_concepts.level,
+       folio_concepts.definition, folio_concepts.level_1_code, folio_concepts.level_2_code,
+       folio_concepts.level_3_code)
+  IS DISTINCT FROM
+      (EXCLUDED.label, EXCLUDED.parent_code, EXCLUDED.level, EXCLUDED.definition,
+       EXCLUDED.level_1_code, EXCLUDED.level_2_code, EXCLUDED.level_3_code)
 """
 
 

@@ -7,7 +7,7 @@ down:
 	docker compose down
 
 ingest:        ## idempotent load: FOLIO -> MAUD -> EDGAR enrich -> CUAD
-	python -m explorer.ingest --source all
+	PYTHONPATH=backend python -m explorer.ingest --source $(or $(SOURCE),all)
 
 test:          ## everything that runs with no API key
 	pytest backend/tests -q -m "not needs_key"
