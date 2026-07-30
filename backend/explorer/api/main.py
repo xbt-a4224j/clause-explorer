@@ -6,16 +6,21 @@ Routes for the product land in later issues; this is the floor everything else s
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import httpx
 import psycopg
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from explorer import __version__
+from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.settings import settings
+
+configure_logging(settings.log_level)
+log = get_logger()
 
 app = FastAPI(
     title="Clause Explorer",
@@ -27,6 +32,39 @@ app = FastAPI(
 )
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Bind a request id, log start and end with timing, echo it back as a header.
+
+    The id is bound to contextvars rather than passed around, so anything logged deeper
+    in the call stack inherits it without changing signatures.
+    """
+    rid = bind_request(request.headers.get("x-request-id"))
+    started = time.perf_counter()
+    log.info("request_start", method=request.method, path=request.url.path)
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.exception(
+            "request_failed",
+            method=request.method,
+            path=request.url.path,
+            duration_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
+        clear_request()
+        raise
+    log.info(
+        "request_end",
+        method=request.method,
+        path=request.url.path,
+        status=response.status_code,
+        duration_ms=round((time.perf_counter() - started) * 1000, 1),
+    )
+    response.headers["x-request-id"] = rid
+    clear_request()
+    return response
 
 
 class Health(BaseModel):
