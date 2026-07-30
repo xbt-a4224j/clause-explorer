@@ -66,8 +66,28 @@ Extraction is a separate **calibration experiment**: run the extractor over a he
 compare against the labels, publish the accuracy per deal point. That's what makes the claim
 "usable on documents nobody annotated" testable rather than asserted.
 
-**Caveat:** FOLIO industry codes on CUAD are *inferred* by a classifier — CUAD ships no industry
-metadata — and are labeled inferred everywhere they appear.
+## Limitations
+
+Stated here because the numbers in this repo are meant to be checkable, and every one of these
+is measured rather than estimated (see `docs/worklog.md` for the commands).
+
+- **FOLIO industry codes on CUAD are inferred.** CUAD ships no industry metadata, so anything
+  there is classifier output, flagged `is_inferred_industry` in the schema and labeled inferred
+  everywhere it appears. Currently **no CUAD row has an industry at all** (0 of 13,823) — the
+  classification pass and its accuracy table are still to come, and a keyword guess in the
+  meantime would be worse than a blank.
+- **Industry on the merger matters is also inferred.** It comes from a checked-in SIC → FOLIO
+  crosswalk over the SEC's own coarse, self-assigned code: 134 of 152 matters resolved. A
+  20-matter hand check found the identified registrant was the target in 17 and the acquirer
+  in 3.
+- **Deal value is not populated** for any of the 152 matters. EDGAR's company endpoints do not
+  carry transaction value, so `deal_size_band` is empty and size-based filtering does not work
+  yet.
+- **The corpus spans 20 months**, 2020-03-13 to 2021-11-21 — not five years.
+- **Health Care is 3 matters of 152.** Pharma and biotech file under SIC 2834/2836, which NAICS
+  and FOLIO both place under Manufacturing (42 matters).
+- **3.8% of deal points have no source span** (495 of 12,937) and cannot drill through; MAUD's
+  excerpts could not be anchored back into the contract text for those.
 
 ## Stack
 

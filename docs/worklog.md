@@ -39,6 +39,9 @@ are judged by whether they make one of those three scripts land.
 | D23 | Every EDGAR-derived industry is **`is_inferred_industry = TRUE`** | SIC is coarse and self-assigned, the crosswalk is a judgement, and identification picks the acquirer in ~15% of cases | Nothing in the product can present industry as gold; the UI must flag it everywhere |
 | D24 | The identified company is **the first party that resolves to a registrant with an SIC**, subs excluded | MAUD is a public-target study, so the target is an SEC registrant; this took CIK resolution from 97/152 to 134/152 | Picks the acquirer in 3 of 20 hand-checked matters, which then carry the acquirer's industry |
 | D25 | `deal_value_usd` left **NULL** rather than estimated | EDGAR's company endpoints do not carry transaction value; price x shares is an estimate of a different order and would appear in the UI as fact | #9 stays open, `deal_size_band` is empty, and demo script 1's size filter has nothing to filter on |
+| D26 | CUAD contracts are **not** rows in `matters`; their clauses carry `matter_id` NULL | `matters` is the comparable-deals universe a partner filters. 510 commercial contracts in there would inflate every facet count that reads as "comparable deals" | CUAD clauses have no matter card to drill into; they stand on `source_contract_title` and `source_file` |
+| D27 | CUAD clause id includes **`char_end`** | 242 annotations share a start offset with another of the same category and differ only in length; keying on start alone collapsed 244 distinct expert spans | Ids change if CUAD re-cuts an annotation — which is why the load prunes rows the corpus no longer produces |
+| D28 | The CUAD load **prunes** `corpus='cuad'` rows the parse no longer produces | Upsert alone is not idempotent across a corpus revision: a superseded row survives forever and keeps answering drill-throughs with text nothing points at | A parse bug that drops rows also deletes them from the table; the scope is limited to `corpus='cuad'` so MAUD can never be touched |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -601,3 +604,65 @@ widened the definition. Not decided here; recorded so the decision is visible.
 
 Signing dates spanning **20 months**, not five years, is the second corpus limit. Any UI copy
 saying "last five years" would be false.
+
+## #10 — CUAD parsed into clauses
+
+510 commercial contracts, 13,823 clause rows over 41 expert clause types, every offset read
+from the corpus rather than reconstructed.
+
+### Verification
+
+```
+$ ./scripts/download_cuad.sh
+sha256: f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a
+archive bytes: 18309308
+files extracted: 5
+
+$ PYTHONPATH=backend python -m explorer.ingest.cuad
+{"source": "cuad", "contracts": 510, "clauses": 13823, "clause_types": 41,
+ "with_industry": 0, "duration_ms": 452.0, "event": "ingest_cuad"}
+
+$ PYTHONPATH=backend python -m explorer.ingest.cuad      # second run — idempotent
+{"source": "cuad", "contracts": 510, "clauses": 13823, ... "duration_ms": 424.2}
+
+$ # against the loaded database
+clauses 13823 · clause types 41 · matters still 152 · gold-industry rows 0
+top clause types: Parties 2554 · License Grant 777 · Cap On Liability 672 ·
+                  Anti-Assignment 654 · Audit Rights 643
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+108 passed in 13.38s          # was 97
+$ ruff format --check . && ruff check . && mypy backend/explorer --ignore-missing-imports
+All checks passed! / Success: no issues found in 20 source files
+```
+
+### Corpus shape, measured
+
+CUAD asks all 41 categories of all 510 contracts — 20,910 question rows, of which **6,702**
+are answered, yielding **13,823** answer spans (a category can be answered with several
+spans). Only answered categories become rows: an unanswered category means the clause is
+*absent*, and a row with empty text would make "this contract has no audit-rights clause"
+indistinguishable from "we have no text for its audit-rights clause".
+
+### A bug the provenance test caught
+
+The first id scheme was `sha256(title, category, char_start)`. Loading produced **13,579**
+rows for 13,823 parsed clauses. The 244 missing rows were not duplicates: **242 CUAD
+annotations share a start offset with another annotation of the same category and differ only
+in length** — `Google` and `Google Inc`, both at offset 644 of the same contract. Two distinct
+expert spans, silently collapsed into one. `char_end` is now part of the key.
+
+This is the value of asserting loaded-row-count against parsed-row-count rather than "the
+insert did not error".
+
+### Industry is 0 of 13,823, deliberately
+
+CUAD ships no industry metadata. `is_inferred_industry` is TRUE on every row and
+`folio_industry_code` is NULL on every row, because nothing here guesses an industry from a
+filename. A keyword table over contract titles would produce a column that looks populated
+and is unmeasured; the classification pass belongs with the calibration work (#28) where its
+accuracy is published. README's new Limitations section states this plainly, as the AC asks.
+
+### Not done
+
+- CUAD clauses have `matter_id` NULL. See D26 — they are a clause corpus, not deals.
