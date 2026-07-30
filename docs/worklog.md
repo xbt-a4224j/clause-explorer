@@ -35,6 +35,10 @@ are judged by whether they make one of those three scripts land.
 | D18 | **DEPRECATED and SANDBOX subtrees excluded** from the load | Dead vocabulary that nothing is tagged with; `resolve()` returning one of those codes produces zero rows that read as "no comparable deals" — the exact failure #25 exists to prevent | Row count is 18,259 not 18,327; if FOLIO revives a deprecated branch we silently miss it |
 | D20 | Span for a discontinuous excerpt is the **enclosing range** first-segment-start .. last-segment-end | MAUD joins separate provisions with `<omitted>`; per-segment spans need a second table, and the schema has one span per deal point | The range contains material the annotator did not quote. Accepted: a drill-through that opens the right provisions with surrounding text beats one that cannot open at all |
 | D21 | Unlocatable spans store **NULL** (495 of 12,937) | An offset that is wrong opens the wrong clause and looks completely right; "no fabricated numbers" applies to byte ranges | 3.8% of rows have no drill-through until the locator improves |
+| D22 | SIC -> FOLIO crosswalk is a **checked-in CSV** with longest-prefix resolution | It is curation, not logic; a reviewer must be able to fix one row without reading Python, and 4-digit rows can override a 2-digit group (software 737x -> Information, where NAICS puts it) | Two places to look when an industry looks wrong: the file and the resolver |
+| D23 | Every EDGAR-derived industry is **`is_inferred_industry = TRUE`** | SIC is coarse and self-assigned, the crosswalk is a judgement, and identification picks the acquirer in ~15% of cases | Nothing in the product can present industry as gold; the UI must flag it everywhere |
+| D24 | The identified company is **the first party that resolves to a registrant with an SIC**, subs excluded | MAUD is a public-target study, so the target is an SEC registrant; this took CIK resolution from 97/152 to 134/152 | Picks the acquirer in 3 of 20 hand-checked matters, which then carry the acquirer's industry |
+| D25 | `deal_value_usd` left **NULL** rather than estimated | EDGAR's company endpoints do not carry transaction value; price x shares is an estimate of a different order and would appear in the UI as fact | #9 stays open, `deal_size_band` is empty, and demo script 1's size filter has nothing to filter on |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -510,3 +514,90 @@ constructor call is a trap, not a shorthand.
   bytes from the file. Party names, signing date and deal value come from EDGAR in #9; none
   are guessed here.
 - `clauses` is untouched; MAUD gives deal points, and clause text rows come from CUAD (#10).
+
+## #9 — EDGAR enrichment: industry, signing date, party names (deal value NOT done)
+
+**This issue is not closed.** Four of its five field requirements are met and verified;
+`deal_value_usd` is not populated and I am not checking that box. Detail below.
+
+### Verification
+
+```
+$ ./scripts/download_edgar_index.sh
+bytes: 39865365 · lines: 1052920
+sha256: e3b9d73e3a3d696029b08a3b3589a6495cdcede98a3f70fdd832e1a6c25ca1fd
+
+$ PYTHONPATH=backend python -m explorer.ingest.edgar
+{"source": "edgar", "matters": 152, "with_target_name": 144, "with_signing_date": 149,
+ "with_sic": 134, "with_folio_industry": 134, "network_requests": 142,
+ "duration_ms": 70257.2, "event": "ingest_edgar"}
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+97 passed in 12.85s        # was 79
+$ ruff format --check . && ruff check . && mypy backend/explorer --ignore-missing-imports
+All checks passed! / Success: no issues found in 19 source files
+```
+
+### Coverage, measured (of 152 matters)
+
+| field | resolved | source |
+|---|---|---|
+| `signing_date` | **149 (98.0%)** | the agreement's own header |
+| `target_name` | **144 (94.7%)** | the agreement's own header |
+| `sic_code` | **134 (88.2%)** | EDGAR submissions for the resolved CIK |
+| `folio_industry_code` | **134 (88.2%)** | `data/mappings/sic_to_folio.csv` |
+| `deal_value_usd` | **0** | not available from these endpoints — see below |
+
+Industry distribution over the 152:
+
+```
+ 42  Manufacturing            25  Finance and Insurance     18  (unresolved)
+ 18  Information              12  Real Estate/Rental        11  Mining and Natural Resources
+  7  Business and Admin        3  Construction               3  Retail Trade
+  3  Health Care               2  Professional Services      2  Wholesale Trade
+  2  Accommodation and Food    2  Utilities                  1  Educational Services
+  1  Transportation
+```
+
+Signing dates run **2020-03-13 → 2021-11-21**. `is_inferred_industry` is TRUE on all 134.
+
+### Identification accuracy, hand-checked
+
+Party identification improved in three measured steps:
+
+```
+first working version:                          97/152 CIK resolved
++ extend a match over a trailing legal suffix:  115/152    ("...SYSTEMS GROUP" -> "...GROUP, INC.")
++ try each non-sub party, accept the first
+  that resolves to a registrant WITH an SIC:    134/152
+```
+
+A 20-matter random sample was checked by hand against the deals: **17 of 20** identified the
+target, **3 of 20** identified the acquirer instead (contract_84 VICI/MGM Growth, contract_147
+Macquarie/Waddell & Reed, contract_5 AstraZeneca/Alexion). Those three carry the *acquirer's*
+industry. That is a real error, recorded rather than smoothed over, and it is part of why
+`is_inferred_industry` is TRUE on every enriched row.
+
+### deal_value_usd is not populated, and why
+
+EDGAR's submissions API carries no transaction value — it is company metadata (SIC, name,
+state, filing list). Deal value lives in the DEFM14A/8-K narrative or must be computed as
+per-share consideration × shares outstanding, which is an *estimate* of a different kind from
+everything else here. Rather than ship a number of unstated provenance under a column the UI
+will present as fact, the column stays NULL and #9 stays open.
+
+Consequence to face at the #11 checkpoint, not later: `deal_size_band` is empty, so demo
+script 1's "$200M–1B" filter has nothing to filter on, and the Coverage grid (#22) has one
+real axis instead of two.
+
+### A corpus finding that matters more than the code
+
+**Health Care is 3 matters of 152.** The crosswalk is right — pharma and biotech are SIC
+2834/2836, which NAICS and FOLIO both place under Manufacturing, and FOLIO's Health Care
+Industry is NAICS 62, providers — but a partner asking for "healthcare comparables" means
+pharma too. Two honest options at #11: report the thin cell as the Coverage tab is designed
+to (the product working), or add pharma SIC rows to the crosswalk and say plainly that we
+widened the definition. Not decided here; recorded so the decision is visible.
+
+Signing dates spanning **20 months**, not five years, is the second corpus limit. Any UI copy
+saying "last five years" would be false.

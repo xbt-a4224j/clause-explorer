@@ -1,0 +1,106 @@
+# SIC -> FOLIO industry crosswalk (#9). Checked in on purpose: this is curation, not code,
+# and a reviewer must be able to audit and correct a single row without reading Python.
+#
+# `sic` is a prefix. Resolution is longest-prefix-first, so a 4-digit row overrides the
+# 2-digit major group it sits inside. That is how software (SIC 737x, which SIC files under
+# "Services") reaches FOLIO's Information Industry, where NAICS puts it.
+#
+# Basis: SIC division/major-group structure mapped onto FOLIO's 21 NAICS-aligned Industry
+# concepts. FOLIO's Industry branch carries NAICS references in rdfs:isDefinedBy, so the
+# crosswalk is SIC -> NAICS sector -> FOLIO, not a free-hand judgement per row.
+#
+# Every matter enriched through this file gets is_inferred_industry = TRUE. A crosswalk is an
+# inference: SIC is the SEC's own coarse self-assigned code, and a conglomerate filed under
+# one code operates in several.
+sic,folio_code,folio_label,basis
+01,R92xsHpdHu6BJjtepuRu,Agriculture Industry,SIC division A -> NAICS 11
+02,R92xsHpdHu6BJjtepuRu,Agriculture Industry,SIC division A -> NAICS 11
+07,R92xsHpdHu6BJjtepuRu,Agriculture Industry,SIC division A -> NAICS 11
+08,R92xsHpdHu6BJjtepuRu,Agriculture Industry,SIC division A -> NAICS 11
+09,R92xsHpdHu6BJjtepuRu,Agriculture Industry,SIC division A -> NAICS 11
+10,ROWsW3Tkpc2YQmbHQehntm,Mining and Natural Resources Extraction Industry,SIC division B -> NAICS 21
+12,ROWsW3Tkpc2YQmbHQehntm,Mining and Natural Resources Extraction Industry,SIC division B -> NAICS 21
+13,ROWsW3Tkpc2YQmbHQehntm,Mining and Natural Resources Extraction Industry,SIC division B -> NAICS 21
+14,ROWsW3Tkpc2YQmbHQehntm,Mining and Natural Resources Extraction Industry,SIC division B -> NAICS 21
+15,RCQY0EFoRWFu0qcub25sBj8,Construction Industry,SIC division C -> NAICS 23
+16,RCQY0EFoRWFu0qcub25sBj8,Construction Industry,SIC division C -> NAICS 23
+17,RCQY0EFoRWFu0qcub25sBj8,Construction Industry,SIC division C -> NAICS 23
+20,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+21,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+22,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+23,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+24,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+25,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+26,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+27,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+28,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+29,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+30,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+31,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+32,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+33,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+34,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+35,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+36,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+37,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+38,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+39,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+40,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+41,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+42,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+43,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+44,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+45,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+46,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+47,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
+48,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 48 communications -> NAICS 51
+49,RBFAn1xyfuXmMiWDnpSsuU2,Utilities Industry,SIC 49 electric/gas/sanitary -> NAICS 22
+50,R97XG1bV4Mx6t2B4cpMlF0U,Wholesale Trade Industry,SIC division F -> NAICS 42
+51,R97XG1bV4Mx6t2B4cpMlF0U,Wholesale Trade Industry,SIC division F -> NAICS 42
+52,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+53,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+54,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+55,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+56,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+57,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+58,RDeR0053Q1cPSk9hSjORcBT,Accommodation and Food Services Industry,SIC 58 eating/drinking -> NAICS 72
+59,RDfdmGR6iPi4k2t6ecIUBkP,Retail Trade Industry,SIC division G -> NAICS 44-45
+60,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC division H -> NAICS 52
+61,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC division H -> NAICS 52
+62,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC division H -> NAICS 52
+63,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC division H -> NAICS 52
+64,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC division H -> NAICS 52
+65,RjKL1UdfWL1FCPVhnbIFSF,"Real Estate, Rental and Leasing Industry",SIC 65 real estate -> NAICS 53
+67,RCksXAlY9lRN16wERqZZ8Tk,Finance and Insurance Services Industry,SIC 67 holding/investment offices -> NAICS 52
+6798,RjKL1UdfWL1FCPVhnbIFSF,"Real Estate, Rental and Leasing Industry",SIC 6798 REITs -> NAICS 525 but the operating business is real estate
+70,RDeR0053Q1cPSk9hSjORcBT,Accommodation and Food Services Industry,SIC 70 hotels -> NAICS 721
+72,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 72 personal services -> NAICS 81
+73,RN2D91ENKaHvvID40zUJvt,Business and Administrative Services Industry,SIC 73 business services -> NAICS 56
+7370,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7370 computer programming/data processing -> NAICS 5182/5415
+7371,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7371 computer programming services -> NAICS 5415
+7372,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7372 prepackaged software -> NAICS 5112
+7373,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7373 computer integrated systems design -> NAICS 5415
+7374,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7374 data processing -> NAICS 518
+7379,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 7379 computer rental/leasing -> NAICS 5182
+75,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 75 auto repair/services -> NAICS 81
+76,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 76 misc repair -> NAICS 81
+78,RHwCmZ2yKrJobzC86GC6Ep,Information Industry,SIC 78 motion pictures -> NAICS 512
+79,R7BZzP16LxkLJjYqRNwWXP,"Arts, Entertainment and Recreation Industry",SIC 79 amusement/recreation -> NAICS 71
+80,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,SIC 80 health services -> NAICS 62
+81,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 81 legal services -> NAICS 5411
+82,RB7IaNyshrHiqug0LlmK6J2,Educational Services Industry,SIC 82 educational services -> NAICS 61
+83,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,SIC 83 social services -> NAICS 624
+84,R7BZzP16LxkLJjYqRNwWXP,"Arts, Entertainment and Recreation Industry",SIC 84 museums -> NAICS 712
+86,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 86 membership organizations -> NAICS 813
+87,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 87 engineering/accounting/research/management -> NAICS 54
+8731,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 8731 commercial physical/biological research -> NAICS 5417
+88,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 88 private households -> NAICS 814
+89,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 89 services NEC -> NAICS 54
+91,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+92,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+93,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+94,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+95,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+96,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+97,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92
+99,R7tFU0P1atJqNKz2BW7ly6f,No Industry,SIC 99 nonclassifiable establishments

@@ -64,3 +64,26 @@ Every corpus records the exact acquisition command, the resulting filename, byte
 - Source: https://www.sec.gov/edgar — free, public. Requires a descriptive User-Agent; respect rate limits.
 - Used for: SIC industry code, deal value, signing/closing dates, party names, for the MAUD agreements
 - Note: fetched per-CIK for a known set (no crawler). Record the fetch date — filings are amended.
+
+## SEC EDGAR — enrichment (#9)
+
+- Source: https://www.sec.gov/Archives/edgar/cik-lookup-data.txt (company-name → CIK index)
+  and https://data.sec.gov/submissions/CIK##########.json (per-company SIC).
+- Licence: US government work, public domain. SEC requires a descriptive User-Agent on
+  automated requests; ours is
+  `Clause Explorer research (open source; contact alex4334johnson@gmail.com)`.
+- Rate limit used: **5 requests/second** (SEC fair-access guidance is 10/s).
+- Command (run 2026-07-30) — `scripts/download_edgar_index.sh`:
+  ```
+  curl -sfL -A "<user agent>" -o data/edgar/cik-lookup-data.txt \
+    https://www.sec.gov/Archives/edgar/cik-lookup-data.txt
+  ```
+- File: `data/edgar/cik-lookup-data.txt`
+- Bytes: 39,865,365 · lines: 1,052,920
+- sha256: `e3b9d73e3a3d696029b08a3b3589a6495cdcede98a3f70fdd832e1a6c25ca1fd`
+- **Fetch date: 2026-07-30.** Filings get amended, so every submissions response is cached
+  under `data/edgar/cache/` and never re-fetched; refreshing is an explicit `rm -rf` of that
+  directory. 142 company-submission responses cached on this run.
+- Derived file, checked in: `data/mappings/sic_to_folio.csv` — the SIC → FOLIO crosswalk,
+  95 rows, curated from the SIC division structure against FOLIO's NAICS-aligned Industry
+  concepts.
