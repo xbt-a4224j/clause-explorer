@@ -1,0 +1,141 @@
+/* Shell chrome. Tokens only — no literal colors here; see tokens.css and docs/DESIGN.md.
+   The lavender accent appears on focus rings, the brand mark and the active tab marker.
+   Nowhere decorative. */
+
+.shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+}
+
+/* ---- top bar ---- */
+.shell__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-lg);
+  padding: 0 var(--pad-lg);
+  height: 48px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-1);
+}
+.shell__brand {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.shell__tabs { display: flex; gap: 2px; }
+.shell__tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-subtle);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.shell__tab:hover { color: var(--ink-muted); background: var(--surface-2); }
+.shell__tab.is-active { color: var(--ink); background: var(--surface-3); }
+.shell__tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 10px; right: 10px; bottom: -1px;
+  height: 1px;
+  background: var(--accent);
+}
+/* the number-key affordance — discoverable without opening the help overlay */
+.shell__tabkey {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-tertiary);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  padding: 0 3px;
+  line-height: 14px;
+}
+.shell__search {
+  margin-left: auto;
+  width: 260px;
+  padding: 5px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--canvas);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.shell__search::placeholder { color: var(--ink-tertiary); }
+
+/* ---- main ---- */
+.shell__main { padding: var(--pad-lg); overflow: auto; }
+.shell__title { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: -0.2px; }
+.shell__hint { margin: 2px 0 0; color: var(--ink-subtle); font-size: 13px; }
+.shell__pending {
+  margin-top: var(--pad-lg);
+  padding: var(--pad-md);
+  max-width: 560px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius);
+  color: var(--ink-tertiary);
+  font-size: 13px;
+}
+
+/* ---- status strip ---- */
+.shell__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 var(--pad-lg);
+  border-top: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.shell__dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.shell__dot--ok { background: var(--success); }
+.shell__dot--warn { background: #d9a441; }
+.shell__dot--bad { background: #d95757; }
+.shell__sep { color: var(--ink-tertiary); }
+.shell__spacer { flex: 1; }
+.shell__helpbtn {
+  border: 0; background: transparent; color: var(--ink-subtle);
+  font: inherit; cursor: pointer; padding: 2px 4px; border-radius: 3px;
+}
+.shell__helpbtn:hover { color: var(--ink); }
+
+/* ---- shortcut overlay ---- */
+.shell__scrim {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid; place-items: center;
+}
+.shell__dialog {
+  min-width: 340px;
+  padding: var(--pad-lg);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  background: var(--surface-1);
+}
+.shell__dialogtitle { margin: 0 0 var(--pad-md); font-size: 14px; font-weight: 500; }
+.shell__keys { margin: 0; display: grid; gap: 6px; }
+.shell__keyrow { display: grid; grid-template-columns: 88px 1fr; align-items: center; }
+.shell__keyrow dd { margin: 0; color: var(--ink-subtle); font-size: 13px; }
+kbd {
+  font-family: var(--font-mono); font-size: 11px;
+  border: 1px solid var(--hairline-strong); border-radius: 3px;
+  padding: 1px 5px; color: var(--ink-muted); background: var(--surface-3);
+}
+.shell__close {
+  margin-top: var(--pad-lg); width: 100%;
+  padding: 6px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+  background: transparent; color: var(--ink-subtle); font: inherit; cursor: pointer;
+}
+.shell__close:hover { color: var(--ink); border-color: var(--accent); }

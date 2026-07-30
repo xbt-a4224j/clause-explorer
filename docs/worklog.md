@@ -26,6 +26,8 @@ are judged by whether they make one of those three scripts land.
 | D9 | Inferred values flagged **in the schema** (`is_inferred_*`), not only in docs | CUAD ships no industry metadata, so FOLIO codes there are classifier output. Unflagged, they are indistinguishable from MAUD gold and every aggregate silently mixes them | A flag column per inferrable field |
 | D10 | Trigger uses **`clock_timestamp()`**, not `now()` | `now()` is transaction-start time and constant within a transaction, so insert-then-update in one ingest transaction would leave `updated_at` unchanged — Cube's `refresh_key` would serve stale aggregates with no way to notice | Timestamps are not transaction-consistent, which is correct here |
 | D11 | Plain `schema.sql` + a tiny runner instead of Alembic | One schema, no release history to migrate across; a single readable SQL file reviews better than a generated revision chain | If the schema starts evolving across releases, this must become Alembic |
+| D14 | Tab order in `tabs.ts` is **load-bearing** — number shortcut is the array index | One source of truth for order, label and shortcut; no parallel mapping to drift | Reordering the array silently rebinds every shortcut; noted in the file |
+| D15 | Global shortcuts are **suppressed inside editable targets** (except Escape) | Without the guard, typing "3" into search jumps to Coverage — the demo dies on camera | Escape needs an explicit carve-out to still close overlays from an input |
 | D13 | Internal errors return a **generic** message; the cause is logged instead | A traceback can carry the DSN or an API key and these endpoints are unauthenticated | Callers lose detail; the request id is the bridge to the real cause |
 | D12 | FOLIO ancestry **denormalized** into `level_1/2/3_code` | Cube facet queries read them directly instead of walking a recursive CTE per query (#13) | Must be recomputed if the ontology reloads |
 
@@ -242,3 +244,48 @@ the first instinct was to change the handler.
 ### Not done
 
 - No dependencies added.
+
+---
+
+## #5 — Six-tab shell, Linear tokens, keyboard navigation
+
+Navigation, the keyboard contract and a live health strip. Panels are deliberately
+placeholders — each view lands in its own issue (#19–#22, #29–#31).
+
+Design tokens transcribed from `docs/DESIGN.md` into `styles/tokens.css`; `shell.css` uses
+tokens only, no literal colors. Accent `#5e6ad2` appears on the brand mark, the active-tab
+underline and focus rings — nowhere decorative.
+
+Number-key affordances render **on the tabs themselves**, so the shortcut is discoverable
+without opening the help overlay.
+
+### Verification
+
+```
+$ npx vitest run
+Test Files  1 passed (1) / Tests  10 passed (10)
+
+$ npx tsc --noEmit        -> clean
+$ npm run build           -> built in 302ms
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+39 passed
+
+$ curl -o /dev/null -w '%{http_code}' localhost:5173     -> 200
+```
+
+Rendered against the live stack: six tabs, number affordances, status strip reading
+`ok · db ok · cube ok · v0.1.0`.
+
+### The test that matters most
+
+`ignores shortcuts while typing in an input` — without the editable-target guard, typing
+"3" into the search box switches to Coverage. That is a demo-killing bug and it is invisible
+until someone types a digit on camera (D15).
+
+### Not done
+
+- Panels are placeholders by design.
+- `j`/`k` result navigation is declared in the shortcut overlay but only becomes meaningful
+  once Explore has a result list (#19). Listed there deliberately so the contract is fixed
+  before views are written against it.
