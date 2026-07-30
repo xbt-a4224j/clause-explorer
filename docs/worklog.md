@@ -47,6 +47,8 @@ are judged by whether they make one of those three scripts land.
 | D31 | `numeric_value` is parsed from MAUD's own answer text at ingest | The numbers are inside the expert's label ("4 business days"), so reading them is normalisation, not extraction — and without it there is nothing to take a median of | Units differ per deal point, so the column is meaningless unless `deal_point_name` is filtered first; the model's descriptions say so |
 | D32 | Answers that only bound a value store **NULL** | "Greater than 5 business days" is an inequality; storing 5 puts it in a median looking like a measurement | 809 numeric rows instead of slightly more, and some real information is dropped rather than distorted |
 | D33 | The single `type: avg` is named **`mean_numeric_value_do_not_use_for_market`** | It exists only to show divergence from the median; an agent selecting by name cannot reach for it casually | An ugly name in a public API surface — deliberately |
+| D34 | Embeddings are **256-dim float16**, not the model's native 1536-dim float32 | The cache is committed to a public repo; native size would be ~86 MB against a measured 9.5 MB | Some retrieval quality, unmeasured until #17's ablation quantifies it |
+| D35 | The committed cache is written **only** by `warm_cache`, never by a query path | A developer with a key would otherwise rewrite a version-controlled artefact just by searching, producing a diff from nowhere | A miss with a key is cached in memory only, so it is re-embedded next process start |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -1070,3 +1072,55 @@ run's** probe row, inserted and deleted seconds earlier. The probe id is now uni
 `158 passed` clean. The assertion never changed at any point: the row must appear without a
 restart. Both findings are in the test's docstring where the next person to see a flake will
 find them.
+
+## #16 — Embedding cache: retrieval works with no API key
+
+### The cache, measured
+
+```
+$ PYTHONPATH=backend python -m explorer.retrieval.warm_cache
+{"step": "warm_cache", "texts_seen": 13975, "embedded_now": 13975, "entries_before": 0,
+ "entries_after": 11797, "api_calls": 110, "file_bytes": 10008513, "duration_ms": 65297.0}
+
+$ du -h data/embeddings/vectors.npz
+9.5M
+
+$ # then, with the key removed entirely
+$ env -u OPENAI_API_KEY python -c "...EmbeddingCache(api_key=None)..."
+entries: 11797 | file MB: 10.01
+hit with no key -> vector dim (256,) dtype float16 | api_calls 0
+miss without key -> 1 text(s) are not in the embedding cache (11797 cached at vectors.npz)
+                    and OPENAI_API_KEY is not set. Run `python -m explorer.retrieval.warm_cache`...
+```
+
+**13,975 texts in, 11,797 vectors out.** The 2,178-entry gap is content addressing doing its
+job: that many clause texts are byte-identical to another clause somewhere in CUAD (boilerplate
+governing-law and assignment provisions repeat across contracts), and a content-keyed cache
+stores each exactly once. A cache keyed on clause id would have paid to embed all 13,975.
+
+110 API calls at batch size 128. 9.5 MB committed, which is why the vectors are 256-dimensional
+`float16` rather than the model's native 1536-dimensional `float32` — that would have been a
+~86 MB file in a public repo. #17's ablation measures what, if anything, the shortening costs.
+
+### The three cases, each with a test that runs with no key
+
+| case | behaviour |
+|---|---|
+| hit | vector returned, `api_calls == 0`, no key needed |
+| miss **with** a key | embedded once, kept in memory, second request does not re-embed |
+| miss **without** a key | `EmbeddingUnavailable` naming the cached count and the fixing command |
+
+The miss-with-key test stubs the client, so no test needs a key or a network — including the
+one that proves an API call happens exactly once.
+
+### The committed file is never written by a query path
+
+`save()` is called only by `warm_cache`. A test asserts that embedding a new text with a key
+in hand leaves the file byte-identical. Otherwise a developer with a key would silently
+rewrite a version-controlled artefact just by running a search, and the diff would appear from
+nowhere.
+
+```
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+166 passed in 73.80s          # was 158
+```
