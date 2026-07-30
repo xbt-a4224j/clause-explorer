@@ -33,6 +33,8 @@ are judged by whether they make one of those three scripts land.
 | D16 | FOLIO `code` is the **IRI suffix**, not the label or `dc:identifier` | IRIs are opaque and stable across releases; labels get retitled and `dc:identifier` is present on only part of the ontology | Codes are unreadable in psql; every display needs a join to `label` |
 | D17 | Multi-parent concepts keep **one** parent — the lexicographically smallest code | FOLIO is a DAG: 830 of 18,327 classes declare 2+ `rdfs:subClassOf`. `parent_code` holds one, and the tie-break must be deterministic or reloads reshuffle the hierarchy | For those concepts the roll-up path in the UI is *one* true path, not the only one. A closure table would fix it at the price of a join in every Cube dimension — revisit if a mapped dimension (#9) lands on a multi-parent branch |
 | D18 | **DEPRECATED and SANDBOX subtrees excluded** from the load | Dead vocabulary that nothing is tagged with; `resolve()` returning one of those codes produces zero rows that read as "no comparable deals" — the exact failure #25 exists to prevent | Row count is 18,259 not 18,327; if FOLIO revives a deprecated branch we silently miss it |
+| D20 | Span for a discontinuous excerpt is the **enclosing range** first-segment-start .. last-segment-end | MAUD joins separate provisions with `<omitted>`; per-segment spans need a second table, and the schema has one span per deal point | The range contains material the annotator did not quote. Accepted: a drill-through that opens the right provisions with surrounding text beats one that cannot open at all |
+| D21 | Unlocatable spans store **NULL** (495 of 12,937) | An offset that is wrong opens the wrong clause and looks completely right; "no fabricated numbers" applies to byte ranges | 3.8% of rows have no drill-through until the locator improves |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -423,3 +425,88 @@ MAUD's `label` column is an answer *index*, not a deal-point name. The deal poin
 `question` (92 values); `text_type` is the coarser 22-value grouping and `category` the
 7-value one. Reading `label` as the deal point would have produced 10 deal points instead
 of 92 and looked plausible.
+
+## #8 — MAUD parsed into matters + LONG deal_points
+
+152 matters, 12,937 deal-point rows, 92 distinct `deal_point_name` values read from the
+corpus rather than hardcoded. `is_inferred = false` on every row — these are the lawyers'
+labels, and nothing here re-extracts them.
+
+### Verification
+
+```
+$ PYTHONPATH=backend python -m explorer.ingest.maud
+{"source": "maud", "matters": 152, "deal_points": 12937, "deal_point_names": 92,
+ "spans_located": 12442, "spans_null": 495, "duration_ms": 8092.6, "event": "ingest_maud"}
+
+$ PYTHONPATH=backend python -m explorer.ingest.maud      # second run — idempotent
+{"source": "maud", "matters": 152, "deal_points": 12937, ... "duration_ms": 7640.6}
+
+$ # against the loaded database
+matters 152
+deal_points 12937
+distinct names 92
+inferred rows 0
+null spans 495
+per-matter deal points min/avg/max: (75, 85.1, 90)
+sample title: contract_1 | 'Exhibit 2.1 AGREEMENT AND PLAN OF MERGER among MERCK SHARP & DOHME CORP...'
+Type of Consideration: All Cash 89 · All Stock 39 · Mixed Cash/Stock 21 · Mixed: Election 3
+
+$ pytest backend/tests/test_maud_parse.py -q
+16 passed in 8.31s
+
+$ ruff format --check . && ruff check .   -> 27 files already formatted / All checks passed!
+$ mypy backend/explorer --ignore-missing-imports -> Success: no issues found in 18 source files
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+79 passed in 16.66s          # was 63
+```
+
+### Source spans: 12,442 of 12,937 located (96.2%), 495 stored NULL
+
+MAUD's excerpt text is **not** byte-identical to the contract file it came from, which the
+AC's provenance requirement runs straight into. Three differences, found by measuring rather
+than assuming — the naive `excerpt in source` check matches **0 of 300** sampled rows:
+
+| Difference | Effect if ignored |
+|---|---|
+| files carry `________________` page-break rules the excerpts drop | full-excerpt match fails; only the first ~230 chars align |
+| excerpts end with `(Page 40)` / `(Pages 9-10)` citations | tail anchor never matches |
+| excerpts are discontinuous, joined by literal `<omitted>` | whole-excerpt anchoring impossible |
+
+Located fraction as each was handled, measured over all 12,937 pairs:
+
+```
+exact match:                          0
+whitespace-normalized, head+tail:  4,504   (34.8%)
++ page citations stripped:         8,391   (64.9%)
++ split on <omitted>, per-segment: 12,442   (96.2%)
+```
+
+The 495 that will not anchor store **NULL**, not a guess. `no fabricated numbers` covers
+offsets: a wrong byte range is a drill-through that opens the wrong clause and looks right.
+
+### Verified corpus facts
+
+- Every (matter, deal point) pair has exactly **one** answer — 12,937 pairs, no multi-answer
+  case — so `UNIQUE (matter_id, deal_point_name)` holds without a tie-break rule.
+- 152 × 92 = 13,984 possible pairs; 12,937 exist. Coverage is 92.5%, not complete: matters
+  carry 75–90 deal points each, mean 85.1. The LONG shape absorbs this with no NULL columns.
+- Only `data_type='main'` rows load. `abridged` (14,928 rows) is the same annotation over a
+  shortened passage and `rare_answers` (3,680) is keyed to a `<RARE_ANSWERS>` pseudo-contract;
+  either would double-count matters in every rollup.
+
+### A performance bug worth recording
+
+The first working version took **~260 s** to parse. Cause: `locators.setdefault(matter_id,
+SpanLocator(sources[matter_id]))` — Python evaluates `setdefault`'s default argument on
+*every* call, so the whitespace index was rebuilt once per deal point (12,937 times) instead
+of once per matter (152). An explicit `if key not in dict` took it to **8 s**. The profile
+was flat and misleading until the locators were hoisted out of the loop; `setdefault` with a
+constructor call is a trap, not a shorthand.
+
+### Not done
+
+- `source_contract_title` is the document's own opening line-run, trimmed to 200 chars — real
+  bytes from the file. Party names, signing date and deal value come from EDGAR in #9; none
+  are guessed here.
+- `clauses` is untouched; MAUD gives deal points, and clause text rows come from CUAD (#10).
