@@ -178,3 +178,92 @@ source is a bug.
 
 MAUD and CUAD are CC BY 4.0; FOLIO is CC BY. Attribution belongs in `docs/provenance.md` and the
 README.
+
+---
+
+# Iteration rules
+
+**This is the operating loop. Follow it per issue, in order, without pausing between issues.**
+
+Work issues in ascending number order (`#1 → #32`); the order is dependency-driven. Read the
+body first: `gh issue view <N> -R xbt-a4224j/clause-explorer`. Acceptance criteria live there.
+
+## The loop
+
+1. **Write the test first.** Then RUN it and confirm it fails *for the stated reason* — not
+   for an import error you did not intend. A test that passes before its implementation
+   exists is broken; fix the test, not the gate.
+2. **Implement** the minimum that satisfies the acceptance criteria.
+3. **Run the gates** (below). All must be green.
+4. **Verify against the running stack**, not just unit tests. Curl the endpoint, load the
+   page, read the container logs. Unit tests passing is not evidence the feature works.
+5. **Append to `docs/worklog.md`** — what was built, the commands run with their *real
+   output*, any decision made (with rationale and accepted cost), and anything not done.
+6. **Commit and push**, message ending `Closes #N`. One issue per commit so each diff maps
+   to its ticket.
+7. **Go straight to the next issue.** Do not stop to report or ask.
+
+## Gates — every one, before every commit
+
+```bash
+# backend
+ruff format --check . && ruff check .
+mypy backend/explorer --ignore-missing-imports
+env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+
+# frontend, when touched
+cd frontend && npx tsc --noEmit && npx vitest run && npm run build
+```
+
+If a gate fails, the commit does not happen. **Never** weaken a gate, lower a threshold, or
+narrow an acceptance criterion to make something pass. If a target genuinely cannot be met,
+stop and say why.
+
+## Environment
+
+- **Python 3.12** — `psycopg-binary` has no wheel for 3.14, which `python3 -m venv` picks by
+  default. Use `.venv` in the repo root.
+- `python -m explorer.*` needs `PYTHONPATH=backend`. pytest gets it from `pytest.ini`;
+  `make migrate` sets it. Bare module runs do not — a missing PYTHONPATH fails *silently*
+  if you grep the output.
+- DB: `CLAUSE_EXPLORER_DB=postgresql://explorer:explorer@localhost:5432/explorer`
+- Real e2e tests using the API key are welcome — keep to ~4, mark them `needs_key`, and they
+  are excluded from the CI gate automatically.
+
+## Recording decisions
+
+`docs/worklog.md` has a decisions table. Add a row whenever you make a call that a reviewer
+might question. Record **the cost you accepted**, not just the choice — a decision without
+its downside reads as marketing. Include decisions that turned out wrong.
+
+## When a test fails, diagnose before fixing
+
+Sometimes the test is wrong, not the implementation. Both have happened here already:
+`PydanticUndefinedAnnotation` was a test-scope bug, while the `updated_at` failure was a
+genuine schema defect that would have silently served stale aggregates. Read the actual
+error before changing anything.
+
+## Known traps in this codebase
+
+- **Secret-shaped literals in tests** trip secret scanners and GitHub push protection even
+  when obviously fake. Assemble fixtures at runtime: `"sk" + "-proj-" + "a" * 20`.
+- **`from __future__ import annotations` + a pydantic model defined inside a function** →
+  `PydanticUndefinedAnnotation`. Define request models at module scope.
+- **FastAPI cannot build a response model from a union of `Response` subclasses.** Pass
+  `response_model=None` on those routes.
+- **structlog processors are typed against `MutableMapping`**, not `dict`; mypy rejects `dict`.
+- **`ruff format` collapses multi-line signatures**, so multi-line string replacement against
+  formatted files is fragile. Match a single line, or edit before formatting.
+- **Postgres `now()` is transaction-start time.** Use `clock_timestamp()` in touch triggers.
+
+## The demo scripts are the acceptance test
+
+`docs/demo-scripts.md` defines three walkthroughs. Every implementation decision is judged by
+whether it makes one of them land. A feature serving none of them is out of scope; a rough
+edge on one of their paths is a bug, not polish.
+
+## Checkpoints — report, then keep going
+
+After **#5**, **#11**, **#18**, **#23**. Report real numbers at each. #11 is the one that
+matters most: it reveals whether the corpus actually supports the product. If facet cells come
+back too thin for Script 1, say so plainly rather than proceeding as if it worked.
