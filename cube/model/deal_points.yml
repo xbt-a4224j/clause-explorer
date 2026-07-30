@@ -34,6 +34,14 @@ cubes:
     refresh_key:
       sql: SELECT MAX(updated_at) FROM public.deal_points
 
+    # added in #13, once the matters cube existed. Without it Cube cannot find a join path
+    # from deal_points to folio_concepts, so "fiduciary out, healthcare only" is not
+    # expressible as one query — which is the entire point of the semantic layer here.
+    joins:
+      - name: matters
+        relationship: many_to_one
+        sql: "{CUBE}.matter_id = {matters}.id"
+
     dimensions:
       - name: id
         sql: id

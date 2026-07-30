@@ -891,3 +891,69 @@ project exists to close, so the caveat lives where the agent will read it.
 - No `matters` cube yet, so no industry/date dimensions and no join — that is #13, and the
   join to it is deliberately absent rather than stubbed.
 - Medians are #15. There is no `type: avg` anywhere in this file and there will not be one.
+
+## #13 — Cube model for matters: FOLIO hierarchy dimensions and facet counts
+
+`cube/model/matters.yml` adds the `matters` and `folio_concepts` cubes plus a
+`comparable_deals` view, and restores the `deal_points → matters` join that #12 deliberately
+left out rather than stubbing against a cube that did not exist.
+
+### The AC's open question, answered by testing rather than assuming
+
+**Cube 1.7.15** (read from the running container, not from docs). A `hierarchies:` block was
+added to the view; **the model compiled without error, but `/cubejs-api/v1/meta` returned
+`"hierarchies": []` for every cube and view.** The key is accepted and not surfaced by the
+REST API this product uses, so a native hierarchy would be dead configuration that reads as a
+working feature. Removed, and the finding is recorded in the model's own header with the
+version — a test asserts both survive in the file.
+
+The product drills down on the denormalized `level_1_code`/`level_2_code`/`level_3_code`
+columns written at ingest (#6).
+
+### Facet counts, Cube vs hand-computed SQL
+
+```
+$ curl .../load?query={"measures":["comparable_deals.n"],"dimensions":["comparable_deals.label"]}
+    25  Health Care Industry            |  $ psql: 25  Health Care Industry
+    25  Finance and Insurance Services  |          25  Finance and Insurance Services
+    22  Manufacturing Industry          |          22  Manufacturing Industry
+    18  None                            |          (absent — inner join)
+    18  Information Industry            |          18  Information Industry
+    12  Real Estate, Rental and Leasing |          12  Real Estate, Rental and Leasing
+```
+
+Identical, with one deliberate difference: Cube returns an **18-row `None` bucket** the SQL
+inner join dropped. Those are the matters with no industry, and the product must show them —
+a coverage grid that silently omits what it cannot classify understates its own ignorance.
+The test asserts the facet cells sum to **152**, which only holds because the unclassified
+are visible.
+
+### The join earning its place
+
+```
+$ # "fiduciary out, healthcare only" — one query across two cubes
+  n= 12  None
+  n=  9  "Inconsistent" with fiduciary duties
+  n=  4  "Reasonably likely/expected to be inconsistent" with fiduciary duties
+  total n = 25
+```
+
+A fiduciary out in **13 of 25** healthcare agreements. That is demo script 1's payload, served
+by the semantic layer rather than by SQL in Python — and it needed the `deal_points → matters`
+join, without which Cube reports `Can't find join path to join 'deal_points', 'folio_concepts'`.
+
+```
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+136 passed in 61.84s          # was 128
+$ ruff format --check . && ruff check . && mypy backend/explorer --ignore-missing-imports
+All checks passed! / Success: no issues found in 22 source files
+$ cd frontend && npx tsc --noEmit && npx vitest run
+clean / 10 passed
+```
+
+### Deal-size bands: defined once, empty today
+
+`deal_size_band` is a CASE in the model and nowhere else. A test greps `frontend/src` for
+`$200M` and `200000000` and fails if either appears, so the UI cannot grow its own definition.
+Every matter is currently `unknown` — `deal_value_usd` is NULL for all 152 (#9) — and the
+dimension's description says `unknown` is a real value to be shown, not filtered away.

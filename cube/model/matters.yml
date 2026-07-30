@@ -1,0 +1,249 @@
+# The comparable-deals universe: one row per merger agreement (#13).
+#
+# THIS FILE IS AN API — see the header of deal_points.yml. Measure and dimension names here are
+# what the agent selects from and what the eval scores against.
+#
+# ## Hierarchy: denormalized levels. Native hierarchies tested and rejected.
+#
+# **Cube version in use: 1.7.15** (`@cubejs-backend/server-core`, read from the running
+# container). Tested directly, not assumed: a `hierarchies:` block was added to the
+# `comparable_deals` view and the model compiled without error — but `/cubejs-api/v1/meta`
+# returns `"hierarchies": []` for every cube and view. The key is accepted and not surfaced by
+# the REST API this product uses, so a native hierarchy would be dead configuration that reads
+# as a working feature. It was removed.
+#
+# The product therefore drills down on the **denormalized** `level_1_code`/`level_2_code`/
+# `level_3_code` columns written at ingest (#6) — three plain dimensions the frontend steps
+# through. Not a recursive CTE: correct, slow, and with no clean expression as a Cube dimension.
+#
+# ## Deal-size bands are defined HERE and nowhere else
+#
+# The `deal_size_band` dimension below is the single definition of what "$200M–1B" means. The
+# frontend must read the values from the API; a test greps the frontend source to make sure no
+# band literal is hardcoded there. Two definitions of a band is two different answers to the
+# same question, and the one the partner reads would be the one in the UI.
+#
+# **As loaded today every matter falls in `unknown`**: `deal_value_usd` is NULL for all 152
+# because EDGAR's company endpoints carry no transaction value (#9 is open). The band logic is
+# defined anyway so there is one place to be right when values arrive — but a size facet
+# currently renders as a single `unknown` bucket, and demo script 1 does not use it.
+
+cubes:
+  - name: matters
+    sql_table: public.matters
+    description: >-
+      One row per merger agreement — the comparable-deals universe a partner filters when
+      asking "what have we got that looks like this deal?". 152 agreements from the MAUD
+      corpus, signed between 2020-03-13 and 2021-11-21. CUAD's commercial contracts are
+      deliberately NOT in here; they are a clause corpus, not deals.
+
+    refresh_key:
+      sql: SELECT MAX(updated_at) FROM public.matters
+
+    joins:
+      - name: deal_points
+        relationship: one_to_many
+        sql: "{CUBE}.id = {deal_points}.matter_id"
+
+      - name: folio_concepts
+        relationship: many_to_one
+        sql: "{CUBE}.folio_industry_code = {folio_concepts}.code"
+
+    dimensions:
+      - name: id
+        sql: id
+        type: string
+        primary_key: true
+        description: The matter identifier, e.g. "contract_13". Use it to drill through to a
+          single agreement.
+
+      - name: target_name
+        sql: target_name
+        type: string
+        description: >-
+          The public target, read from the agreement's own header. NULL for 8 of 152 where the
+          header could not be parsed. Identification is imperfect — on a 20-matter hand check
+          it named the acquirer instead of the target 3 times — so treat it as a label, not a
+          key.
+
+      - name: acquirer_name
+        sql: acquirer_name
+        type: string
+        description: The buyer, read from the agreement's own header. NULL where unparsed.
+
+      - name: signing_date
+        sql: signing_date
+        type: time
+        description: >-
+          When the agreement was signed, read from the document itself. Populated for 149 of
+          152. The whole corpus spans 2020-03-13 to 2021-11-21 — 20 months, NOT five years, so
+          never characterise it as a multi-year sample.
+
+      - name: signing_year
+        sql: "EXTRACT(YEAR FROM {CUBE}.signing_date)"
+        type: number
+        description: >-
+          Signing year, for the coverage grid's time axis. Only 2020 and 2021 exist in this
+          corpus; a year facet therefore has exactly two non-empty values.
+
+      - name: sic_code
+        sql: sic_code
+        type: string
+        description: >-
+          The SEC's own four-digit industry code for the identified registrant, from EDGAR.
+          Populated for 134 of 152. This is the raw code, not our grouping — see
+          folio_industry_label for what the product actually facets on.
+
+      - name: folio_industry_code
+        sql: folio_industry_code
+        type: string
+        description: FOLIO concept code for the matter's industry. Prefer folio_industry_label
+          for anything user-facing; codes are opaque IRI suffixes.
+
+      - name: is_inferred_industry
+        sql: is_inferred_industry
+        type: boolean
+        description: >-
+          TRUE for every matter that has an industry at all. Industry is derived by crosswalk
+          from a coarse self-assigned SIC code, so it is never gold. Any UI showing industry
+          must flag it as inferred.
+
+      - name: has_industry
+        sql: "{CUBE}.folio_industry_code IS NOT NULL"
+        type: boolean
+        description: >-
+          Whether the matter could be classified at all — TRUE for 134 of 152. Use it to state
+          coverage honestly instead of letting 18 unclassified matters vanish from a facet.
+
+      - name: deal_value_usd
+        sql: deal_value_usd
+        type: number
+        description: >-
+          Transaction value. **NULL for every matter as currently loaded** — EDGAR's company
+          endpoints do not carry it (#9). Do not report a size-based figure from this corpus;
+          there is no data behind it yet.
+
+      - name: deal_size_band
+        type: string
+        sql: >-
+          CASE
+            WHEN {CUBE}.deal_value_usd IS NULL THEN 'unknown'
+            WHEN {CUBE}.deal_value_usd < 200000000 THEN 'under $200M'
+            WHEN {CUBE}.deal_value_usd < 1000000000 THEN '$200M-1B'
+            WHEN {CUBE}.deal_value_usd < 10000000000 THEN '$1B-10B'
+            ELSE 'over $10B'
+          END
+        description: >-
+          The single definition of a deal-size band in this system — the frontend must read
+          these values from the API rather than restating the thresholds. Every matter is
+          currently 'unknown' because deal_value_usd is NULL throughout; 'unknown' is a real
+          value here, not a missing one, and must be shown rather than filtered away.
+
+      - name: corpus
+        sql: corpus
+        type: string
+        description: Which dataset the matter came from. 'maud' for all 152 today.
+
+      - name: updated_at
+        sql: updated_at
+        type: time
+        description: When the ingest last wrote this row. Operational, not analytical.
+
+    measures:
+      - name: n
+        type: count
+        description: >-
+          THE DENOMINATOR — how many agreements are in the current selection. This is the
+          number that must accompany every figure the product reports. Unfiltered it is 152.
+
+      - name: with_industry_n
+        type: count
+        filters:
+          - sql: "{CUBE}.folio_industry_code IS NOT NULL"
+        description: >-
+          Agreements that could be classified into an industry, 134 of 152. Use as the
+          denominator when reporting an industry breakdown, so the 18 unclassified matters are
+          visible rather than silently dropped.
+
+      - name: with_signing_date_n
+        type: count
+        filters:
+          - sql: "{CUBE}.signing_date IS NOT NULL"
+        description: Agreements with a signing date, 149 of 152. The denominator for anything
+          reported over time.
+
+  - name: folio_concepts
+    sql_table: public.folio_concepts
+    description: >-
+      The FOLIO legal-concept vocabulary, joined to matters so the product facets on labels
+      rather than opaque codes. 18,259 concepts loaded; the industry branch is the part used
+      here.
+
+    refresh_key:
+      sql: SELECT MAX(updated_at) FROM public.folio_concepts
+
+    dimensions:
+      - name: code
+        sql: code
+        type: string
+        primary_key: true
+        public: false
+
+      - name: label
+        sql: label
+        type: string
+        description: >-
+          The industry name a partner reads, e.g. "Health Care Industry". NOTE: this product's
+          Health Care grouping includes pharma, biotech, medical devices and CROs, which NAICS
+          files under Manufacturing. It is our definition, not a standard one, and must be
+          described that way wherever it appears.
+
+      - name: level_1_code
+        sql: level_1_code
+        type: string
+        description: Top of the FOLIO branch, e.g. "Industry and Market". The coarsest
+          roll-up level.
+
+      - name: level_2_code
+        sql: level_2_code
+        type: string
+        description: Second FOLIO level, e.g. "Industry". Denormalized at ingest so facet
+          queries read a column instead of walking a recursive CTE.
+
+      - name: level_3_code
+        sql: level_3_code
+        type: string
+        description: Third FOLIO level — the sector a matter is actually tagged with, e.g.
+          "Health Care Industry".
+
+      - name: updated_at
+        sql: updated_at
+        type: time
+        description: When the ingest last wrote this concept. Operational, not analytical.
+
+views:
+  - name: comparable_deals
+    description: >-
+      The Explore tab's query surface: matters with their FOLIO industry labels and levels.
+      Agents should prefer this view over the raw cubes — it is the curated selection. Drill
+      down by stepping level_1_code -> level_2_code -> label; this Cube version does not expose
+      native hierarchies over the REST API (see the file header).
+    cubes:
+      - join_path: matters
+        includes:
+          - id
+          - target_name
+          - acquirer_name
+          - signing_date
+          - signing_year
+          - deal_size_band
+          - has_industry
+          - is_inferred_industry
+          - n
+          - with_industry_n
+      - join_path: matters.folio_concepts
+        includes:
+          - label
+          - level_1_code
+          - level_2_code
+          - level_3_code
