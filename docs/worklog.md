@@ -1197,3 +1197,63 @@ disagree.
 $ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
 177 passed in 84.32s          # was 166
 ```
+
+## #18 — POST /comparables: FOLIO filter, then hybrid rank
+
+### Verification against the running stack
+
+```
+$ docker compose up -d --build api
+$ curl -s -X POST localhost:8000/comparables -H 'content-type: application/json' \
+    -d '{"folio_industry_code":"RCSG4k3ah1Pu5YgPexPgOmL","limit":3}'
+
+candidates 25 returned 3
+applied: {'folio_industry_code': 'RCSG4k3ah1Pu5YgPexPgOmL',
+          'folio_industry_label': 'Health Care Industry',
+          'rolled_up_to_descendants': 91, 'deal_size_band': None,
+          'ranked_by': 'matter id (no description given)'}
+  contract_1   | ACCELERON PHARMA INC.       | Health Care Industry | inferred True
+  contract_104 | PPD, INC.                   | Health Care Industry | inferred True
+  contract_105 | PRA HEALTH SCIENCES, INC.   | Health Care Industry | inferred True
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+188 passed in 87.25s          # was 177
+```
+
+That is demo script 1's first beat working end to end against real data — and note
+`rolled_up_to_descendants: 91`, the FOLIO hierarchy doing its job: filtering on Health Care
+matched the concept plus its 91 descendants via the denormalized level columns.
+
+### Filter before rank, not after
+
+Ranking the corpus and dropping out-of-filter results afterwards is the obvious version and it
+is wrong twice: a request for ten healthcare comparables returns three because seven of the
+top ten were filtered away, and the scores that survive were normalized against a corpus the
+user never asked about. Here the filter runs in Postgres and the hybrid index is built over
+exactly the surviving matters, so relevance is relative to the requested slice. Asserted by a
+test that ranks a health-care-filtered request and requires every result to still be health
+care.
+
+### An unknown FOLIO code is a 400, not an empty list
+
+The nastiest failure mode in the design: zero results and a bad filter value look identical to
+a reader. A code that resolves to nothing raises rather than returning `[]`.
+
+### Two things the tests taught
+
+**`AmbiguousParameter`.** `%(industry)s IS NULL` gives Postgres no way to infer a parameter
+type and the endpoint 500'd. Fixed with explicit `::text` / `::date` casts — every filter is
+still a bound parameter, never interpolated.
+
+**The 503 was correct and my test was wrong.** Ranking free text needs that text embedded, so
+with no key only *cached* queries can be ranked. My first tests used ad-hoc descriptions and
+got 503s. That is the designed contract from #16, not a limitation to work around: the no-key
+tests now use a query `warm_cache` embedded, and a separate test asserts an uncached query with
+no key returns 503 naming the cached count and the fixing command — never a silent API call,
+never a bare 500.
+
+### Not done
+
+- `deal_size_band` is accepted and only matches `'unknown'`, because that is the only value any
+  matter has (#9). It is wired so it works the day values land, and it cannot silently match
+  everything in the meantime.

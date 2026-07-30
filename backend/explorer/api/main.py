@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from explorer import __version__
+from explorer.api.comparables import router as comparables_router
 from explorer.api.errors import install_error_handlers
 from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.settings import settings
@@ -33,6 +34,7 @@ app = FastAPI(
 )
 
 install_error_handlers(app)
+app.include_router(comparables_router)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
