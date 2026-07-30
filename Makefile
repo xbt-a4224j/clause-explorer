@@ -29,3 +29,6 @@ logs:
 fmt:
 	ruff format .
 	cd frontend && npx prettier --write src
+
+migrate:       ## apply schema (up|down|reset via ARG=)
+	PYTHONPATH=backend python -m explorer.db.migrate $(or $(ARG),up)
