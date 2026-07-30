@@ -177,3 +177,40 @@ class TestLoad:
                 "SELECT count(DISTINCT deal_point_name) FROM deal_points"
             ).fetchone()[0]
         assert names == 92
+
+
+class TestNumericValue:
+    """MAUD records durations as text — "4 business days", "within 12 months". The number is
+    in the gold label, so pulling it out is normalisation, not extraction: nothing here reads
+    contract text or infers anything (#15 needs a numeric column to take medians over)."""
+
+    @pytest.mark.parametrize(
+        ("position", "expected"),
+        [
+            ("4 business days", 4.0),
+            ("within 12 months", 12.0),
+            ("3 calendar days", 3.0),
+            ("50%", 50.0),
+            ("12 months or longer", 12.0),
+            ("2.5 business days", 2.5),
+        ],
+    )
+    def test_leading_number_is_read(self, position: str, expected: float) -> None:
+        from explorer.ingest.maud import numeric_from_position
+
+        assert numeric_from_position(position) == expected
+
+    @pytest.mark.parametrize(
+        "position",
+        [
+            "All Cash",
+            "None",
+            "Other",
+            "Greater than 5 business days",  # a bound, not a value — storing 5 would be a lie
+            "",
+        ],
+    )
+    def test_non_numeric_positions_are_none(self, position: str) -> None:
+        from explorer.ingest.maud import numeric_from_position
+
+        assert numeric_from_position(position) is None

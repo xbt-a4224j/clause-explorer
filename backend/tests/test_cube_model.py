@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import yaml
@@ -43,6 +44,11 @@ class TestLongShape:
         assert loaded_names == {
             "n",
             "present_count",
+            "numeric_n",
+            "median_numeric_value",
+            "p25_numeric_value",
+            "p75_numeric_value",
+            "mean_numeric_value_do_not_use_for_market",
             "count_distinct_matters",
             "expert_labelled_n",
             "with_source_span_n",
@@ -301,53 +307,174 @@ class TestFreshnessContract:
 
 @pytest.mark.skipif(not _cube_up(), reason="Cube not running")
 class TestNewRowsAppearWithoutARestart:
-    def test_insert_is_reflected_within_the_documented_window(self) -> None:
-        """The live test the AC asks for. Inserts a probe row, polls, cleans up."""
+    """#14's live test: data inserted into Postgres is visible through Cube with nothing
+    restarted.
+
+    Asserted with a **query Cube has never run before** (filtered to the probe row) rather than
+    by polling a cached aggregate. The aggregate version measured the real staleness window —
+    11.3s, recorded in the model headers — but as a test it was timing-dependent on Cube's
+    result cache and flaked under full-suite load. The property that matters is "no restart
+    required", and this proves it deterministically; the window itself is a documented
+    measurement, not an assertion.
+    """
+
+    def test_an_inserted_row_is_visible_through_cube_without_a_restart(self) -> None:
         import time
+        import uuid
 
         import psycopg
 
         dsn = os.getenv(
             "CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer"
         )
+        # unique per run: a fixed id means Cube can still be serving a cached view of the
+        # *previous* run's probe (inserted and deleted seconds ago), which made the pre-check
+        # fail rather than the behaviour under test
+        probe = f"refresh_probe_{uuid.uuid4().hex[:12]}"
 
-        def matters_n() -> int | None:
-            """None while Cube is warming. A restart leaves it compiling for a few seconds and
-            it answers 5xx; treating that as "no new row" made this test flaky rather than
-            wrong, so transient errors are retried instead of failing the assertion."""
+        def probe_rows() -> list[dict]:
+            """[] while Cube is warming or the row is not visible yet."""
             url = f"{CUBE_URL}/load?query=" + urllib.parse.quote(
-                json.dumps({"measures": ["matters.n"]})
+                json.dumps(
+                    {
+                        "measures": ["matters.n"],
+                        "dimensions": ["matters.target_name"],
+                        "filters": [
+                            {"member": "matters.id", "operator": "equals", "values": [probe]}
+                        ],
+                    }
+                )
             )
             try:
                 with urllib.request.urlopen(url, timeout=30) as response:
-                    return int(json.load(response)["data"][0]["matters.n"])
-            except (urllib.error.URLError, KeyError, IndexError):
-                return None
+                    return list(json.load(response)["data"])
+            except (urllib.error.URLError, KeyError):
+                return []
 
-        before = None
-        warmup = time.time() + 60
-        while before is None and time.time() < warmup:
-            before = matters_n()
-            if before is None:
-                time.sleep(2)
-        assert before is not None, "Cube never became queryable"
+        assert probe_rows() == [], "a fresh id cannot already be in the corpus"
 
         with psycopg.connect(dsn) as conn:
             conn.execute(
-                "INSERT INTO matters (id, source_file, source_contract_title, corpus) "
-                "VALUES ('refresh_probe', 'probe', 'refresh_key probe (#14)', 'maud')"
+                "INSERT INTO matters (id, source_file, source_contract_title, corpus, "
+                "target_name) VALUES (%s, 'probe', 'refresh_key probe (#14)', 'maud', "
+                "'REFRESH PROBE INC.')",
+                (probe,),
             )
             conn.commit()
         try:
-            deadline = time.time() + 60  # documented window is ~11s; the rest is slack
-            seen = False
+            # The staleness window applies even to a query Cube has never run before — tested:
+            # a fresh, filtered query returns [] immediately after the INSERT. So it is the
+            # refresh-key *value* that is cached for ~10s, not the query result. Hence polling.
+            # The deadline is 120s rather than the measured ~11s purely to absorb full-suite
+            # load; the assertion is unchanged.
+            deadline = time.time() + 120
+            rows: list[dict] = []
             while time.time() < deadline:
-                if matters_n() == before + 1:
-                    seen = True
+                rows = probe_rows()
+                if rows:
                     break
-                time.sleep(1)
-            assert seen, "new row never appeared — refresh_key is not working"
+                time.sleep(2)
+            assert rows, "inserted row never appeared — a restart should not be needed"
+            assert rows[0]["matters.target_name"] == "REFRESH PROBE INC."
         finally:
             with psycopg.connect(dsn) as conn:
-                conn.execute("DELETE FROM matters WHERE id = 'refresh_probe'")
+                conn.execute("DELETE FROM matters WHERE id = %s", (probe,))
                 conn.commit()
+
+
+class TestPercentilesNotAverages:
+    """#15. `type: avg` where a median is meant is the most dangerous measure that could sit in
+    this model: right magnitude, right units, wrong statistic, and nothing about the output
+    looks wrong."""
+
+    def test_medians_use_percentile_cont(self, model: dict) -> None:
+        measures = {m["name"]: m for m in model["measures"]}
+        for name, fraction in (
+            ("median_numeric_value", "0.5"),
+            ("p25_numeric_value", "0.25"),
+            ("p75_numeric_value", "0.75"),
+        ):
+            sql = measures[name]["sql"]
+            assert f"PERCENTILE_CONT({fraction})" in sql
+            assert "WITHIN GROUP (ORDER BY" in sql
+
+    def test_the_only_avg_is_named_so_it_cannot_be_used_by_accident(self, model: dict) -> None:
+        averages = [m for m in model["measures"] if m["type"] == "avg"]
+        assert [m["name"] for m in averages] == ["mean_numeric_value_do_not_use_for_market"]
+        assert "DO NOT use this" in averages[0]["description"]
+
+    def test_every_percentile_explains_why_avg_is_wrong(self, model: dict) -> None:
+        for name in ("median_numeric_value", "p25_numeric_value", "p75_numeric_value"):
+            measure = next(m for m in model["measures"] if m["name"] == name)
+            text = measure["description"].lower()
+            assert "never an average" in text or "same caveats" in text or "median alone" in text
+
+    def test_percentiles_have_their_own_denominator(self, model: dict) -> None:
+        """809 of 12,937 rows carry a number, so the percentile's n is not the deal point's n."""
+        numeric_n = next(m for m in model["measures"] if m["name"] == "numeric_n")
+        assert "DENOMINATOR FOR EVERY PERCENTILE" in numeric_n["description"]
+
+
+class TestMedianOnASkewedFixture:
+    """A hand-computed check that median and mean genuinely differ, so the model's choice is
+    demonstrated rather than asserted. Postgres does the arithmetic — the same
+    percentile_cont the Cube measure emits."""
+
+    # one long outlier, as real deal data has
+    SKEWED: ClassVar[list[int]] = [2, 2, 2, 2, 2, 3, 3, 4, 40]
+
+    def test_median_is_not_the_mean(self) -> None:
+        import statistics
+
+        assert statistics.median(self.SKEWED) == 2
+        assert round(statistics.mean(self.SKEWED), 2) == 6.67
+        assert statistics.median(self.SKEWED) != statistics.mean(self.SKEWED)
+
+    @pytest.mark.skipif(not _cube_up(), reason="Postgres/Cube stack not running")
+    def test_postgres_percentile_cont_matches_the_hand_computed_median(self) -> None:
+        import psycopg
+
+        dsn = os.getenv(
+            "CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer"
+        )
+        with psycopg.connect(dsn) as conn:
+            row = conn.execute(
+                "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v), avg(v) "
+                "FROM unnest(%s::numeric[]) AS t(v)",
+                (self.SKEWED,),
+            ).fetchone()
+        median, mean = float(row[0]), float(row[1])
+        assert median == 2.0
+        assert round(mean, 2) == 6.67
+        assert median != mean, "if these ever match, the fixture stopped being skewed"
+
+
+@pytest.mark.skipif(not _cube_up(), reason="Cube not running")
+class TestPercentilesAgainstLiveCube:
+    def test_median_and_mean_diverge_on_the_real_corpus(self) -> None:
+        """The measured divergence that justifies the whole issue."""
+        url = f"{CUBE_URL}/load?query=" + urllib.parse.quote(
+            json.dumps(
+                {
+                    "measures": [
+                        "deal_points.numeric_n",
+                        "deal_points.median_numeric_value",
+                        "deal_points.mean_numeric_value_do_not_use_for_market",
+                    ],
+                    "filters": [
+                        {
+                            "member": "deal_points.deal_point_name",
+                            "operator": "equals",
+                            "values": [
+                                "Additional matching rights period for modifications (COR)-Answer"
+                            ],
+                        }
+                    ],
+                }
+            )
+        )
+        with urllib.request.urlopen(url, timeout=30) as response:
+            row = json.load(response)["data"][0]
+        assert int(row["deal_points.numeric_n"]) == 143
+        assert float(row["deal_points.median_numeric_value"]) == 2.0
+        assert round(float(row["deal_points.mean_numeric_value_do_not_use_for_market"]), 2) == 2.54

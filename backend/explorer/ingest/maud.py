@@ -142,6 +142,26 @@ def _normalize_with_offsets(source: str) -> tuple[str, list[int]]:
     return "".join(chars), offsets
 
 
+# MAUD records durations and percentages as answer text: "4 business days", "within 12
+# months", "50%". The number is part of the expert's own label, so reading it is normalisation
+# — nothing here looks at contract text. A position that only bounds a value ("Greater than 5
+# business days") yields None: storing 5 would turn an inequality into a data point, and it
+# would sit in a median looking exactly like a measured 5.
+LEADING_NUMBER = re.compile(
+    r"^(?:within|approximately|about)?\s*(\d+(?:\.\d+)?)\s*(?:%|[a-z])", re.IGNORECASE
+)
+BOUND_WORDS = ("greater than", "less than", "more than", "fewer than", "at least", "at most")
+
+
+def numeric_from_position(position: str) -> float | None:
+    """The number an expert recorded in this answer, or None if the answer is not a value."""
+    text = position.strip().lower()
+    if not text or any(text.startswith(word) for word in BOUND_WORDS):
+        return None
+    match = LEADING_NUMBER.match(text)
+    return float(match.group(1)) if match else None
+
+
 @dataclass(frozen=True)
 class Matter:
     id: str
@@ -158,6 +178,7 @@ class DealPoint:
     source_span_start: int | None
     source_span_end: int | None
     source_excerpt: str
+    numeric_value: float | None = None
     is_inferred: bool = False
 
 
@@ -217,6 +238,7 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
                 matter_id=matter_id,
                 deal_point_name=deal_point_name,
                 position=answer,
+                numeric_value=numeric_from_position(answer),
                 source_span_start=span[0] if span else None,
                 source_span_end=span[1] if span else None,
                 source_excerpt=excerpt,
@@ -239,18 +261,20 @@ WHERE (matters.source_file, matters.source_contract_title, matters.corpus)
 
 UPSERT_DEAL_POINT = """
 INSERT INTO deal_points
-    (matter_id, deal_point_name, position, source_span_start, source_span_end, is_inferred)
-VALUES (%s, %s, %s, %s, %s, %s)
+    (matter_id, deal_point_name, position, numeric_value, source_span_start, source_span_end,
+     is_inferred)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (matter_id, deal_point_name) DO UPDATE SET
     position = EXCLUDED.position,
+    numeric_value = EXCLUDED.numeric_value,
     source_span_start = EXCLUDED.source_span_start,
     source_span_end = EXCLUDED.source_span_end,
     is_inferred = EXCLUDED.is_inferred
-WHERE (deal_points.position, deal_points.source_span_start, deal_points.source_span_end,
-       deal_points.is_inferred)
+WHERE (deal_points.position, deal_points.numeric_value, deal_points.source_span_start,
+       deal_points.source_span_end, deal_points.is_inferred)
   IS DISTINCT FROM
-      (EXCLUDED.position, EXCLUDED.source_span_start, EXCLUDED.source_span_end,
-       EXCLUDED.is_inferred)
+      (EXCLUDED.position, EXCLUDED.numeric_value, EXCLUDED.source_span_start,
+       EXCLUDED.source_span_end, EXCLUDED.is_inferred)
 """
 
 
@@ -267,6 +291,7 @@ def upsert_maud(conn: Connection, matters: list[Matter], points: list[DealPoint]
                     p.matter_id,
                     p.deal_point_name,
                     p.position,
+                    p.numeric_value,
                     p.source_span_start,
                     p.source_span_end,
                     p.is_inferred,
@@ -308,6 +333,7 @@ def run(dsn: str | None = None) -> dict[str, object]:
         "deal_point_names": len({p.deal_point_name for p in points}),
         "spans_located": located,
         "spans_null": len(points) - located,
+        "with_numeric_value": sum(1 for p in points if p.numeric_value is not None),
         "duration_ms": duration_ms,
     }
     log.info("ingest_maud", **result)

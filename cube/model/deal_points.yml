@@ -92,6 +92,16 @@ cubes:
           e.g. "All Cash" or '"Inconsistent" with fiduciary duties'. Group by this to get the
           distribution of outcomes for one deal point.
 
+      - name: numeric_value
+        sql: numeric_value
+        type: number
+        description: >-
+          The number inside the expert's answer text, where there is one — "4 business days"
+          becomes 4.0. NULL for categorical answers and for answers that only bound a value
+          ("Greater than 5 business days"), because storing 5 there would put an inequality
+          into a median looking like a measurement. Units differ by deal point: always filter
+          deal_point_name before aggregating this.
+
       - name: is_inferred
         sql: is_inferred
         type: boolean
@@ -132,6 +142,63 @@ cubes:
           threshold. Caveat the model must respect: MAUD records absence as the literal answer
           "None" for most deal points but not all, so for a deal point whose answers are graded
           standards rather than present/absent, group by position instead of using this measure.
+
+      # ── Percentiles (#15) ────────────────────────────────────────────────────────────────
+      #
+      # There is no `type: median` in Cube, and `type: avg` is NOT a substitute. It is the
+      # single most dangerous measure that could sit in this file: it returns a number of the
+      # right magnitude, in the right units, that is simply the wrong statistic. Measured on
+      # the loaded corpus, "Additional matching rights period for modifications (COR)" has
+      # mean 2.54 and median 2.0 — the mean is pulled up by a handful of long periods, and a
+      # partner quoting "about 2.5 business days is market" would be quoting an artefact of
+      # the tail rather than what deals actually do.
+      #
+      # These read `numeric_value`, which is the number inside the expert's own answer text
+      # ("4 business days" -> 4.0). Only 809 of 12,937 rows have one, so ALWAYS pair a
+      # percentile with numeric_n — the sample size for the percentile is not the sample size
+      # for the deal point.
+      - name: numeric_n
+        type: count
+        filters:
+          - sql: "{CUBE}.numeric_value IS NOT NULL"
+        description: >-
+          THE DENOMINATOR FOR EVERY PERCENTILE BELOW — how many answers in the selection carry
+          a number at all. 809 of 12,937 rows corpus-wide, because most deal points are
+          categorical. Never report a median without it.
+
+      - name: median_numeric_value
+        type: number
+        sql: "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
+        description: >-
+          The median of the numeric answers in the selection — e.g. the median initial matching
+          rights period in business days. Use this, never an average: the distributions here are
+          skewed by a few long outliers and the mean reports the tail rather than the market.
+          Filter by deal_point_name first or this mixes days, months and percents into one
+          meaningless number. Report with numeric_n.
+
+      - name: p25_numeric_value
+        type: number
+        sql: "PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
+        description: >-
+          25th percentile of the numeric answers, same units and same caveats as
+          median_numeric_value. Use with p75 to show the spread a median hides.
+
+      - name: p75_numeric_value
+        type: number
+        sql: "PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
+        description: >-
+          75th percentile of the numeric answers. Together with p25 this is the range to quote
+          when asked "what is market" — a median alone implies a consensus the spread may not
+          support.
+
+      - name: mean_numeric_value_do_not_use_for_market
+        type: avg
+        sql: numeric_value
+        description: >-
+          The arithmetic mean, present ONLY so the calibration write-up can show how far it
+          diverges from the median. DO NOT use this to answer "what is market" — that is
+          median_numeric_value. Corpus example: mean 2.54 vs median 2.0 business days for
+          additional matching rights periods.
 
       - name: count_distinct_matters
         type: count_distinct

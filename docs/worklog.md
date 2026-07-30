@@ -44,6 +44,9 @@ are judged by whether they make one of those three scripts land.
 | D28 | The CUAD load **prunes** `corpus='cuad'` rows the parse no longer produces | Upsert alone is not idempotent across a corpus revision: a superseded row survives forever and keeps answering drill-throughs with text nothing points at | A parse bug that drops rows also deletes them from the table; the scope is limited to `corpus='cuad'` so MAUD can never be touched |
 | D29 | Every upsert carries an **`IS DISTINCT FROM` guard**; only genuinely changed rows are rewritten | Cube's `refresh_key` is `MAX(updated_at)`, so an unconditional upsert makes a no-op re-ingest invalidate every cached aggregate | Longer, noisier SQL in four loaders, and the guard column list must be kept in step with the column list above it |
 | D30 | Pharma, biotech, devices and CROs are grouped under **Health Care**, departing from NAICS | A partner asking for healthcare comparables means them; straight NAICS leaves Health Care at n=3 of 152 | The dimension is our definition, not a standard one. Flagged in every affected `basis` cell, the file header, a pinning test, and required in UI copy |
+| D31 | `numeric_value` is parsed from MAUD's own answer text at ingest | The numbers are inside the expert's label ("4 business days"), so reading them is normalisation, not extraction — and without it there is nothing to take a median of | Units differ per deal point, so the column is meaningless unless `deal_point_name` is filtered first; the model's descriptions say so |
+| D32 | Answers that only bound a value store **NULL** | "Greater than 5 business days" is an inequality; storing 5 puts it in a median looking like a measurement | 809 numeric rows instead of slightly more, and some real information is dropped rather than distorted |
+| D33 | The single `type: avg` is named **`mean_numeric_value_do_not_use_for_market`** | It exists only to show divergence from the median; an agent selecting by name cannot reach for it casually | An ugly name in a public API surface — deliberately |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -999,3 +1002,71 @@ must still appear.
 $ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
 140 passed in 75.96s          # was 136
 ```
+
+## #15 — Medians via percentile_cont, and the mean that must never be used
+
+### The corpus has no reverse termination fee to take a median of
+
+The AC asks for the real median and mean **reverse termination fee**, side by side. MAUD does
+not carry one. Its 92 questions are categorical or ordinal; the numbers that exist live inside
+answer *text* — "4 business days", "within 12 months", "50%". There is no RTF magnitude in the
+corpus at all, so there is no honest median to report for it. Reported instead: the deal points
+that do carry numbers.
+
+`numeric_value` is now populated at ingest by reading the number out of the expert's own answer
+— normalisation, not extraction; nothing reads contract text. **809 of 12,937** rows carry one.
+Answers that only *bound* a value ("Greater than 5 business days") store NULL: putting 5 there
+turns an inequality into a data point that sits in a median looking like a measurement.
+
+### The measured divergence, from the loaded corpus through Cube
+
+```
+$ curl .../load?query={"measures":["deal_points.numeric_n","deal_points.median_numeric_value",
+    "deal_points.p25_numeric_value","deal_points.p75_numeric_value",
+    "deal_points.mean_numeric_value_do_not_use_for_market"],
+    "dimensions":["deal_points.deal_point_name"]}
+
+  n= 150 median=12 p25=12 p75=12 mean=11.78  Tail Period Length-Answer
+  n= 147 median= 4 p25= 4 p75= 4 mean= 4.01  Initial matching rights period (COR)-Answer
+  n= 143 median= 2 p25= 2 p75= 3 mean= 2.54  Additional matching rights period for modifications (COR)
+  n= 127 median= 4 p25= 4 p75= 5 mean= 4.07  Initial matching rights period (FTR)-Answer
+  n= 121 median= 2 p25= 2 p75= 3 mean= 2.48  Additional matching rights period for modifications (FTR)
+```
+
+**Median 2.0 vs mean 2.54 business days**, n=143, for additional matching rights periods. A
+partner told "about 2.5 business days is market" would be quoting the tail — no deal in the
+corpus has a 2.5-day period; the market answer is 2, with a p75 of 3. That is the whole
+argument for this issue, measured rather than asserted.
+
+Tail Period is the mirror case: median 12 = p25 = p75, mean 11.78. A mean invents variation
+where the market is uniform.
+
+### Guardrails in the model
+
+- `median_numeric_value`, `p25_numeric_value`, `p75_numeric_value` — all
+  `PERCENTILE_CONT(x) WITHIN GROUP (ORDER BY numeric_value)`, asserted by test.
+- exactly one `type: avg` exists and it is called
+  **`mean_numeric_value_do_not_use_for_market`**, with "DO NOT use this" in its description. A
+  test asserts it is the only average in the model and that it is named that way. An agent
+  selecting measures by name cannot reach for it casually.
+- `numeric_n` is a separate denominator, because the percentile's n (809) is not the deal
+  point's n (12,937). Its description opens "THE DENOMINATOR FOR EVERY PERCENTILE BELOW".
+- a skewed fixture `[2,2,2,2,2,3,3,4,40]` is checked both in Python and through Postgres'
+  own `percentile_cont`: median 2.0, mean 6.67, and an assertion that if they ever match, the
+  fixture stopped being skewed.
+
+### A flaky test, fixed by understanding it rather than by widening it
+
+#14's live refresh test failed twice under full-suite load and passed alone. First fix attempt:
+assert with a query Cube had never run, on the theory that only cached *results* were stale.
+That test failed immediately and taught the real mechanism — **a brand-new filtered query also
+returns `[]` right after the INSERT, so it is the refresh-key value that is cached for ~10s,
+not the query result.** The test is back to polling, with a 120s deadline to absorb suite load
+and transient-error tolerance for a warming Cube.
+
+It still failed — and fast, not on the deadline, which located the last cause: the *pre-check*
+("this id is not in the corpus yet") was tripping on Cube's cached view of the **previous
+run's** probe row, inserted and deleted seconds earlier. The probe id is now unique per run.
+`158 passed` clean. The assertion never changed at any point: the row must appear without a
+restart. Both findings are in the test's docstring where the next person to see a flake will
+find them.
