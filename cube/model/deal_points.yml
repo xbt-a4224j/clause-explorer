@@ -1,0 +1,141 @@
+# The governed metric vocabulary for deal points (#12).
+#
+# THIS FILE IS AN API. The agent (#24) reads these names from /meta and selects from them; the
+# eval (#27) uses them as its label space. Renaming a measure breaks eval fixtures the same way
+# renaming an endpoint breaks callers. Add, deprecate, but do not quietly rename.
+#
+# `description` is written for the model, not for a human browsing a schema. It is the only
+# thing the agent sees when deciding whether a measure answers the question asked, so it says
+# what the measure counts, what its denominator is, and when not to use it.
+#
+# Two shape rules this file exists to enforce:
+#
+#   1. `deal_point_name` is a DIMENSION, because deal_points is LONG. MAUD ships 92 deal points
+#      and the ABA revises them; a 93rd is rows, and this file does not change.
+#   2. Numerator and denominator are SEPARATE measures. The UI must be able to render "6 of 8".
+#      A pre-divided ratio measure would force 75%, which claims precision an n of 8 does not
+#      support (CLAUDE.md: counts below threshold, percentages above).
+#
+# Never `count_distinct_approx` — HyperLogLog is approximate and this product's claim is
+# defensible numbers. A test greps for it.
+
+cubes:
+  - name: deal_points
+    sql_table: public.deal_points
+    description: >-
+      One row per matter per ABA deal point, as labelled by the expert annotators of the MAUD
+      corpus. This is the grain for every "what was negotiated" question: how many deals took a
+      given position on a given deal point. Filter by deal_point_name first — an unfiltered
+      count mixes 92 unrelated questions together and means nothing.
+
+    # Cube invalidates cached aggregates when this value changes. The ingest is careful never
+    # to bump updated_at on a row whose content did not change (#11), so a no-op re-ingest
+    # does not invalidate anything.
+    refresh_key:
+      sql: SELECT MAX(updated_at) FROM public.deal_points
+
+    dimensions:
+      - name: id
+        sql: id
+        type: number
+        primary_key: true
+        public: false
+
+      - name: matter_id
+        sql: matter_id
+        type: string
+        description: >-
+          The agreement this labelled deal point belongs to. Use with count_distinct_matters to
+          answer "how many deals", as opposed to how many labelled rows.
+
+      - name: deal_point_name
+        sql: deal_point_name
+        type: string
+        description: >-
+          The ABA deal point being answered, e.g. "Fiduciary exception: Board determination
+          (no-shop)" or "Type of Consideration-Answer". 92 distinct values in the loaded corpus.
+          ALWAYS filter on this before reading any count: the cube holds every deal point at
+          once, so an unfiltered n is the total number of labels, not a sample size.
+
+      - name: position
+        sql: position
+        type: string
+        description: >-
+          The negotiated position the annotator recorded for this deal point — the answer text,
+          e.g. "All Cash" or '"Inconsistent" with fiduciary duties'. Group by this to get the
+          distribution of outcomes for one deal point.
+
+      - name: is_inferred
+        sql: is_inferred
+        type: boolean
+        description: >-
+          FALSE for MAUD's expert labels, TRUE for anything a model extracted. Every row
+          currently loaded is FALSE. Filter to is_inferred = false when a figure has to be
+          defensible as expert-labelled; never mix the two in one number without saying so.
+
+      - name: has_source_span
+        sql: "{CUBE}.source_span_start IS NOT NULL"
+        type: boolean
+        description: >-
+          Whether this labelled position can be traced to a byte range in the source agreement
+          and therefore drilled into. TRUE for 12,442 of 12,937 loaded rows.
+
+      - name: updated_at
+        sql: updated_at
+        type: time
+        description: When this row was last written by the ingest. Operational, not analytical.
+
+    measures:
+      - name: n
+        type: count
+        description: >-
+          THE DENOMINATOR. The number of labelled matters in the current selection — the sample
+          size. Every figure this product reports must carry it. With a deal_point_name filter
+          applied, this is "how many agreements we have an answer for on that deal point".
+          Report it alongside any count or percentage, never on its own as a headline.
+
+      - name: present_count
+        type: count
+        filters:
+          - sql: "{CUBE}.position NOT IN ('None', 'No', 'N/A')"
+        description: >-
+          THE NUMERATOR for "how many deals have this provision at all". Counts rows whose
+          recorded position is anything other than an explicit absence. Pair it with n and
+          render the two as "6 of 8" — never divide them into a percentage below the reporting
+          threshold. Caveat the model must respect: MAUD records absence as the literal answer
+          "None" for most deal points but not all, so for a deal point whose answers are graded
+          standards rather than present/absent, group by position instead of using this measure.
+
+      - name: count_distinct_matters
+        type: count_distinct
+        sql: matter_id
+        description: >-
+          Exact number of distinct agreements in the selection. Use when a matter could appear
+          more than once — for instance when several deal points are selected at once — and n
+          would double-count agreements. Exact by construction; approximate distinct counts are
+          forbidden in this model.
+
+      - name: expert_labelled_n
+        type: count
+        filters:
+          - sql: "{CUBE}.is_inferred = false"
+        description: >-
+          The denominator restricted to expert-labelled rows, excluding anything a model
+          extracted. Use this when a claim has to be defensible as human-labelled. Equal to n
+          for the corpus as currently loaded.
+
+      - name: with_source_span_n
+        type: count
+        filters:
+          - sql: "{CUBE}.source_span_start IS NOT NULL"
+        description: >-
+          How many rows in the selection can be drilled through to the clause text behind them.
+          Use as the denominator when reporting drill-through coverage; do not use it as the
+          sample size for a negotiated-terms figure.
+
+      - name: matters_total
+        type: count_distinct
+        sql: matter_id
+        description: >-
+          Alias of count_distinct_matters kept for the coverage grid (#22), where the cell value
+          is "how many agreements sit in this industry x period cell". Exact, not approximate.

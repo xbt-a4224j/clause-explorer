@@ -816,3 +816,78 @@ a filter the product offers, because no such flag exists in MAUD or EDGAR.
 No test was weakened for any of this. `test_major_group_maps` was rewritten to assert meat
 packing (SIC 2011) still maps to Manufacturing, so the crosswalk's default behaviour is still
 pinned alongside the deliberate exception.
+
+## #12 — Cube model for deal_points (LONG), numerator and denominator separate
+
+`cube/model/deal_points.yml`. Six measures, seven dimensions, every one with a description
+written for the model rather than for a human — `/meta` is all the agent sees when deciding
+whether a measure answers the question (#24).
+
+### Verification — a real rollup through the Cube REST API
+
+```
+$ curl -s -G 'http://localhost:4000/cubejs-api/v1/load' --data-urlencode 'query={
+    "measures":["deal_points.n","deal_points.present_count"],
+    "dimensions":["deal_points.position"],
+    "filters":[{"member":"deal_points.deal_point_name","operator":"equals",
+                "values":["Fiduciary exception:  Board determination standard-Answer (no-shop)"]}],
+    "order":{"deal_points.n":"desc"}}'
+
+  n= 47  present=  0  None
+  n= 44  present= 44  "Inconsistent" with fiduciary duties
+  n= 35  present= 35  "Reasonably likely/expected to be inconsistent" with fiduciary duties
+  n=  9  present=  9  Other specified standard
+  n=  7  present=  7  "Reasonably likely/expected violation" of fiduciary duties
+  n=  5  present=  5  "Reasonably likely/expected breach" of fiduciary duties
+  n=  2  present=  2  "Required to comply" with fiduciary duties
+  n=  1  present=  1  "Violation" of fiduciary duties
+  n=  1  present=  1  "Breach" of fiduciary duties
+
+  refreshKeyValues: [[{"max":"2026-07-30T19:13:21.055"}]]     # refresh_key is live
+```
+
+That totals **n=151** and reads, in the product's own language: a fiduciary out appears in
+**104 of 151** agreements, and the standard is "inconsistent with fiduciary duties" in 44 of
+them. Numerator and denominator arrive as separate measures, so the UI can render "104 of 151"
+and is never handed a pre-divided 68.9%.
+
+```
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+128 passed in 65.61s          # was 115
+$ ruff format --check . && ruff check . && mypy backend/explorer --ignore-missing-imports
+All checks passed! / Success: no issues found in 22 source files
+```
+
+### The model is treated as an API
+
+`test_cube_model.py` pins the properties that make it safe to point an LLM at:
+
+- `deal_point_name` is a dimension, and **no measure is named after a deal point** — MAUD's
+  93rd is rows, and this file does not change.
+- the exact set of six measure names is asserted, with a message saying that changing it is an
+  API change, because those names are the eval's label space (#27).
+- **no `count_distinct_approx`** anywhere in the model directory, and every distinct count is
+  exact.
+- every public measure and dimension has a non-empty description, and the descriptions
+  collectively say when *not* to use a measure.
+- `refresh_key` is `MAX(updated_at)`, which is only safe because #11's ingest stopped touching
+  unchanged rows.
+
+The grep test failed first time on the file's **own header comment** telling the next author
+never to use `count_distinct_approx`. Fixed by ignoring comment lines — a comment cannot
+configure anything — rather than by softening the assertion or rewording the warning.
+
+### `present_count` and its honest limit
+
+The numerator counts positions other than an explicit absence (`None`, `No`, `N/A`). Its
+description says plainly that MAUD records absence as the literal answer "None" for most deal
+points but not all, so for a deal point whose answers are graded standards rather than
+present/absent, the model should group by `position` instead. A numerator that silently means
+the wrong thing on some deal points is exactly the "definition of the number" error the
+project exists to close, so the caveat lives where the agent will read it.
+
+### Not done
+
+- No `matters` cube yet, so no industry/date dimensions and no join — that is #13, and the
+  join to it is deliberately absent rather than stubbed.
+- Medians are #15. There is no `type: avg` anywhere in this file and there will not be one.
