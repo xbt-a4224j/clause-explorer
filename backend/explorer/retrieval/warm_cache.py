@@ -52,8 +52,16 @@ ORDER BY id
 
 
 def gather_texts(dsn: str | None = None) -> dict[str, str]:
-    """Everything the product needs a vector for, keyed by a readable source id."""
+    """Everything the product needs a vector for, keyed by a readable source id.
+
+    Eval queries are included deliberately: the retrieval ablation (#17) must run with no API
+    key, and it cannot if the queries it issues are uncached.
+    """
+    from explorer.evals.retrieval_set import eval_query_texts
+
     texts: dict[str, str] = {}
+    for index, query in enumerate(eval_query_texts(dsn)):
+        texts[f"evalquery:{index}"] = query
     with psycopg.connect(dsn or settings.database_url) as conn:
         for matter_id, summary in conn.execute(MATTER_SUMMARY_SQL):
             if summary:

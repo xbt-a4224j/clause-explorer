@@ -1124,3 +1124,76 @@ nowhere.
 $ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
 166 passed in 73.80s          # was 158
 ```
+
+## #17 — Hybrid retrieval with a real ablation
+
+### The ablation, run with no API key
+
+```
+$ env -u OPENAI_API_KEY python -m explorer.evals.retrieval_ablation
+{"eval": "retrieval_ablation", "queries": 90, "corpus": 152, "duration_ms": 1889.1,
+ "best": "hybrid alpha=0.5"}
+
+| method            | recall@1 | recall@5 | recall@10 |  MRR  |
+|-------------------|----------|----------|-----------|-------|
+| pure BM25         |  0.711   |  0.822   |   0.911   | 0.769 |
+| hybrid alpha=0.3  |  0.722   |  0.856   |   0.911   | 0.775 |
+| hybrid alpha=0.5  |  0.744   |  0.856   |   0.900   | 0.785 |
+| hybrid alpha=0.7  |  0.733   |  0.833   |   0.889   | 0.767 |
+| pure vector       |  0.722   |  0.778   |   0.811   | 0.744 |
+```
+
+**Hybrid wins, narrowly** — 0.785 at alpha=0.5 against 0.769 BM25 and 0.744 vector. Alpha was
+not tuned toward a result; the sweep is fixed at 0.0/0.3/0.5/0.7/1.0 and the table is whatever
+it produced.
+
+### The caveat that matters more than the headline
+
+Two of the three query phrasings are **saturated** — every method scores 1.000 recall@1:
+
+```
+| phrasing      | method      | recall@1 | recall@5 | recall@10 |  MRR  |
+| industry_year | pure BM25   |  0.133   |  0.467   |   0.733   | 0.306 |
+| industry_year | hybrid 0.5  |  0.233   |  0.567   |   0.700   | 0.355 |
+| industry_year | pure vector |  0.167   |  0.333   |   0.433   | 0.231 |
+| paraphrase    | (all three) |  1.000   |  1.000   |   1.000   | 1.000 |
+| parties       | (all three) |  1.000   |  1.000   |   1.000   | 1.000 |
+```
+
+`parties` and `paraphrase` both name the acquirer, and the indexed summary contains that name
+verbatim — no retriever can fail. So the aggregate MRR is dominated by a task nothing can lose,
+and **the only discriminating row is `industry_year`**: hybrid 0.355, BM25 0.306, vector 0.231.
+The results file says this in its own section rather than letting the 0.785 stand unqualified,
+and the saturation notice is generated from the data, so it appears automatically if a future
+eval set is too easy.
+
+Note what that row also shows: on the one hard slice, **pure vector is the worst of the three**
+— 256-dimensional embeddings of a one-line summary lose to lexical matching on a query like
+"Health Care Industry merger agreement signed in 2021". Hybrid beats both, which is the case
+for keeping it, but the honest reading is "BM25 is doing most of the work here".
+
+### The eval set is ground truth, not authored judgements
+
+Hand-authoring "query -> relevant matters" would mean scoring a retriever against my own
+guesses. Instead each query describes exactly one matter using fields already in the database,
+and the single relevant result is that matter — known-item retrieval, reproducible by anyone,
+unnudgeable. The sample is every nth qualifying matter, so it cannot be reshuffled until the
+numbers improve. What it does **not** measure is topical similarity ("deals like this one"),
+which needs judgements this corpus does not carry; that limitation is stated in the results
+file, and #18's comparable ranking is not covered by this table.
+
+### Normalization is the correctness story
+
+BM25 scores are unbounded and query-dependent; cosine sits in ~[0,1]. Blending raw means BM25's
+scale swamps the vector term and `alpha` silently stops meaning anything — the results still
+look plausibly ordered. Both sides are min-max normalized per query, and three tests hold it:
+component scores stay within [0,1], a flat distribution maps to zeros rather than NaN, and
+moving alpha from 0 to 1 actually flips the top result on a query where the two methods
+disagree.
+
+`alpha` is `HYBRID_ALPHA` from the environment with a per-query override, never a literal.
+
+```
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+177 passed in 84.32s          # was 166
+```
