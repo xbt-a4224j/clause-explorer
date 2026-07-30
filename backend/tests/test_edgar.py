@@ -96,7 +96,21 @@ class TestSicToFolio:
         return SicFolioMap.load()
 
     def test_major_group_maps(self, mapping: SicFolioMap) -> None:
-        assert mapping.resolve("2834") == "RBOjgvcq6Z33XxMhTxWiiDS"  # pharma -> Manufacturing
+        assert mapping.resolve("2011") == "RBOjgvcq6Z33XxMhTxWiiDS"  # meat packing -> Manufacturing
+
+    def test_life_sciences_are_deliberately_grouped_with_health_care(
+        self, mapping: SicFolioMap
+    ) -> None:
+        """A departure from NAICS, made on purpose and pinned here so it cannot be "fixed"
+        back by someone tidying the crosswalk. Straight NAICS puts pharma under Manufacturing
+        and leaves Health Care at n=3 of 152 — a true number answering a question nobody
+        asked. With this grouping it is n=25. The UI must describe the dimension as ours."""
+        health_care = "RCSG4k3ah1Pu5YgPexPgOmL"
+        assert mapping.resolve("2834") == health_care  # pharmaceutical preparations
+        assert mapping.resolve("2836") == health_care  # biological products
+        assert mapping.resolve("3841") == health_care  # surgical and medical instruments
+        assert mapping.resolve("8731") == health_care  # commercial biological research
+        assert mapping.resolve("2011") != health_care  # ...but food manufacturing is not
 
     def test_four_digit_row_overrides_its_major_group(self, mapping: SicFolioMap) -> None:
         """SIC files software under Services; NAICS and FOLIO put it under Information."""

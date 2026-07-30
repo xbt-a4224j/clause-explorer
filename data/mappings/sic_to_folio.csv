@@ -5,6 +5,12 @@
 # 2-digit major group it sits inside. That is how software (SIC 737x, which SIC files under
 # "Services") reaches FOLIO's Information Industry, where NAICS puts it.
 #
+# Rows whose basis reads PRODUCT DEFINITION are a deliberate departure from NAICS: pharma,
+# biotech, medical devices and CROs are filed by SIC and NAICS under Manufacturing, but a
+# partner asking for "healthcare comparables" means them. The UI must therefore describe this
+# dimension as our grouping, not NAICS's. Straight NAICS puts Health Care at n=3 of 152, which
+# is a true number answering a question nobody asked.
+#
 # Basis: SIC division/major-group structure mapped onto FOLIO's 21 NAICS-aligned Industry
 # concepts. FOLIO's Industry branch carries NAICS references in rdfs:isDefinedBy, so the
 # crosswalk is SIC -> NAICS sector -> FOLIO, not a free-hand judgement per row.
@@ -34,6 +40,10 @@ sic,folio_code,folio_label,basis
 26,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 27,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 28,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+2833,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - medicinal chemicals; departs from NAICS which files this under Manufacturing
+2834,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - pharmaceutical preparations; departs from NAICS
+2835,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - in vitro/in vivo diagnostics; departs from NAICS
+2836,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - biological products; departs from NAICS
 29,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 30,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 31,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
@@ -44,6 +54,10 @@ sic,folio_code,folio_label,basis
 36,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 37,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 38,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
+3826,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - laboratory analytical instruments; departs from NAICS
+3841,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - surgical and medical instruments; departs from NAICS
+3842,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - orthopedic and surgical appliances; departs from NAICS
+3845,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - electromedical apparatus; departs from NAICS
 39,RBOjgvcq6Z33XxMhTxWiiDS,Manufacturing Industry,SIC division D -> NAICS 31-33
 40,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
 41,RUE4fCCSnGX1wIK324EyiL,Transportation and Logistics Industry,SIC division E -> NAICS 48-49
@@ -93,7 +107,7 @@ sic,folio_code,folio_label,basis
 84,R7BZzP16LxkLJjYqRNwWXP,"Arts, Entertainment and Recreation Industry",SIC 84 museums -> NAICS 712
 86,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 86 membership organizations -> NAICS 813
 87,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 87 engineering/accounting/research/management -> NAICS 54
-8731,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 8731 commercial physical/biological research -> NAICS 5417
+8731,RCSG4k3ah1Pu5YgPexPgOmL,Health Care Industry,PRODUCT DEFINITION - commercial biological research (CROs and biotech); departs from NAICS 5417
 88,RBsVax4c8Bdvzok8MTZKGD8,Business and Consumer Services Industry,SIC 88 private households -> NAICS 814
 89,RBFLYkta0F7DwegW1FnUX52,Professional Services Industry,SIC 89 services NEC -> NAICS 54
 91,RC2P0YZS5Ku67wmSwN4OxWs,Public Administration Industry,SIC division J -> NAICS 92

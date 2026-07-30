@@ -14,6 +14,12 @@ here is quotable until it has been observed.
 ## Script 1 — "Find me comparable deals" (Explore)
 
 **Who:** a partner preparing a pitch for a healthcare private-equity sponsor.
+
+> **Corpus limits this script must respect** (measured, see `docs/worklog.md` #11): the corpus
+> spans **20 months**, 2020-03-13 → 2021-11-21 — never say "last five years". There is no
+> sponsor-side flag in MAUD or EDGAR, so "private-equity sponsor" is the partner's context, not
+> a filter the product offers. Health Care is n=25 because our crosswalk groups pharma, biotech,
+> devices and CROs with providers; NAICS does not, and the UI must say the grouping is ours.
 **The ask:** *what have we got that looks like this deal?*
 
 ### Beats
@@ -21,7 +27,12 @@ here is quotable until it has been observed.
 1. Land on **Explore**. Corpus counts are visible before any interaction —
    `‹measured› matters · ‹measured› deal points · ‹measured› industries`.
 2. Type into search, or press `/`. Filter down with the facet rail:
-   industry → Healthcare, size band → $200M–1B, years → 2020+.
+   industry → Health Care (n=25 of 152, measured 2026-07-30), year → 2021.
+
+   > **Size band is not in this script.** `deal_value_usd` is NULL for all 152 matters — EDGAR's
+   > company endpoints carry no transaction value (#9 is open on it). A size facet would render
+   > as an empty rail, so the script filters on industry and year, which are populated. Restore
+   > the size beat when #9 closes, not before.
 3. **Facet counts update live as each filter lands.** Zero-count values grey out rather than
    disappearing — you can see what the corpus does *not* have.
 4. Results rank by similarity. Each matter card shows parties, industry, size, date, and the

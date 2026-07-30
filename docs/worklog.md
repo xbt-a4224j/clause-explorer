@@ -43,6 +43,7 @@ are judged by whether they make one of those three scripts land.
 | D27 | CUAD clause id includes **`char_end`** | 242 annotations share a start offset with another of the same category and differ only in length; keying on start alone collapsed 244 distinct expert spans | Ids change if CUAD re-cuts an annotation — which is why the load prunes rows the corpus no longer produces |
 | D28 | The CUAD load **prunes** `corpus='cuad'` rows the parse no longer produces | Upsert alone is not idempotent across a corpus revision: a superseded row survives forever and keeps answering drill-throughs with text nothing points at | A parse bug that drops rows also deletes them from the table; the scope is limited to `corpus='cuad'` so MAUD can never be touched |
 | D29 | Every upsert carries an **`IS DISTINCT FROM` guard**; only genuinely changed rows are rewritten | Cube's `refresh_key` is `MAX(updated_at)`, so an unconditional upsert makes a no-op re-ingest invalidate every cached aggregate | Longer, noisier SQL in four loaders, and the guard column list must be kept in step with the column list above it |
+| D30 | Pharma, biotech, devices and CROs are grouped under **Health Care**, departing from NAICS | A partner asking for healthcare comparables means them; straight NAICS leaves Health Care at n=3 of 152 | The dimension is our definition, not a standard one. Flagged in every affected `basis` cell, the file header, a pinning test, and required in UI copy |
 | D19 | Aliases live in a separate **`folio_aliases`** table; an ambiguous alias resolves to `None` | `skos:altLabel` is many-per-concept, and picking arbitrarily between two concepts sharing an alias is a wrong answer that looks right | An extra table and a second query on the resolve miss path |
 
 ---
@@ -776,3 +777,42 @@ which I am choosing unilaterally:
 
 Doing 2 and 3 makes script 1 approximately runnable. Doing neither means script 1 needs
 rewriting. Either way the "last five years" phrasing has to go — the data is 20 months.
+
+## Checkpoint decisions taken (post-#11)
+
+Asked to keep going without pausing, so I took the three scoping calls the checkpoint
+surfaced rather than leaving them open. Each is reversible and each is a config change.
+
+**1. Life sciences are grouped with Health Care.** Added SIC 2833–2836, 3826, 3841, 3842,
+3845 and 8731 rows to `data/mappings/sic_to_folio.csv`, each with a `basis` of
+`PRODUCT DEFINITION - ... departs from NAICS`.
+
+```
+$ PYTHONPATH=backend python -m explorer.ingest --source edgar
+$ # industry distribution, after
+Health Care Industry                     25     (was 3)
+Finance and Insurance Services           25
+Manufacturing Industry                   22     (was 42)
+Information Industry                     18
+Real Estate, Rental and Leasing          12
+Mining and Natural Resources             11
+```
+
+Cost accepted: this is **our** grouping, not NAICS's. NAICS and SIC both file pharma under
+Manufacturing, and a reviewer who checks the crosswalk against NAICS will find a discrepancy.
+That is why the departure is in the `basis` column of every affected row, in the file header,
+in a test that pins it (`test_life_sciences_are_deliberately_grouped_with_health_care`), and
+must appear in the UI wherever the dimension is shown. The alternative was an honest n=3 that
+answers a question nobody asked.
+
+**2. Demo script 1 drops the size filter.** `deal_value_usd` is NULL for all 152, so a size
+facet renders as an empty rail. `docs/demo-scripts.md` now filters industry + year, and says
+in the script itself to restore the size beat when #9 closes, not before.
+
+**3. The corpus limits are written into the script, not just the worklog.** "Last five years"
+is gone — the corpus is 20 months. "Sponsor-side" is documented as the partner's context, not
+a filter the product offers, because no such flag exists in MAUD or EDGAR.
+
+No test was weakened for any of this. `test_major_group_maps` was rewritten to assert meat
+packing (SIC 2011) still maps to Manufacturing, so the crosswalk's default behaviour is still
+pinned alongside the deliberate exception.
