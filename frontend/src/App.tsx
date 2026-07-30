@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
+import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
 import './styles/shell.css'
@@ -13,6 +14,8 @@ type Health = { status: string; db: string; cube: string; version: string }
 export function App() {
   const [active, setActive] = useState<TabId>('explore')
   const [showHelp, setShowHelp] = useState(false)
+  // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
+  const [selection, setSelection] = useState<string[]>([])
   const [health, setHealth] = useState<Health | null>(null)
   const [healthError, setHealthError] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -87,7 +90,12 @@ export function App() {
         <h1 className="shell__title">{activeTab.label}</h1>
         <p className="shell__hint">{activeTab.hint}</p>
         {active === 'explore' ? (
-          <Explore searchRef={searchRef} />
+          // The selection lives here, not inside Explore: switching tabs unmounts the view, and
+          // Deal Terms must roll up the set the partner actually chose rather than defaulting
+          // to the whole corpus.
+          <Explore searchRef={searchRef} onSelectionChange={setSelection} />
+        ) : active === 'deal-terms' ? (
+          <DealTerms selection={selection} />
         ) : (
           <p className="shell__pending">
             This view lands in its own issue. The shell, keyboard contract and health strip are

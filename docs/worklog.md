@@ -56,6 +56,9 @@ are judged by whether they make one of those three scripts land.
 | D39 | Clause text is the **exact slice** of the source file at the recorded offsets, never a summary | The provenance rule: a row whose text cannot be traced to a byte range in the source is a bug. A paraphrase is untraceable by construction | The card renders raw contract text including page-break artefacts; it scrolls in its own box rather than being cleaned up |
 | D40 | A deal point with no resolvable span returns **null text plus a reason**, in three distinct flavours | An empty box reads as "there is no such clause"; the truth is "MAUD located no range", "the corpus is not on disk", or "the range is out of bounds" | Three strings to keep accurate, and the card must render all three |
 | D41 | The pasted summary is built **server-side** | It leaves the app and loses every visual qualifier, so the inferred flag and the denominator have to survive as words. Building it in the client would let the two drift | The paragraph cannot be restyled per view; changing its wording is a backend change with a test |
+| D42 | The count-vs-percentage switch is decided **per row on `answered_n`**, not per selection | How many of the selected matters answer *that* deal point is the real sample size; a selection-level switch renders `29 of 29` as a percentage because the selection happened to be 40 | Two rows in the same response can be rendered in different forms, which looks inconsistent until you read the denominators |
+| D43 | The display string is **pre-rendered server-side** | One implementation of the rule, so a table cell, a tooltip and a pasted paragraph cannot disagree about when a percentage is allowed | The client cannot reformat for a narrow column; changing the wording is a backend change |
+| D44 | Every row carries its **full position distribution**, not just present/absent | `present_count` is right for Yes/No deal points and misleading for graded ones — "8 of 8 present" says nothing about Constructive vs Actual knowledge | Rows are heavier and the view has a second line of detail under each headline |
 
 ---
 
@@ -1601,3 +1604,141 @@ $ curl -s -o /dev/null -w '%{http_code}' localhost:5173/api/matters/contract_1
   is derivable) and belongs with the rollup work in #21.
 - **Transaction type on the card**: no such field exists in MAUD or EDGAR, same as #19.
 - **Deal value on the card** renders "not available" until #9 lands.
+
+## #21 — Deal Terms: the rollup over a selected set
+
+The view that replaces the comparison chart an associate builds by hand. `POST /deal-terms`
+takes the matter ids Explore is showing and returns one row per deal point; every number comes
+from Cube, so the figure here and the facet count in the rail cannot mean different things.
+
+### The request/response pair the AC asked for
+
+```
+$ curl -s -X POST localhost:8000/deal-terms -H 'content-type: application/json' \
+    -d '{"matter_ids":["contract_1", ... ,"contract_8"]}'
+
+selection_n           : 8
+percentage_threshold  : 30
+answered deal points  : 92
+absent  deal points   : 0
+total rows            : 92
+
+rows rendered as a percentage: 0          # at n=8, by rule
+
+deal point                                                     display   positions
+Definition includes stock deals-Answer                         8 of 8    Greater than 50% but not "all…
+Knowledge Definition limited to one or more identified persons 8 of 8    Yes=8
+Knowledge Definition-Answer                                    8 of 8    Constructive knowledge=6, Actual knowledge=2
+Limitations on FTR Exercise-Answer                             8 of 8    Material breach of no-shop…
+
+numeric deal points: 7
+  Initial matching rights period (FTR)-Answer   median=4.0 p25=3.5 p75=4.0 n=7
+  Definition includes stock deals-Answer        median=50.0 p25=50.0 p75=50.0 n=4
+```
+
+### The rendering rule, verified at its edge on real data
+
+The rule is per **row**, not per selection — the denominator that matters is how many of the
+selected matters actually answer that deal point. Asked for 40 matters:
+
+```
+selection_n: 40 | threshold: 30
+percentage rows: 85 | count rows: 7
+
+Change in law (Y/N)                                  100%      answered_n=40
+Buyer consent requirement (ordinary course)-Answer   100%      answered_n=40
+--- still counts, because answered_n < 30 ---
+Additional matching rights period for modifications  29 of 29  answered_n=29
+Breach of No Shop required to be willful, material…  21 of 21  answered_n=21
+```
+
+`answered_n=29` renders `29 of 29` while `answered_n=40` renders `100%`, in the same response.
+A selection-level switch would have called both a percentage and quietly overstated the second.
+Three tests pin the boundary — at the threshold, one below it, and that no row anywhere in a
+small selection carries a `%`.
+
+The rule lives in one function server-side and the pre-rendered string is what ships. The view
+never divides two numbers; if a `/` appears in `DealTerms.tsx`, the rule has already been broken.
+
+### Absence is a row, verified
+
+A one-matter selection is the case where absence actually shows up:
+
+```
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":["contract_1"]}'
+answered: 89 | absent: 3 | rows: 92
+
+Breach of Meeting Covenant required to be willful, materia…  0 of 1
+Breach of No Shop required to be willful, material and/or…   0 of 1
+COR standard (board determination only)-answer               0 of 1
+```
+
+92 rows either way. The vocabulary is read from Cube rather than hardcoded, so a 93rd deal point
+appears here as a row the day it lands (D8) with no code change.
+
+Two different zeroes, deliberately distinguished: `answered_n = 0` means no selected matter has
+a labelled answer, while `present_count = 0` with `answered_n = 8` means all eight were asked and
+all eight said no. Both render `0 of 8`; only the first carries the explanatory sentence.
+
+### Drill-through
+
+```
+$ curl -s -X POST localhost:8000/deal-terms/drill \
+    -d '{"matter_ids":[...8...],"deal_point_name":"Knowledge Definition-Answer"}'
+contract_1     Constructive knowledge
+contract_3     Actual knowledge
+contract_5     Actual knowledge
+...
+```
+
+Clause text deliberately stays with `GET /matters/{id}` (#20) — one place reads a byte range out
+of a source agreement, and it is not this endpoint.
+
+### An empty selection is a 422
+
+```
+$ curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/deal-terms -d '{"matter_ids":[]}'
+422
+```
+
+An unfiltered rollup would answer confidently about all 152 matters while looking exactly like
+an answer about the eight the partner chose. The view refuses too, and does not fetch at all
+with an empty selection.
+
+### Scope is on the response, not in UI copy
+
+`scope_note` ships with the numbers: *"These are comparable PUBLIC deals from the MAUD study of
+SEC-filed merger agreements. This is not this firm's own matter history and must not be
+described as it."* On the response rather than in the component so it travels into anything that
+renders these figures.
+
+### Positions, not just present/absent
+
+`present_count` counts answers that are not `None`/`No`/`N/A`, which is right for present/absent
+deal points and wrong for graded ones — `Knowledge Definition-Answer` is `Constructive
+knowledge=6, Actual knowledge=2`, and "8 of 8 present" says nothing useful about it. Every row
+therefore carries its full position distribution, and the view renders it beneath the headline.
+
+### Gates
+
+```
+$ ruff format --check . && ruff check .          All checks passed!
+$ mypy backend/explorer --ignore-missing-imports Success: no issues found in 32 source files
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+235 passed in 80.99s          # was 217 at #20
+$ cd frontend && npx tsc --noEmit && npx vitest run && npm run build
+Tests  44 passed (44)         # was 35
+✓ built in 339ms
+```
+
+### Not done
+
+- **The selection is the matters Explore currently lists, not a hand-picked subset.** There is
+  no per-card checkbox yet, so "the selected set" means "the current result set" (capped at the
+  25 Explore requests). Narrowing by facet is the way to change it. A real multi-select belongs
+  with the Coverage cross-filter work.
+- **No refusal on a thin selection.** A one-matter rollup answers `0 of 1` and `1 of 1` today.
+  That is #23's `min_n` gate, which is also the k-anonymity control, and it is deliberately not
+  pre-empted here.
+- Deal-point ordering is by prevalence then alphabetical for absent rows; no salience ranking
+  exists in MAUD, same limitation recorded under #20.

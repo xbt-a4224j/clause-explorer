@@ -20,6 +20,8 @@ interface Props {
   // MutableRefObject, not RefObject: the shell creates it with useRef<HTMLInputElement>(null),
   // so its current is nullable and React 18's ref prop type requires the mutable form.
   searchRef: React.MutableRefObject<HTMLInputElement | null>
+  /** Reports the matters currently on screen — the set Deal Terms rolls up (#21). */
+  onSelectionChange?: (matterIds: string[]) => void
 }
 
 export interface Filters {
@@ -37,7 +39,7 @@ const EMPTY: Filters = {
   deal_size_band: null,
 }
 
-export function Explore({ searchRef }: Props) {
+export function Explore({ searchRef, onSelectionChange }: Props) {
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [description, setDescription] = useState('')
   const [facets, setFacets] = useState<FacetsResponse | null>(null)
@@ -94,6 +96,11 @@ export function Explore({ searchRef }: Props) {
   // No client-side filtering: the server is the authority on what is in the slice, and dropping
   // rows here would put the visible list and `candidate_count` into disagreement.
   const matters: Matter[] = useMemo(() => results?.matters ?? [], [results])
+
+  // report the visible set upward so Deal Terms rolls up exactly what the partner is looking at
+  useEffect(() => {
+    onSelectionChange?.(matters.map((m) => m.matter_id))
+  }, [matters, onSelectionChange])
 
   const move = useCallback(
     (delta: number) => {

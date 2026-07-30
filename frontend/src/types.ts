@@ -87,3 +87,36 @@ export interface MatterDetail {
   /** Plain-text paragraph for pasting into a pitch. Built server-side so it cannot drift. */
   summary: string
 }
+
+export interface PositionCount {
+  position: string
+  n: number
+}
+
+export interface NumericSummary {
+  numeric_n: number
+  median: number | null
+  p25: number | null
+  p75: number | null
+}
+
+export interface DealTermRow {
+  deal_point_name: string
+  /** Selected matters with a labelled answer. The denominator — not the selection size. */
+  answered_n: number
+  present_count: number
+  /** Pre-rendered server-side per the threshold rule: "6 of 8" or "62%". Never re-derive it. */
+  display: string
+  display_kind: 'count' | 'percentage'
+  positions: PositionCount[]
+  numeric: NumericSummary | null
+}
+
+export interface DealTermsResponse {
+  selection_n: number
+  percentage_threshold: number
+  rows: DealTermRow[]
+  answered_deal_point_count: number
+  absent_deal_point_count: number
+  scope_note: string
+}
