@@ -1,0 +1,95 @@
+"""FastAPI application.
+
+Issue #1 scope: the stack boots and /healthz reports on each dependency independently.
+Routes for the product land in later issues; this is the floor everything else stands on.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import httpx
+import psycopg
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, HTMLResponse
+from pydantic import BaseModel
+
+from explorer import __version__
+from explorer.api.settings import settings
+
+app = FastAPI(
+    title="Clause Explorer",
+    version=__version__,
+    description=(
+        "Comparable-deals workbench. Find deals like the one in front of you, see what "
+        "was negotiated across them, and know where experience is thin."
+    ),
+)
+
+_STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+
+
+class Health(BaseModel):
+    """Per-dependency health.
+
+    Deliberately not a single boolean: the only useful thing this endpoint can tell an
+    operator is *which* dependency is down.
+    """
+
+    status: str  # "ok" when every dependency is reachable, else "degraded"
+    db: str  # "ok" | "unreachable"
+    cube: str  # "ok" | "unreachable"
+    version: str
+
+
+def _check_db() -> str:
+    try:
+        with psycopg.connect(settings.database_url, connect_timeout=2) as conn:
+            conn.execute("SELECT 1")
+        return "ok"
+    except Exception:  # noqa: BLE001 - a health check must never propagate; any failure means unreachable
+        # The exception is deliberately not surfaced: the DSN carries credentials and
+        # this endpoint is unauthenticated.
+        return "unreachable"
+
+
+def _check_cube() -> str:
+    try:
+        resp = httpx.get(f"{settings.cube_api_url}/meta", timeout=2.0)
+        return "ok" if resp.status_code < 500 else "unreachable"
+    except Exception:  # noqa: BLE001 - same rationale as _check_db
+        return "unreachable"
+
+
+@app.get("/healthz", response_model=Health)
+def healthz() -> Health:
+    """Report each dependency separately; status is ok only if all are reachable."""
+    db, cube = _check_db(), _check_cube()
+    return Health(
+        status="ok" if db == "ok" and cube == "ok" else "degraded",
+        db=db,
+        cube=cube,
+        version=__version__,
+    )
+
+
+# response_model=None: the return is a union of Response subclasses, which FastAPI
+# cannot turn into a Pydantic response model.
+@app.get("/", response_class=HTMLResponse, response_model=None)
+def root() -> HTMLResponse | FileResponse:
+    """Serve the built frontend when present.
+
+    In compose, nginx serves the SPA and proxies /api here, so this path is only hit in
+    local dev before a frontend build exists. Returning a usable pointer beats a 404.
+    """
+    index = _STATIC_DIR / "index.html"
+    if index.is_file():
+        return FileResponse(index)
+    return HTMLResponse(
+        "<!doctype html><meta charset=utf-8><title>Clause Explorer</title>"
+        "<body style='font:14px ui-monospace,monospace;background:#010102;color:#f7f8f8;"
+        "padding:2rem'><h1 style='color:#5e6ad2;font-size:1rem'>clause explorer</h1>"
+        "<p>API is up. The frontend is not built yet.</p>"
+        "<p><a style='color:#5e6ad2' href='/docs'>/docs</a> &middot; "
+        "<a style='color:#5e6ad2' href='/healthz'>/healthz</a></p></body>"
+    )
