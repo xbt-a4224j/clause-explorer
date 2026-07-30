@@ -57,3 +57,33 @@ export interface ComparablesResponse {
   returned_count: number
   applied_filters: AppliedFilters
 }
+
+export interface DealPointDetail {
+  deal_point_name: string
+  position: string
+  is_inferred: boolean
+  numeric_value: number | null
+  source_span_start: number | null
+  source_span_end: number | null
+  /** The exact characters at [start, end) in the source file. Never generated. */
+  clause_text: string | null
+  /** Why there is no clause text. Set whenever clause_text is null. */
+  text_unavailable: string | null
+}
+
+export interface MatterDetail {
+  matter_id: string
+  target_name: string | null
+  acquirer_name: string | null
+  industry: string | null
+  is_inferred_industry: boolean
+  signing_date: string | null
+  deal_value_usd: number | null
+  source_file: string | null
+  source_contract_title: string | null
+  deal_point_count: number
+  located_count: number
+  deal_points: DealPointDetail[]
+  /** Plain-text paragraph for pasting into a pitch. Built server-side so it cannot drift. */
+  summary: string
+}

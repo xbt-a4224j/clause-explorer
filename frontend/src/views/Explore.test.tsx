@@ -79,6 +79,34 @@ const COMPARABLES: ComparablesResponse = {
   ],
 }
 
+// expanding a card fetches its detail (#20); the list must keep working regardless
+const MATTER_DETAIL = {
+  matter_id: 'contract_1',
+  target_name: 'ACCELERON PHARMA INC.',
+  acquirer_name: 'MERCK SHARP & DOHME CORP.',
+  industry: 'Health Care Industry',
+  is_inferred_industry: true,
+  signing_date: '2021-09-29',
+  deal_value_usd: null,
+  source_file: 'maud/data/contracts/contract_1.txt',
+  source_contract_title: 'ACCELERON PHARMA INC. - Agreement and Plan of Merger',
+  deal_point_count: 1,
+  located_count: 1,
+  summary: 'summary (n=1)',
+  deal_points: [
+    {
+      deal_point_name: 'Fiduciary exception to COR covenant',
+      position: 'Yes',
+      is_inferred: false,
+      numeric_value: null,
+      source_span_start: 1,
+      source_span_end: 2,
+      clause_text: 'x',
+      text_unavailable: null,
+    },
+  ],
+}
+
 function mockApi(overrides: { facets?: unknown; comparables?: unknown; fail?: boolean } = {}) {
   return vi.fn(async (url: string, _init?: RequestInit) => {
     if (overrides.fail) {
@@ -89,7 +117,9 @@ function mockApi(overrides: { facets?: unknown; comparables?: unknown; fail?: bo
     }
     const body = url.includes('facets')
       ? (overrides.facets ?? FACETS)
-      : (overrides.comparables ?? COMPARABLES)
+      : url.includes('/matters/')
+        ? MATTER_DETAIL
+        : (overrides.comparables ?? COMPARABLES)
     return { ok: true, json: async () => body } as Response
   })
 }

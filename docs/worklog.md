@@ -53,6 +53,9 @@ are judged by whether they make one of those three scripts land.
 | D36 | The facet rail carries the **FOLIO code** beside every industry label, and `/comparables` is filtered by the code | The label is a display string; matching on it is the silent-empty-result failure #25 exists for. A code is the join key and cannot drift from "Health Care Industry" to "Healthcare" | `comparable_deals.code` had to become public in the Cube view, widening the agent's selectable surface by one dimension it should never display |
 | D37 | A facet group whose only values are `unknown`/`unclassified` renders **disabled with a stated reason**, not hidden | Omitting deal size claims the corpus has no size axis; showing it enabled offers a filter that cannot narrow anything. Both are false in different directions | A `REASONS` map in `facets.py` keyed by group — one hand-written string that must be deleted when #9 lands, and nothing fails if it is not |
 | D38 | Explore does **no** client-side filtering of the ranked response | The server is the authority on the slice. Filtering the response in the browser put the visible list and `candidate_count` into disagreement, and ranked against a corpus the partner never asked about | The UI cannot cheaply preview a filter without a round trip |
+| D39 | Clause text is the **exact slice** of the source file at the recorded offsets, never a summary | The provenance rule: a row whose text cannot be traced to a byte range in the source is a bug. A paraphrase is untraceable by construction | The card renders raw contract text including page-break artefacts; it scrolls in its own box rather than being cleaned up |
+| D40 | A deal point with no resolvable span returns **null text plus a reason**, in three distinct flavours | An empty box reads as "there is no such clause"; the truth is "MAUD located no range", "the corpus is not on disk", or "the range is out of bounds" | Three strings to keep accurate, and the card must render all three |
+| D41 | The pasted summary is built **server-side** | It leaves the app and loses every visual qualifier, so the inferred flag and the denominator have to survive as words. Building it in the client would let the two drift | The paragraph cannot be restyled per view; changing its wording is a backend change with a test |
 
 ---
 
@@ -1467,3 +1470,134 @@ Tests  25 passed (25)         # was 21 passed, 1 failed
 - Docker's daemon was wedged at the start of this session (socket accepting connections but
   never answering `/_ping`); it needed a hard restart before any of the live verification above
   could run.
+
+## #20 — Matter card with drill-through and a copyable summary
+
+`GET /matters/{id}` behind a card that expands into the deal points for that matter, each with
+the clause text behind it. Deliberately **not** through Cube: the semantic layer's footprint is
+facet counts, rollups and the coverage grid, and individual record fetch is outside it.
+
+### The clause text is the file, not a description of it
+
+```
+$ curl -s localhost:8000/matters/contract_1
+target       : ACCELERON PHARMA INC.
+acquirer     : MERCK SHARP & DOHME CORP.
+industry     : Health Care Industry | inferred: True
+deal value   : None
+source       : maud/data/contracts/contract_1.txt
+deal points  : 89 | located: 80
+
+--- drill-through: "Ability to consummate" concept is subject to MAE carveouts => No
+    span [234875, 239289)
+    text: '“Company Material Adverse Effect” means any change, effect, event, inaccuracy,
+            occurrence, or other matter that would reasonably be expected to have, '
+```
+
+Checked against the downloaded file rather than trusted:
+
+```
+$ python3 - <<'PY'
+raw = open('data/maud/data/contracts/contract_1.txt').read()
+print(dp['clause_text'] == raw[dp['source_span_start']:dp['source_span_end']])
+PY
+byte-exact against the downloaded file: True
+len: 4414
+```
+
+A pinning test asserts the same equality, so a future refactor that starts summarising or
+re-wrapping the excerpt fails the suite rather than quietly changing what the card claims.
+
+### Nothing is invented when the span is missing
+
+9 of this matter's 89 deal points have no located range (495 of 12,937 corpus-wide). Those
+return `clause_text: null` with a reason — `MAUD located no character range for this label in
+the source agreement.` — and the card renders the sentence. An empty box reads as "there is no
+such clause"; the truth is "MAUD located no range for it", and those are different claims.
+
+Three distinct reasons, so the card never has to guess: no span recorded, source file absent
+(the corpus is gitignored, so this is normal on a fresh checkout), or a range that falls outside
+the file. `located_count` and `deal_point_count` both ship, so the card can say **80 of 89**
+rather than a bare percentage.
+
+### The summary is built server-side, because it leaves the app
+
+Pasted into a deck, the paragraph loses every visual cue the UI used to qualify it. So the
+inferred badge becomes the literal word and the denominator is written out:
+
+```
+MERCK SHARP & DOHME CORP. / ACCELERON PHARMA INC. — Health Care Industry (inferred from SIC,
+not an expert label), signed 2021-09-29. deal value not available. Negotiated terms (n=89, 80
+traced to a source span): ... Source: ACCELERON PHARMA INC. - Agreement and Plan of Merger
+(maud/data/contracts/contract_1.txt). Deal-point labels are MAUD expert annotations (CC BY 4.0).
+```
+
+"deal value not available" rather than a blank or a zero — #9 is open and D25 refused to
+estimate it. Tests assert the citation, the word "inferred", `n=89`, and that no markup can
+reach the clipboard.
+
+### An unknown id is a 404 that says so
+
+```
+$ curl -s localhost:8000/matters/nope
+HTTP 404
+{"error":{"code":"not_found","message":"No matter 'nope'. This is not an empty result — the id
+ does not exist.","detail":null}}
+```
+
+### Two defects found while building
+
+**A crash that would have taken the whole result list down.** The card called
+`detail.deal_points.map` on whatever the fetch returned. A 200 whose body is not a matter detail
+— a misrouted proxy, a stale service worker — threw `Cannot read properties of undefined` inside
+React and blanked the list, not just the card. Surfaced because Explore's test mock answers every
+non-facets URL with the comparables body, which is exactly that shape. The response is now
+checked for a `deal_points` array and reported as an error state instead.
+
+**A regression I introduced.** Rewriting the expanded panel dropped the hybrid/vector/bm25 score
+breakdown that #19 showed. `Explore.test.tsx`'s "Enter expands the focused result" caught it. The
+breakdown is back, alongside the drill-through: the ranking should be as inspectable as the
+clauses are.
+
+### Path resolution, and the one place a DB value becomes a file read
+
+`matters.source_file` is recorded relative to `data/` (`maud/data/contracts/contract_1.txt`),
+not the repo root — the first implementation joined it to the repo root and every card came back
+with `source_text_available: false`. Resolved against `DATA_ROOT`, and the resolved path is
+required to stay inside it: the value comes from our own ingest rather than a request, but this
+is the only place a database string turns into a filesystem read.
+
+Contract texts are ~700 KB and every deal point on a card cites the same one, so the file is read
+once per card and memoised across requests (bounded at 8 files) instead of 89 times.
+
+### Gates
+
+```
+$ ruff format --check . && ruff check .
+49 files already formatted
+All checks passed!
+
+$ mypy backend/explorer --ignore-missing-imports
+Success: no issues found in 31 source files
+
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+217 passed in 76.76s          # was 204 at #19
+
+$ cd frontend && npx tsc --noEmit && npx vitest run && npm run build
+Tests  35 passed (35)         # was 25
+✓ built in 301ms
+
+$ curl -s -o /dev/null -w '%{http_code}' localhost:5173/api/matters/contract_1
+200                            # through the nginx proxy, not just the API directly
+```
+
+### Not done
+
+- **"Top" negotiated terms in the pasted paragraph are the first five alphabetically**, not the
+  five that matter. Nothing in MAUD ranks deal points by salience, and inventing an order
+  (preferring non-"No" positions, say) would be a judgement presented as data. It reads oddly —
+  the paragraph opens on `"Ability to consummate" concept is subject to MAE carveouts` — and it
+  is honest. A defensible ordering exists (frequency of the deal point across the corpus, which
+  is derivable) and belongs with the rollup work in #21.
+- **Transaction type on the card**: no such field exists in MAUD or EDGAR, same as #19.
+- **Deal value on the card** renders "not available" until #9 lands.

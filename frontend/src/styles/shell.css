@@ -253,3 +253,52 @@ kbd {
 .skeleton--short { width: 25%; }
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none } }
+
+/* ---- matter card drill-through (#20) ---------------------------------------------------- */
+
+.card__toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--pad-md);
+  flex-wrap: wrap; margin-bottom: var(--pad-sm);
+}
+.card__provenance { font-size: 11px; color: var(--ink-muted); }
+.card__copy {
+  padding: 4px 10px; font-size: 11px;
+  background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--radius);
+  color: var(--ink); cursor: pointer;
+}
+.card__copy:hover { border-color: var(--ink-tertiary); }
+.card__copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.card__cite { font-size: 11px; color: var(--ink-muted); margin-bottom: var(--pad-md); }
+.card__loading { display: flex; flex-direction: column; gap: 6px; }
+.skeleton--row { height: 34px; border-radius: var(--radius); }
+
+.dps { display: flex; flex-direction: column; gap: 1px; }
+.dp { padding: var(--pad-sm) 0; border-top: 1px solid var(--hairline); min-width: 0; }
+.dp__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--pad-md); margin-bottom: 4px;
+}
+.dp__name { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.dp__position {
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-secondary);
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+}
+
+/* The clause is a verbatim slice of the agreement and can run to thousands of characters.
+   It scrolls inside its own box: the page itself must never scroll horizontally. */
+.dp__clause {
+  max-height: 220px; overflow: auto; overscroll-behavior: contain;
+  padding: var(--pad-sm); margin: 4px 0;
+  background: var(--surface-2); border-left: 2px solid var(--hairline); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--ink-secondary);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.dp__span { font-size: 10px; }
+/* not an error — the label exists, MAUD just located no range for it */
+.dp__missing { font-size: 11px; color: var(--ink-tertiary); font-style: italic; }
+.card__scores {
+  display: flex; gap: var(--pad-md); flex-wrap: wrap;
+  margin-bottom: var(--pad-sm); font-family: var(--font-mono); font-size: 11px;
+}
+.card__scores dt { color: var(--ink-tertiary); }
+.card__scores dd { margin: 0 0 0 4px; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
