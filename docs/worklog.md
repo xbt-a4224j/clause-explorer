@@ -957,3 +957,45 @@ clean / 10 passed
 `$200M` and `200000000` and fails if either appears, so the UI cannot grow its own definition.
 Every matter is currently `unknown` — `deal_value_usd` is NULL for all 152 (#9) — and the
 dimension's description says `unknown` is a real value to be shown, not filtered away.
+
+## #14 — refresh_key on updated_at: new rows appear without a restart
+
+### The live test, measured
+
+```
+$ # query Cube, INSERT straight into Postgres, poll — nothing restarted
+before n = 152 | refreshKeyValues [[{'max': '2026-07-30T19:12:07.801'}]]
+after  n = 153 | observed staleness window: 11.3s
+```
+
+**New data appears in roughly 11 seconds without restarting anything.** That is Cube's default
+10-second refresh-key check plus the query. It is not tuned and does not need to be: the whole
+corpus reloads in 13 seconds. The figure is recorded in both model headers and a test asserts
+it stays recorded, so nobody can quietly change the behaviour and leave the documentation
+claiming the old number.
+
+This only works because of #11: the ingest's `IS DISTINCT FROM` guards mean a no-op re-ingest
+does not move `MAX(updated_at)`, so re-running `make ingest` does not invalidate every cached
+aggregate for nothing.
+
+### No pre-aggregations, on purpose
+
+Stated in the model headers and asserted by a test that greps for `pre_aggregations`. At 152
+matters and 12,937 deal points, Postgres answers these in milliseconds. A pre-aggregation
+would add a build step, push the staleness window from seconds to minutes, and create a second
+place for a number to be wrong — for no measurable gain. If a query is ever slow, measure it
+first and put the evidence here.
+
+### A flake, diagnosed rather than retried
+
+The live test failed once in a full-suite run and passed standalone three times. Cause: the run
+began seconds after `docker compose restart cube`, while Cube was still compiling the model and
+answering 5xx — the polling helper treated that as "row not there yet" and burned the window.
+Fixed by having the helper return `None` on a transient error and by waiting for Cube to become
+queryable before taking the `before` reading. The assertion itself was not loosened: the row
+must still appear.
+
+```
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+140 passed in 75.96s          # was 136
+```

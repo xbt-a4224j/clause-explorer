@@ -27,6 +27,25 @@
 # because EDGAR's company endpoints carry no transaction value (#9 is open). The band logic is
 # defined anyway so there is one place to be right when values arrive — but a size facet
 # currently renders as a single `unknown` bucket, and demo script 1 does not use it.
+#
+# ## Freshness: measured, not assumed (#14)
+#
+# Every cube here declares `refresh_key: sql: SELECT MAX(updated_at) FROM ...` explicitly
+# rather than relying on Cube's default. Measured end to end on 2026-07-30 — query, INSERT a
+# row directly into Postgres, poll until it appears, with nothing restarted:
+#
+#     before n = 152   refreshKeyValues [[{"max": "2026-07-30T19:12:07.801"}]]
+#     after  n = 153   observed staleness window: 11.3s
+#
+# **So: new data appears within roughly 11 seconds, without a restart.** That is Cube's default
+# 10-second refresh-key check interval plus the query itself; it is not tuned, and it is fine
+# for a corpus that reloads in 13 seconds.
+#
+# **No pre-aggregations, deliberately.** 152 matters and 12,937 deal points answer in
+# milliseconds from Postgres directly. A pre-aggregation would add a build step, a staleness
+# window measured in minutes instead of seconds, and a second place for a number to be wrong —
+# for no measurable gain at this scale. Do not add one speculatively; if a query is ever slow,
+# measure it first and put the evidence in docs/worklog.md.
 
 cubes:
   - name: matters

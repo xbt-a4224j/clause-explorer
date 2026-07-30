@@ -271,3 +271,83 @@ class TestFacetCountsAgainstSql:
             rows = json.load(response)["data"]
         total = sum(int(r["deal_points.n"]) for r in rows)
         assert total == 25, f"healthcare slice should be the 25 health-care matters, got {total}"
+
+
+class TestFreshnessContract:
+    """#14: "does new data show up automatically?" must have a defined answer."""
+
+    def test_every_cube_declares_an_explicit_refresh_key(self) -> None:
+        for path in MODEL_DIR.glob("*.yml"):
+            model = yaml.safe_load(path.read_text(encoding="utf-8"))
+            for cube in model.get("cubes", []):
+                sql = cube.get("refresh_key", {}).get("sql", "")
+                assert "MAX(updated_at)" in sql, f"{cube['name']} relies on the default"
+
+    def test_no_pre_aggregations_anywhere(self) -> None:
+        """Not an oversight — a deliberate decision recorded in the model header. At 152
+        matters a pre-aggregation buys nothing and adds a second place to be wrong."""
+        for path in MODEL_DIR.glob("*.yml"):
+            configured = [
+                line
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if not line.lstrip().startswith("#")
+            ]
+            assert "pre_aggregations" not in "\n".join(configured), path.name
+
+    def test_the_measured_staleness_window_is_recorded(self) -> None:
+        header = MATTERS.read_text(encoding="utf-8")[:4000]
+        assert "11.3s" in header and "without a restart" in header
+
+
+@pytest.mark.skipif(not _cube_up(), reason="Cube not running")
+class TestNewRowsAppearWithoutARestart:
+    def test_insert_is_reflected_within_the_documented_window(self) -> None:
+        """The live test the AC asks for. Inserts a probe row, polls, cleans up."""
+        import time
+
+        import psycopg
+
+        dsn = os.getenv(
+            "CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer"
+        )
+
+        def matters_n() -> int | None:
+            """None while Cube is warming. A restart leaves it compiling for a few seconds and
+            it answers 5xx; treating that as "no new row" made this test flaky rather than
+            wrong, so transient errors are retried instead of failing the assertion."""
+            url = f"{CUBE_URL}/load?query=" + urllib.parse.quote(
+                json.dumps({"measures": ["matters.n"]})
+            )
+            try:
+                with urllib.request.urlopen(url, timeout=30) as response:
+                    return int(json.load(response)["data"][0]["matters.n"])
+            except (urllib.error.URLError, KeyError, IndexError):
+                return None
+
+        before = None
+        warmup = time.time() + 60
+        while before is None and time.time() < warmup:
+            before = matters_n()
+            if before is None:
+                time.sleep(2)
+        assert before is not None, "Cube never became queryable"
+
+        with psycopg.connect(dsn) as conn:
+            conn.execute(
+                "INSERT INTO matters (id, source_file, source_contract_title, corpus) "
+                "VALUES ('refresh_probe', 'probe', 'refresh_key probe (#14)', 'maud')"
+            )
+            conn.commit()
+        try:
+            deadline = time.time() + 60  # documented window is ~11s; the rest is slack
+            seen = False
+            while time.time() < deadline:
+                if matters_n() == before + 1:
+                    seen = True
+                    break
+                time.sleep(1)
+            assert seen, "new row never appeared — refresh_key is not working"
+        finally:
+            with psycopg.connect(dsn) as conn:
+                conn.execute("DELETE FROM matters WHERE id = 'refresh_probe'")
+                conn.commit()
