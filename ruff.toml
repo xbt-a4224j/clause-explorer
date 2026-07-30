@@ -1,0 +1,2 @@
+extend-exclude = ["*.md"]
+line-length = 100

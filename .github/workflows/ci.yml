@@ -1,0 +1,41 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements.txt ruff mypy
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy backend/explorer --ignore-missing-imports
+      # no API key: every test not marked needs_key must pass
+      - run: pytest backend/tests -q -m "not needs_key"
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
+      - run: cd frontend && npm install
+      - run: cd frontend && npx tsc --noEmit
+      - run: cd frontend && npm test -- --run
+
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: whole stack boots and api is healthy
+        run: |
+          docker compose up -d --build
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:8000/healthz && break || sleep 3
+          done
+          curl -fs http://localhost:8000/healthz
+          docker compose down

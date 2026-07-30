@@ -1,0 +1,49 @@
+# All open source: Postgres, Cube Core (Apache-2.0), FastAPI, Vite/React, nginx.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: explorer
+      POSTGRES_PASSWORD: explorer
+      POSTGRES_DB: explorer
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U explorer"]
+      interval: 5s
+      retries: 10
+
+  cube:
+    image: cubejs/cube:latest
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      CUBEJS_DEV_MODE: "true"
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: db
+      CUBEJS_DB_NAME: explorer
+      CUBEJS_DB_USER: explorer
+      CUBEJS_DB_PASS: explorer
+      CUBEJS_API_SECRET: dev-only-not-a-secret
+    ports: ["4000:4000"]
+    volumes: ["./cube/model:/cube/conf/model"]
+
+  api:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      CLAUSE_EXPLORER_DB: postgresql://explorer:explorer@db:5432/explorer
+      CUBE_API_URL: http://cube:4000/cubejs-api/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports: ["8000:8000"]
+    volumes: ["./logs:/app/logs"]
+
+  web:
+    build: {context: ., dockerfile: frontend/Dockerfile}
+    depends_on: [api]
+    ports: ["5173:80"]
+
+volumes:
+  pgdata:
