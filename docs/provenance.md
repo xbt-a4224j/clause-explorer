@@ -11,8 +11,26 @@ Every corpus records the exact acquisition command, the resulting filename, byte
 - Source: https://www.atticusprojectai.org/maud · https://github.com/TheAtticusProject/maud
 - License: CC BY 4.0 — attribution required
 - Contents: 152 merger agreements, 47,000+ expert annotations, 92 ABA Public Target Deal Points
-- Command: _not yet recorded_
-- File / bytes / sha256: _not yet recorded_
+- Attribution: MAUD, The Atticus Project, CC BY 4.0.
+- Command (run 2026-07-30) — `scripts/download_maud.sh`, which is:
+  ```
+  curl -sfL -o data/maud/data.zip \
+    https://raw.githubusercontent.com/The-Atticus-Project/maud/main/data.zip
+  unzip -qn data/maud/data.zip -d data/maud
+  ```
+- File: `data/maud/data.zip`
+- Bytes: 32,893,590 (`wc -c`)
+- sha256: `75af5a33d038e9254864f043da38072490ffe11e8488d58d0a2dd39c8f554519`
+  (`shasum -a 256 data/maud/data.zip`)
+- Extracted: 158 files, 202,424 KiB — 152 `data/contracts/contract_*.txt` (53,464 KiB),
+  three label CSVs (`MAUD_train.csv` 81,299,409 B, `MAUD_dev.csv` 21,189,496 B,
+  `MAUD_test.csv` 20,550,295 B) and `data/raw/{main,abridged,counterfactual}.csv`.
+- Label rows across the three CSVs: 39,231, covering **152** contracts and **92** distinct
+  `question` values — the ABA deal points.
+
+> **Not** taken from the Hugging Face mirror `theatticusproject/maud`. That mirror carries the
+> same label CSVs but only **100** of the 152 contract texts, and a matter whose text is
+> missing cannot satisfy the mandatory drill-through to source clauses.
 
 ## CUAD — Contract Understanding Atticus Dataset
 

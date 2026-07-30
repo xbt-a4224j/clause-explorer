@@ -366,3 +366,60 @@ does not block teardown.
 - No `dc:identifier` short codes (e.g. `AFS`) stored. NAICS-aligned identifiers are on the
   Industry branch and may be useful for #9's SIC mapping; deferred until #9 shows it needs
   them rather than guessing now.
+
+## #7 — MAUD downloaded, with provenance
+
+`scripts/download_maud.sh` fetches one archive, extracts it, and prints the checksum and
+counts it just measured. `explorer/ingest/maud_corpus.py` is the single place that knows the
+layout; `corpus_available()` is a bool probe so tests skip — with the fixing command in the
+message — instead of failing on a clean checkout.
+
+### Verification
+
+```
+$ ./scripts/download_maud.sh
+sha256: 75af5a33d038e9254864f043da38072490ffe11e8488d58d0a2dd39c8f554519
+archive bytes: 32893590
+contract files: 152
+extracted bytes: 202424 KiB
+
+$ find data/maud/data -type f | wc -l
+     158
+$ du -sh data/maud/data/contracts | cut -f1
+52M
+
+$ pytest backend/tests/test_maud_corpus.py -q
+5 passed in 0.70s
+
+$ mv data/maud/data /tmp/maud_hidden && pytest backend/tests/test_maud_corpus.py -q -rs
+SKIPPED [1] ... MAUD corpus not downloaded — run scripts/download_maud.sh   (x4)
+1 passed, 4 skipped in 0.01s
+
+$ ruff format --check . && ruff check .   -> 24 files already formatted / All checks passed!
+$ mypy backend/explorer --ignore-missing-imports -> Success: no issues found in 17 source files
+$ env -u OPENAI_API_KEY pytest backend/tests -q -m "not needs_key"
+63 passed          # was 58
+```
+
+### Measured corpus shape
+
+- 152 contract texts, 53,464 KiB
+- 39,231 label rows across the three CSVs
+- **92** distinct `question` values — the ABA deal points, matching the documented count
+- 7 categories; `data_type` splits main 20,623 / abridged 14,928 / rare_answers 3,680
+
+### The source we did not use, and why
+
+The Hugging Face mirror `theatticusproject/maud` was the first candidate and is the more
+convenient API. It ships the same three label CSVs but only **100** of the 152 contract
+texts — verified by downloading it: `contracts in csv: 152, with text file: 100, missing
+text: 52`. Drill-through to source clauses is a hard requirement, and 52 matters that cannot
+drill through is a broken product, so the GitHub `data.zip` is the source of record. One
+archive also means one command and one checksum in provenance.
+
+### Note carried into #8
+
+MAUD's `label` column is an answer *index*, not a deal-point name. The deal point is
+`question` (92 values); `text_type` is the coarser 22-value grouping and `category` the
+7-value one. Reading `label` as the deal point would have produced 10 deal points instead
+of 92 and looked plausible.
