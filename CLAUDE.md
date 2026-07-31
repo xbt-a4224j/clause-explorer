@@ -208,8 +208,10 @@ body first: `gh issue view <N> -R xbt-a4224j/clause-explorer`. Acceptance criter
    page, read the container logs. Unit tests passing is not evidence the feature works.
 5. **Append to `docs/worklog.md`** — what was built, the commands run with their *real
    output*, any decision made (with rationale and accepted cost), and anything not done.
-6. **Commit and push**, message ending `Closes #N`. One issue per commit so each diff maps
-   to its ticket.
+6. **Commit AND PUSH**, message ending `Closes #N`. One issue per commit so each diff
+   maps to its ticket. **Push every time — never batch pushes across issues.** Work that
+   is committed but unpushed is invisible to anyone reviewing the repo, and a reviewer
+   looking at GitHub is the audience this repo exists for.
 7. **Go straight to the next issue.** Do not stop to report or ask.
 
 ## Gates — every one, before every commit
@@ -264,6 +266,13 @@ error before changing anything.
 - **`ruff format` collapses multi-line signatures**, so multi-line string replacement against
   formatted files is fragile. Match a single line, or edit before formatting.
 - **Postgres `now()` is transaction-start time.** Use `clock_timestamp()` in touch triggers.
+- **Neither `api` nor `web` bind-mounts source.** `docker compose restart <svc>` silently
+  serves the code baked into the old image — a route that exists 404s, and frontend changes
+  are simply absent from the browser. Always `docker compose up -d --build <svc>`, and
+  verify by grepping the *served* bundle, not the local `dist/`.
+- **Tests that assert on bare `getByText` break when explainer prose is added.** Three have
+  now broken this way. Scope assertions to a `data-testid` container; the text being unique
+  was always an accident.
 
 ## The demo scripts are the acceptance test
 
