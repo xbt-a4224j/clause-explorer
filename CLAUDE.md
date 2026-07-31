@@ -270,6 +270,13 @@ error before changing anything.
   serves the code baked into the old image — a route that exists 404s, and frontend changes
   are simply absent from the browser. Always `docker compose up -d --build <svc>`, and
   verify by grepping the *served* bundle, not the local `dist/`.
+- **`up --build` is not always enough for `web`.** The Dockerfile runs `npm run build` inside
+  the image, and Docker has reused that layer while source had changed — the container served
+  a bundle with *some* recent work and not the newest, which is worse than serving nothing
+  because it looks like a code bug. If a string you just added is missing from the bundle,
+  `docker compose build --no-cache web`. Grep **inside the container**
+  (`docker compose exec -T web grep -c ...`), not over HTTP, so nginx caching cannot confuse
+  the diagnosis.
 - **Tests that assert on bare `getByText` break when explainer prose is added.** Three have
   now broken this way. Scope assertions to a `data-testid` container; the text being unique
   was always an accident.
