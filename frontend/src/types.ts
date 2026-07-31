@@ -176,3 +176,28 @@ export interface Refusal {
   threshold: number
   message: string
 }
+
+export interface AgentFilter {
+  member: string
+  operator: string
+  values: string[]
+  /** What the user/agent originally typed for this value, before resolution (#25). */
+  raw?: string
+  /** True when `values` differs from `raw` — a filter-value resolution actually happened. */
+  resolved?: boolean
+  inferred?: boolean
+}
+
+export interface AgentTimeDimension {
+  dimension: string
+  range: string
+}
+
+export interface AgentSelection {
+  measures: string[]
+  dimensions: string[]
+  filters: AgentFilter[]
+  timeDimensions: AgentTimeDimension[]
+  n: number
+  is_inferred: boolean
+}

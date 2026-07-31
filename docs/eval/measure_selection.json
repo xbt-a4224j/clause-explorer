@@ -1,0 +1,403 @@
+[
+  {
+    "id": "q01",
+    "question": "how many matters are there in total",
+    "expected_measures": [
+      "deal_points.matters_total"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q02",
+    "question": "how many comparable deals do we have",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q03",
+    "question": "count of deals by industry",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [
+      "comparable_deals.label"
+    ],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q04",
+    "question": "count of matters grouped by industry label using deal points",
+    "expected_measures": [
+      "deal_points.count_distinct_matters"
+    ],
+    "expected_dimensions": [
+      "comparable_deals.label"
+    ],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q05",
+    "question": "how many healthcare deals are there",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.label",
+        "operator": "equals",
+        "values": [
+          "Health Care Industry"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q06",
+    "question": "how many Manufacturing Industry deals are there",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.label",
+        "operator": "equals",
+        "values": [
+          "Manufacturing Industry"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q07",
+    "question": "in how many deals is there a fiduciary exception to the COR covenant",
+    "expected_measures": [
+      "deal_points.present_count",
+      "deal_points.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Fiduciary exception to COR covenant"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q08",
+    "question": "what fraction of deals have a ticking fee",
+    "expected_measures": [
+      "deal_points.present_count",
+      "deal_points.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Ticking fee"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q09",
+    "question": "break down knowledge definition by position across all deals",
+    "expected_measures": [
+      "deal_points.n"
+    ],
+    "expected_dimensions": [
+      "deal_points.position"
+    ],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Knowledge Definition-Answer"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q10",
+    "question": "what is the median reverse termination fee",
+    "expected_measures": [
+      "deal_points.median_numeric_value"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Reverse termination fee-Answer"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q11",
+    "question": "what is the median and interquartile range of the initial matching rights period",
+    "expected_measures": [
+      "deal_points.median_numeric_value",
+      "deal_points.p25_numeric_value",
+      "deal_points.p75_numeric_value"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Initial matching rights period (FTR)-Answer"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q12",
+    "question": "how many deals signed in 2021",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.signing_year",
+        "operator": "equals",
+        "values": [
+          "2021"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q13",
+    "question": "how many deals signed in 2020",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.signing_year",
+        "operator": "equals",
+        "values": [
+          "2020"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q14",
+    "question": "how many healthcare deals signed in 2021",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.label",
+        "operator": "equals",
+        "values": [
+          "Health Care Industry"
+        ]
+      },
+      {
+        "member": "comparable_deals.signing_year",
+        "operator": "equals",
+        "values": [
+          "2021"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q15",
+    "question": "how many deals have an industry that was inferred rather than expert labelled",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.is_inferred_industry",
+        "operator": "equals",
+        "values": [
+          "true"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q16",
+    "question": "how many deals are in the unknown deal size band",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "comparable_deals.deal_size_band",
+        "operator": "equals",
+        "values": [
+          "unknown"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q17",
+    "question": "show deal count by industry and signing year",
+    "expected_measures": [
+      "comparable_deals.n"
+    ],
+    "expected_dimensions": [
+      "comparable_deals.label",
+      "comparable_deals.signing_year"
+    ],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q18",
+    "question": "how many matters have a located source span for their deal points",
+    "expected_measures": [
+      "deal_points.with_source_span_n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q19",
+    "question": "how many deal point answers are expert labelled",
+    "expected_measures": [
+      "deal_points.expert_labelled_n"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q20",
+    "question": "median ticking fee for healthcare deals",
+    "expected_measures": [
+      "deal_points.median_numeric_value"
+    ],
+    "expected_dimensions": [],
+    "expected_filters": [
+      {
+        "member": "deal_points.deal_point_name",
+        "operator": "equals",
+        "values": [
+          "Ticking fee"
+        ]
+      },
+      {
+        "member": "comparable_deals.label",
+        "operator": "equals",
+        "values": [
+          "Health Care Industry"
+        ]
+      }
+    ],
+    "expected_time_dimensions": [],
+    "should_refuse": false
+  },
+  {
+    "id": "q21",
+    "question": "what is our firm's win rate against Kirkland & Ellis on these deals",
+    "expected_measures": [],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": true,
+    "refusal_reason": "no field for opposing counsel or win/loss exists in the model"
+  },
+  {
+    "id": "q22",
+    "question": "show me the full text of the merger agreement for Acceleron Pharma",
+    "expected_measures": [],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": true,
+    "refusal_reason": "row-level document text is not a Cube aggregate; belongs to /matters/{id}"
+  },
+  {
+    "id": "q23",
+    "question": "what will deal volume look like next year",
+    "expected_measures": [],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": true,
+    "refusal_reason": "forecasting is not a query the semantic layer can select"
+  },
+  {
+    "id": "q24",
+    "question": "how many deals did partner Jane Smith originate",
+    "expected_measures": [],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": true,
+    "refusal_reason": "no originating-partner field exists in the model"
+  },
+  {
+    "id": "q25",
+    "question": "what is the average reverse termination fee",
+    "expected_measures": [],
+    "expected_dimensions": [],
+    "expected_filters": [],
+    "expected_time_dimensions": [],
+    "should_refuse": true,
+    "refusal_reason": "the mean measure is named do_not_use_for_market precisely to make this unselectable by a reasonable reading of the vocabulary; the correct answer is the median measure, not the mean"
+  }
+]

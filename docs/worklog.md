@@ -1984,3 +1984,45 @@ env -u OPENAI_API_KEY pytest backend/tests -q       281 passed, 1 deselected   #
 env pytest backend/tests -q -m needs_key            1 passed
 frontend                                            unchanged (backend-only issues)
 ```
+
+## #26 — ResolvedQuery component · #27 — offline measure-selection eval
+
+**#26.** `ResolvedQuery.tsx` renders every component of a selection in plain language — measure,
+dimensions, filters (raw text struck through, resolved value shown after `→`), time range, `n`,
+and an `inferred` flag — plus an "edit this query" button. Not wired into a page: the six-tab
+set is fixed and load-bearing (`tabs.ts`), and none of the six is an agent surface. Built and
+tested as a standalone component per the AC rather than inventing a seventh tab.
+
+**#27.** 25 authored cases (`docs/eval/measure_selection.json`, ≥3 refusals), graded offline
+against real recorded `gpt-4o-mini` output (`docs/eval/recorded_outputs.json`) with no network
+at grading time — asserted directly by making `socket.socket` raise mid-run.
+
+```
+measure_precision 0.800   measure_recall 0.775
+dimension_precision 0.692 dimension_recall 0.725
+filter_exact_match_rate 0.500
+refusal_accuracy 0.200   (1 of 5)
+```
+
+The first live recording caught the model selecting `mean_numeric_value_do_not_use_for_market`
+for "the average reverse termination fee" — the exact trap that measure's name exists to warn
+against, on the first run of the eval built to catch it. Fixed structurally: excluded from the
+agent's vocabulary in `fetch_vocabulary()`, not just left as a scary name inside an enum that
+still made it selectable. Re-recorded; that case now selects the correct median measure.
+
+Refusal accuracy (0.2) is the real finding, not measure selection: in 4 of 5 cases the model
+answered a question it should have declined — filtering `acquirer_name` for "opposing counsel,"
+`target_name` for a partner's name — silent reinterpretation rather than declining, which is
+exactly what #26's resolved-query line exists to let a human catch downstream. Not fixed here;
+noted as the clear next step rather than chased against this specific 25-question set, which
+would overfit the eval instead of improving the agent. Full findings, per-case detail, and the
+filter-exact-match miss pattern (confusing the boolean `has_industry` with the `label` dimension
+— #25's failure mode one level up) are in `docs/results/measure-selection.md`.
+
+### Gates
+
+```
+ruff + mypy                                        clean
+env -u OPENAI_API_KEY pytest backend/tests -q       289 passed, 1 deselected   # was 281
+frontend: tsc + vitest + build                      68 passed
+```

@@ -407,3 +407,20 @@ kbd {
    empty state and the red error state, and framed by the accent rather than danger. */
 .state--refusal { border-left: 2px solid var(--accent); background: var(--surface-1); }
 .term__display--low_confidence { color: var(--ink-tertiary); font-style: italic; }
+
+/* ---- ResolvedQuery (#26) ------------------------------------------------------------------ */
+.resolved {
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted);
+  line-height: 1.6; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px;
+}
+.resolved__measure { color: var(--ink); font-weight: 500; }
+.resolved__raw { color: var(--ink-tertiary); text-decoration: line-through; }
+.resolved__value { color: var(--ink); }
+.resolved__inferred { color: #9a6700; font-weight: 500; }
+.resolved__edit {
+  margin-left: 6px; padding: 1px 6px;
+  background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius);
+  color: var(--ink-muted); font: inherit; font-size: 10px; cursor: pointer;
+}
+.resolved__edit:hover { border-color: var(--accent); color: var(--accent); }
+.resolved__edit:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

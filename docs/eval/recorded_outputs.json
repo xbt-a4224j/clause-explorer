@@ -1,0 +1,456 @@
+[
+  {
+    "id": "q01",
+    "question": "how many matters are there in total",
+    "output": {
+      "measures": [
+        "deal_points.count_distinct_matters"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q02",
+    "question": "how many comparable deals do we have",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q03",
+    "question": "count of deals by industry",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [
+        "comparable_deals.has_industry"
+      ],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q04",
+    "question": "count of matters grouped by industry label using deal points",
+    "output": {
+      "measures": [
+        "deal_points.count_distinct_matters"
+      ],
+      "dimensions": [
+        "comparable_deals.label"
+      ],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q05",
+    "question": "how many healthcare deals are there",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.has_industry",
+          "operator": "equals",
+          "values": [
+            "healthcare"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q06",
+    "question": "how many Manufacturing Industry deals are there",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.has_industry",
+          "operator": "equals",
+          "values": [
+            "Manufacturing"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q07",
+    "question": "in how many deals is there a fiduciary exception to the COR covenant",
+    "output": {
+      "measures": [
+        "deal_points.count_distinct_matters"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "deal_points.deal_point_name",
+          "operator": "equals",
+          "values": [
+            "fiduciary exception to the COR covenant"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q08",
+    "question": "what fraction of deals have a ticking fee",
+    "output": {
+      "measures": [
+        "deal_points.n"
+      ],
+      "dimensions": [
+        "deal_points.id"
+      ],
+      "filters": [
+        {
+          "member": "deal_points.has_source_span",
+          "operator": "equals",
+          "values": [
+            "true"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q09",
+    "question": "break down knowledge definition by position across all deals",
+    "output": {
+      "measures": [],
+      "dimensions": [
+        "deal_points.position",
+        "deal_points.id",
+        "deal_points.deal_point_name"
+      ],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q10",
+    "question": "what is the median reverse termination fee",
+    "output": {
+      "measures": [
+        "deal_points.median_numeric_value"
+      ],
+      "dimensions": [
+        "deal_points.deal_point_name"
+      ],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q11",
+    "question": "what is the median and interquartile range of the initial matching rights period",
+    "output": {
+      "measures": [
+        "deal_points.median_numeric_value",
+        "deal_points.p25_numeric_value",
+        "deal_points.p75_numeric_value"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q12",
+    "question": "how many deals signed in 2021",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.signing_year",
+          "operator": "equals",
+          "values": [
+            "2021"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q13",
+    "question": "how many deals signed in 2020",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.signing_year",
+          "operator": "equals",
+          "values": [
+            "2020"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q14",
+    "question": "how many healthcare deals signed in 2021",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [
+        "comparable_deals.signing_year",
+        "comparable_deals.has_industry"
+      ],
+      "filters": [
+        {
+          "member": "comparable_deals.signing_year",
+          "operator": "equals",
+          "values": [
+            "2021"
+          ]
+        },
+        {
+          "member": "comparable_deals.has_industry",
+          "operator": "equals",
+          "values": [
+            "healthcare"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q15",
+    "question": "how many deals have an industry that was inferred rather than expert labelled",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.has_industry",
+          "operator": "equals",
+          "values": [
+            "true"
+          ]
+        },
+        {
+          "member": "comparable_deals.is_inferred_industry",
+          "operator": "equals",
+          "values": [
+            "true"
+          ]
+        },
+        {
+          "member": "deal_points.expert_labelled_n",
+          "operator": "equals",
+          "values": [
+            "0"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q16",
+    "question": "how many deals are in the unknown deal size band",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [
+        {
+          "member": "comparable_deals.deal_size_band",
+          "operator": "equals",
+          "values": [
+            "unknown"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q17",
+    "question": "show deal count by industry and signing year",
+    "output": {
+      "measures": [
+        "deal_points.count_distinct_matters"
+      ],
+      "dimensions": [
+        "comparable_deals.has_industry",
+        "comparable_deals.signing_year"
+      ],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q18",
+    "question": "how many matters have a located source span for their deal points",
+    "output": {
+      "measures": [
+        "deal_points.with_source_span_n"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q19",
+    "question": "how many deal point answers are expert labelled",
+    "output": {
+      "measures": [
+        "deal_points.expert_labelled_n"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q20",
+    "question": "median ticking fee for healthcare deals",
+    "output": {
+      "measures": [
+        "deal_points.median_numeric_value"
+      ],
+      "dimensions": [
+        "comparable_deals.id",
+        "comparable_deals.target_name",
+        "comparable_deals.acquirer_name",
+        "comparable_deals.signing_date",
+        "comparable_deals.signing_year",
+        "comparable_deals.deal_size_band",
+        "comparable_deals.has_industry",
+        "comparable_deals.is_inferred_industry"
+      ],
+      "filters": [
+        {
+          "member": "comparable_deals.has_industry",
+          "operator": "equals",
+          "values": [
+            "Healthcare"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q21",
+    "question": "what is our firm's win rate against Kirkland & Ellis on these deals",
+    "output": {
+      "measures": [
+        "deal_points.n"
+      ],
+      "dimensions": [
+        "deal_points.id",
+        "deal_points.matter_id",
+        "deal_points.deal_point_name",
+        "comparable_deals.acquirer_name"
+      ],
+      "filters": [
+        {
+          "member": "comparable_deals.acquirer_name",
+          "operator": "equals",
+          "values": [
+            "Kirkland & Ellis"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q22",
+    "question": "show me the full text of the merger agreement for Acceleron Pharma",
+    "output": {
+      "measures": [],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q23",
+    "question": "what will deal volume look like next year",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": [
+        {
+          "dimension": "comparable_deals.signing_year",
+          "granularity": "year"
+        }
+      ]
+    }
+  },
+  {
+    "id": "q24",
+    "question": "how many deals did partner Jane Smith originate",
+    "output": {
+      "measures": [
+        "comparable_deals.n"
+      ],
+      "dimensions": [
+        "comparable_deals.acquirer_name"
+      ],
+      "filters": [
+        {
+          "member": "comparable_deals.acquirer_name",
+          "operator": "equals",
+          "values": [
+            "Jane Smith"
+          ]
+        }
+      ],
+      "timeDimensions": []
+    }
+  },
+  {
+    "id": "q25",
+    "question": "what is the average reverse termination fee",
+    "output": {
+      "measures": [
+        "deal_points.median_numeric_value"
+      ],
+      "dimensions": [],
+      "filters": [],
+      "timeDimensions": []
+    }
+  }
+]

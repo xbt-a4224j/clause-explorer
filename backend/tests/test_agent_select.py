@@ -59,6 +59,26 @@ class TestVocabularyIsReadFromMeta:
         assert "deal_points.present_count" in vocab.measures
         assert "comparable_deals.label" in vocab.dimensions
 
+    def test_the_do_not_use_for_market_measure_is_never_selectable(self) -> None:
+        """The model file names it that way specifically so it isn't reached for casually
+        (#27's eval measured a live model doing exactly that when asked for "the average
+        reverse termination fee"). Structural exclusion, not just a scary name."""
+        meta = {
+            "cubes": [
+                {
+                    "name": "deal_points",
+                    "measures": [
+                        {"name": "deal_points.mean_numeric_value_do_not_use_for_market"},
+                        {"name": "deal_points.median_numeric_value"},
+                    ],
+                    "dimensions": [],
+                }
+            ]
+        }
+        vocab = fetch_vocabulary(cube_meta=meta)
+        assert "deal_points.mean_numeric_value_do_not_use_for_market" not in vocab.measures
+        assert "deal_points.median_numeric_value" in vocab.measures
+
     def test_non_selectable_cubes_are_excluded(self) -> None:
         """folio_concepts is dimension metadata, not a fact table an agent aggregates over."""
         vocab = fetch_vocabulary(cube_meta=FAKE_META)

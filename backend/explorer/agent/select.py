@@ -33,6 +33,13 @@ log = get_logger()
 # a fact table an agent should aggregate over.
 SELECTABLE = {"comparable_deals", "deal_points"}
 
+# The model file names this measure `..._do_not_use_for_market` specifically so a reader would
+# not reach for it casually — but an enum that still lists the name makes it selectable
+# regardless of what the name says. #27's eval measured this directly: asked for "the average
+# reverse termination fee," the model selected exactly this measure. Structural exclusion is the
+# only thing that actually enforces the intent the name states.
+EXCLUDED_MEASURES = {"deal_points.mean_numeric_value_do_not_use_for_market"}
+
 
 class AgentUnavailable(RuntimeError):
     """No key, or Cube's /meta did not answer. Never silently skipped."""
@@ -112,7 +119,9 @@ def fetch_vocabulary(cube_meta: dict[str, Any] | None = None) -> Vocabulary:
     for cube in cube_meta.get("cubes", []):
         if cube["name"] not in SELECTABLE:
             continue
-        measures.extend(m["name"] for m in cube.get("measures", []))
+        measures.extend(
+            m["name"] for m in cube.get("measures", []) if m["name"] not in EXCLUDED_MEASURES
+        )
         dimensions.extend(d["name"] for d in cube.get("dimensions", []))
     return Vocabulary(measures=tuple(measures), dimensions=tuple(dimensions))
 
