@@ -2522,3 +2522,30 @@ closed"; the accessible description says the final arrow is the design, not toda
 |---|---|---|---|
 | D63 | Say the loop is open rather than closing it | Closing it means teaching calibration to prefer a human label over a gold one where they disagree — which on this corpus means overriding a lawyer with a reviewer, on documents where the lawyer is the ground truth the whole product rests on. That is a worse design, not a smaller one | The Label tab now visibly does nothing to the numbers, which is a weaker demo and an honest one |
 
+## Sweep: the remaining behavioural claims hold
+
+After three overstatements in a row (CUAD, the FOLIO roll-up, the Label loop) the honest move
+was to check the rest rather than wait to be asked. Verified in the running browser:
+
+```
+resolved query above the answer   RENDERS — "hybrid alpha=0.5 · n=152"   (Explore.tsx:221)
+j / k move through results        WORKS  — focus 3 -> 4 on j, 4 -> 3 on k
+Copy summary                      REAL   — navigator.clipboard, MatterCard.tsx:59
+drill-through to a byte range     VERIFIED earlier, contract_12 [33470, 37923]
+min_n refusal via raw curl        VERIFIED earlier, n=1 threshold 5
+```
+
+Two measurement errors of my own along the way, recorded so the numbers above are not
+over-trusted: `j` appeared not to work because I read the DOM synchronously before React
+committed, and `/comparables` appeared to return nothing because I read a `results` key that is
+actually called `matters`. Both were my probes, not the product.
+
+**One real finding: `ResolvedQuery.tsx` was dead code** — 58 lines and 8 tests for a component
+no view imported. Explore renders its own resolved line via `describeQuery`, so this was a
+second, unused implementation of the same idea. Deleted. Tests for code nothing renders are
+worse than no tests: they report green for a feature that cannot fail because it never runs.
+
+**The pattern across all four findings:** the *product behaviour* was sound; the overstatement
+was always in the narrative layer — explainers, diagrams, docstrings, demo scripts. Intended
+architecture described in the present tense.
+
