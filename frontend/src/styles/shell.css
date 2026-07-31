@@ -363,3 +363,41 @@ kbd {
   font-size: 10px; color: var(--ink-secondary);
 }
 .card__termname { color: var(--ink-tertiary); }
+
+/* ---- Coverage (#22) --------------------------------------------------------------------- */
+
+.cov { display: flex; flex-direction: column; gap: var(--pad-md); min-width: 0; }
+.cov__note { font-size: 12px; color: var(--ink-subtle); }
+.cov__caption { font-size: 11px; color: var(--ink-muted); }
+.cov__skeleton { display: flex; flex-direction: column; gap: 6px; }
+
+/* the table itself scrolls horizontally in its own box — the page body never does */
+.cov__scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); }
+.cov__table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.cov__table th, .cov__table td {
+  padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.cov__table thead th {
+  background: var(--surface-2); color: var(--ink-muted); font-weight: 500;
+  position: sticky; top: 0;
+}
+.cov__corner, .cov__rowlabel { text-align: left; }
+.cov__rowlabel { font-weight: 500; color: var(--ink); background: var(--surface-1); }
+.cov__total { font-weight: 500; background: var(--surface-2); }
+
+.cov__cell { padding: 0; }
+.cov__hit {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  width: 100%; padding: 6px 10px;
+  background: transparent; border: 0; color: var(--ink); font: inherit; text-align: right;
+  cursor: pointer;
+}
+.cov__hit:hover { background: var(--surface-3); }
+.cov__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Thin cells are LOUD, not faded — the opposite of default BI styling. A greyed-out number
+   reads as "small"; this reads as "not reportable", which is the actual finding. */
+.cov__cell--thin { background: #fff1e5; }
+.cov__cell--thin .cov__hit { color: #9a6700; font-weight: 600; }
+.cov__thinlabel { font-size: 9px; font-weight: 400; color: #9a6700; white-space: normal; max-width: 8rem; }

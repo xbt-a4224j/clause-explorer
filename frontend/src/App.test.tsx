@@ -33,6 +33,23 @@ function mockHealth(status = 'ok', cube = 'ok') {
           }),
       })
     }
+    if (String(url).includes('/coverage')) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            rows: [],
+            columns: [],
+            column_axis: 'year',
+            column_note: '',
+            column_totals: {},
+            total_n: 0,
+            min_n: 5,
+            thin_cell_count: 0,
+            empty_cell_count: 0,
+          }),
+      })
+    }
     return Promise.resolve({
       ok: true,
       json: () =>

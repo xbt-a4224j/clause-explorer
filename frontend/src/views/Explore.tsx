@@ -22,6 +22,9 @@ interface Props {
   searchRef: React.MutableRefObject<HTMLInputElement | null>
   /** Reports the matters currently on screen — the set Deal Terms rolls up (#21). */
   onSelectionChange?: (matterIds: string[]) => void
+  /** A Coverage cell click pre-filters Explore to that industry/year (#22). */
+  seedFilters?: { folio_industry_code: string; folio_industry_label: string; signing_year: string } | null
+  onSeedConsumed?: () => void
 }
 
 export interface Filters {
@@ -39,7 +42,7 @@ const EMPTY: Filters = {
   deal_size_band: null,
 }
 
-export function Explore({ searchRef, onSelectionChange }: Props) {
+export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsumed }: Props) {
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [description, setDescription] = useState('')
   const [facets, setFacets] = useState<FacetsResponse | null>(null)
@@ -51,6 +54,20 @@ export function Explore({ searchRef, onSelectionChange }: Props) {
   const listRef = useRef<HTMLUListElement>(null)
 
   const activeCount = Object.values(filters).filter(Boolean).length
+
+  // consume a Coverage seed exactly once: applying it and clearing it are the same act, so a
+  // second render of the same seed (e.g. a parent re-render) cannot re-apply stale filters
+  useEffect(() => {
+    if (!seedFilters) return
+    setFilters({
+      folio_industry_label: seedFilters.folio_industry_label,
+      folio_industry_code: seedFilters.folio_industry_code,
+      signing_year: seedFilters.signing_year,
+      deal_size_band: null,
+    })
+    onSeedConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedFilters])
 
   useEffect(() => {
     let cancelled = false

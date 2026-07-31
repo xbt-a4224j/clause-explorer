@@ -138,3 +138,30 @@ export interface DrillMatter {
   clause_text: string | null
   text_unavailable: string | null
 }
+
+export interface CoverageCell {
+  column: string
+  n: number
+  reportable: boolean
+  note: string | null
+  folio_industry_code: string | null
+}
+
+export interface CoverageRow {
+  label: string
+  folio_industry_code: string | null
+  cells: CoverageCell[]
+  total_n: number
+}
+
+export interface CoverageResponse {
+  rows: CoverageRow[]
+  columns: string[]
+  column_axis: string
+  column_note: string
+  column_totals: Record<string, number>
+  total_n: number
+  min_n: number
+  thin_cell_count: number
+  empty_cell_count: number
+}

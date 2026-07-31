@@ -1808,3 +1808,35 @@ ruff + mypy                                     clean
 env -u OPENAI_API_KEY pytest backend/tests -q   239 passed        # was 235
 frontend: tsc + vitest + build                  47 passed         # was 44
 ```
+
+## #22 — Coverage: FOLIO x period, thin cells loud not faded
+
+```
+$ curl -s -X POST localhost:8000/coverage -d '{}'
+rows: 15  columns: 2020, 2021, unclassified  min_n: 5
+total: 152  thin: 33 of 45  empty: 16
+
+Finance and Insurance Services Industry   2020=6   2021=19  total=25
+Manufacturing Industry                    2020=4*  2021=18  total=22   (* below min_n)
+Construction Industry                     2020=0*  2021=3*  total=3
+```
+
+Only 12 of 45 cells are reportable. Column axis is `signing_year`, not deal size: #22 specifies
+size, but `deal_value_usd` is NULL on all 152 matters (#9) so that grid is one column wide.
+`column` accepts `band` too — offered, not silently substituted — and both axes carry a
+`column_note` explaining themselves.
+
+**Thinness is data, not styling.** Every cell carries `reportable` and, when false, a `note`
+naming the actual n and the threshold. The view marks it with a distinct warm background and
+bold weight rather than fading it — default BI dims small numbers, which reads as "small"; this
+reads as "not reportable," the opposite signal on purpose. A test asserts the marker class is
+present at n<min_n and absent at n=min_n exactly.
+
+Clicking a cell hands Explore the FOLIO **code** behind the row, never the label (#25's failure
+mode), plus the column year — verified with a click test against a mocked `onNavigateToExplore`.
+
+`min_n=5` lives in `Settings` alongside `percentage_threshold`; #23's refusal reads the same
+value, so a KM user sees a cell is thin before ever hitting the gate that enforces it.
+
+Gates: ruff/mypy clean, `env -u OPENAI_API_KEY pytest` 254 passed (was 239), frontend 59 passed
+(was 47), build clean. Verified through the nginx proxy at localhost:5173, not just curl to 8000.

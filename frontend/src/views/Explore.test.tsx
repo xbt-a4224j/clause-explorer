@@ -240,6 +240,26 @@ describe('filter before rank', () => {
   })
 })
 
+describe('coverage pre-filter', () => {
+  /** A Coverage cell click hands Explore a code and year (#22) — this is the receiving end. */
+  it('applies seed filters from a Coverage cell click and consumes them', async () => {
+    const onConsumed = vi.fn()
+    const ref = createRef<HTMLInputElement>()
+    render(
+      <Explore
+        searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
+        seedFilters={{
+          folio_industry_code: 'RCSG4k3ah1Pu5YgPexPgOmL',
+          folio_industry_label: 'Health Care Industry',
+          signing_year: '2020',
+        }}
+        onSeedConsumed={onConsumed}
+      />,
+    )
+    await waitFor(() => expect(onConsumed).toHaveBeenCalledOnce())
+  })
+})
+
 describe('results', () => {
   it('shows a loading skeleton before data arrives, not a blank panel', () => {
     renderExplore()

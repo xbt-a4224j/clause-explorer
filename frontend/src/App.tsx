@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
+import { Coverage } from './views/Coverage'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
@@ -16,6 +17,8 @@ export function App() {
   const [showHelp, setShowHelp] = useState(false)
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
   const [selection, setSelection] = useState<string[]>([])
+  // a Coverage cell click pre-filters Explore; Explore consumes and clears it
+  const [coverageSeed, setCoverageSeed] = useState<{ folio_industry_code: string; folio_industry_label: string; signing_year: string } | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [healthError, setHealthError] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -93,9 +96,21 @@ export function App() {
           // The selection lives here, not inside Explore: switching tabs unmounts the view, and
           // Deal Terms must roll up the set the partner actually chose rather than defaulting
           // to the whole corpus.
-          <Explore searchRef={searchRef} onSelectionChange={setSelection} />
+          <Explore
+            searchRef={searchRef}
+            onSelectionChange={setSelection}
+            seedFilters={coverageSeed}
+            onSeedConsumed={() => setCoverageSeed(null)}
+          />
         ) : active === 'deal-terms' ? (
           <DealTerms selection={selection} />
+        ) : active === 'coverage' ? (
+          <Coverage
+            onNavigateToExplore={(filters) => {
+              setCoverageSeed(filters)
+              setActive('explore')
+            }}
+          />
         ) : (
           <p className="shell__pending">
             This view lands in its own issue. The shell, keyboard contract and health strip are
