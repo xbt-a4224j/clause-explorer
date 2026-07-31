@@ -2409,3 +2409,37 @@ months, and the sentence is now on screen rather than in a README nobody opened.
 |---|---|---|---|
 | D58 | The three headline counts carry their **source corpus and their gold/inferred status** inline | Three numbers sat side by side implying a common provenance; two are expert-labelled and one is classifier output over a self-assigned SEC code. Reading them as equivalent is exactly the quiet error the schema flags exist to prevent | A second line of small text under the headline, on the first thing a partner sees |
 
+## #9 — deal value is still unavailable; Consideration ships instead
+
+**#9 as written cannot be shipped honestly, and this records why rather than quietly closing
+it.** EDGAR's company endpoints carry no transaction value. The available substitutes were:
+
+- price-per-share x shares outstanding — an estimate of a different order, which D25 already
+  refused because it would render in the UI as fact
+- parsing the merger consideration clause — real and quotable, but it yields *per share*, not
+  deal value, and would need its own calibration before anything could be claimed from it
+- MAUD's own 92 deal points — checked: only four mention price, value or consideration, and
+  none of them is an amount
+
+So `deal_value_usd` stays NULL for all 152 and the Deal size facet stays disabled with its
+stated reason. That is the correct outcome, not a gap.
+
+**What shipped instead.** `Type of Consideration-Answer` is a MAUD *expert label*, populated
+for every matter, and it is the axis a partner reaches for straight after industry — cash deals
+negotiate differently from stock deals. Verified live:
+
+```
+consideration  total=152  inferred=False
+     All Cash                    n=89
+     All Stock                   n=39
+     Mixed Cash/Stock            n=21
+     Mixed Cash/Stock: Election  n=3
+```
+
+Placed above Deal size in the rail: a live axis should not sit beneath a dead one.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D59 | Ship **Consideration** as the third facet; leave deal value NULL and #9 open | The rail needed a third axis that actually narrows something, and this one is gold rather than inferred — the opposite trade from industry. Estimating a deal value to fill the original axis would have put a fabricated number on the landing screen | It is not the size filter the README and demo script 1 promise, so both still overstate the product until #9 lands or is rewritten |
+| D60 | The dimension is a **correlated subquery** in the Cube model, not a denormalised column on `matters` | Keeps `deal_points` the single source of truth for expert labels; a copied column would need its own sync and could disagree with the rows it was copied from | A subquery per facet query on this dimension; acceptable at 152 matters, would need denormalising at scale |
+

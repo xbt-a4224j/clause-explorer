@@ -158,6 +158,21 @@ cubes:
           currently 'unknown' because deal_value_usd is NULL throughout; 'unknown' is a real
           value here, not a missing one, and must be shown rather than filtered away.
 
+      # Deal size is unavailable (#9: EDGAR carries no transaction value, D25 refused to
+      # estimate one). Consideration type is the honest substitute: it is a MAUD *expert
+      # label*, not inference, it is populated for all 152, and it is the axis a partner
+      # actually asks about after industry — cash deals negotiate differently from stock.
+      - name: consideration_type
+        sql: >
+          (SELECT dp.position FROM public.deal_points dp
+            WHERE dp.matter_id = {CUBE}.id
+              AND dp.deal_point_name = 'Type of Consideration-Answer')
+        type: string
+        title: Consideration
+        description: >
+          All Cash / All Stock / Mixed. Read directly from MAUD's expert annotation for the
+          "Type of Consideration" deal point — gold, not inferred, unlike industry.
+
       - name: corpus
         sql: corpus
         type: string
@@ -260,6 +275,7 @@ views:
           - signing_date
           - signing_year
           - deal_size_band
+          - consideration_type
           - has_industry
           - is_inferred_industry
           - n

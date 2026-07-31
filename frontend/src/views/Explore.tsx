@@ -37,6 +37,7 @@ export interface Filters {
   folio_industry_code: string | null
   signing_year: string | null
   deal_size_band: string | null
+  consideration_type: string | null
 }
 
 const EMPTY: Filters = {
@@ -44,6 +45,7 @@ const EMPTY: Filters = {
   folio_industry_code: null,
   signing_year: null,
   deal_size_band: null,
+  consideration_type: null,
 }
 
 export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsumed }: Props) {
@@ -68,6 +70,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       folio_industry_code: seedFilters.folio_industry_code,
       signing_year: seedFilters.signing_year,
       deal_size_band: null,
+      consideration_type: null,
     })
     onSeedConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,6 +85,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       folio_industry_label: filters.folio_industry_label,
       signing_year: filters.signing_year ? Number(filters.signing_year) : null,
       deal_size_band: filters.deal_size_band,
+      consideration_type: filters.consideration_type,
     }
     const comparablesBody = {
       description: description.trim() || null,
@@ -93,6 +97,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       signed_from: filters.signing_year ? `${filters.signing_year}-01-01` : null,
       signed_to: filters.signing_year ? `${filters.signing_year}-12-31` : null,
       deal_size_band: filters.deal_size_band,
+      consideration_type: filters.consideration_type,
       limit: 25,
     }
 
@@ -171,7 +176,12 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
           folio_industry_code: clearing ? null : code,
         }
       }
-      const key = group === 'year' ? 'signing_year' : 'deal_size_band'
+      const key =
+        group === 'year'
+          ? 'signing_year'
+          : group === 'consideration'
+            ? 'consideration_type'
+            : 'deal_size_band'
       return { ...f, [key]: f[key] === value ? null : value }
     })
   }
@@ -283,6 +293,7 @@ function describeQuery(results: ComparablesResponse, filters: Filters): string {
   const applied = results.applied_filters
   if (filters.folio_industry_label) parts.push(filters.folio_industry_label)
   if (applied.signed_from) parts.push(`signed ${applied.signed_from} to ${applied.signed_to}`)
+  if (applied.consideration_type) parts.push(applied.consideration_type)
   if (applied.deal_size_band) parts.push(applied.deal_size_band)
   parts.push(applied.ranked_by)
   return `${parts.join(' · ')} · n=${results.candidate_count}`

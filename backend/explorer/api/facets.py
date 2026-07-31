@@ -28,6 +28,9 @@ INDUSTRY_DIMENSION = "comparable_deals.label"
 CODE_DIMENSION = "comparable_deals.code"
 YEAR_DIMENSION = "comparable_deals.signing_year"
 BAND_DIMENSION = "comparable_deals.deal_size_band"
+# Deal size is empty (#9); consideration type is the honest substitute — a MAUD
+# expert label, populated for all 152, and the axis a partner asks about next.
+CONSIDERATION_DIMENSION = "comparable_deals.consideration_type"
 COUNT_MEASURE = "comparable_deals.n"
 # Corpus totals for the landing state (demo script 1 beat 1)
 DEAL_POINT_COUNT = "deal_points.n"
@@ -37,6 +40,7 @@ class FacetRequest(BaseModel):
     folio_industry_label: str | None = Field(default=None)
     signing_year: int | None = Field(default=None)
     deal_size_band: str | None = Field(default=None)
+    consideration_type: str | None = Field(default=None)
 
 
 class FacetValue(BaseModel):
@@ -119,6 +123,7 @@ VALUE_REASONS = {
         "No size band: deal value is not populated for any matter, so every one falls in the "
         "same bucket. Issue #9."
     ),
+    "consideration": "No consideration type recorded for this matter in MAUD.",
 }
 
 #: dimensions whose values are classifier output, not expert labels
@@ -129,6 +134,7 @@ TOTAL_BASIS = {
     "industry": "matters in this slice with any industry resolved",
     "year": "matters in this slice with a signing year",
     "band": "matters in this slice with a size band",
+    "consideration": "matters in this slice with a consideration type (MAUD expert label)",
 }
 
 REASONS = {
@@ -180,6 +186,14 @@ def _filters(request: FacetRequest, exclude: str) -> list[dict[str, Any]]:
                 "member": YEAR_DIMENSION,
                 "operator": "equals",
                 "values": [str(request.signing_year)],
+            }
+        )
+    if request.consideration_type and exclude != "consideration":
+        active.append(
+            {
+                "member": CONSIDERATION_DIMENSION,
+                "operator": "equals",
+                "values": [request.consideration_type],
             }
         )
     if request.deal_size_band and exclude != "band":
@@ -275,6 +289,14 @@ def facets(request: FacetRequest) -> FacetsResponse:
                 YEAR_DIMENSION,
                 request,
                 str(request.signing_year) if request.signing_year is not None else None,
+            ),
+            # before Deal size, which is empty: a live axis should not sit under a dead one
+            _group(
+                "consideration",
+                "Consideration",
+                CONSIDERATION_DIMENSION,
+                request,
+                request.consideration_type,
             ),
             _group("band", "Deal size", BAND_DIMENSION, request, request.deal_size_band),
         ]

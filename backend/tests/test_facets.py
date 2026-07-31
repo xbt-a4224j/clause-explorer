@@ -22,6 +22,7 @@ from explorer.api.cube_client import CubeUnavailable
 from explorer.api.facets import (
     BAND_DIMENSION,
     CODE_DIMENSION,
+    CONSIDERATION_DIMENSION,
     COUNT_MEASURE,
     DEAL_POINT_COUNT,
     INDUSTRY_DIMENSION,
@@ -54,6 +55,12 @@ YEAR_ROWS = [
     {YEAR_DIMENSION: "2020", COUNT_MEASURE: 33},
 ]
 BAND_ROWS = [{BAND_DIMENSION: "unknown", COUNT_MEASURE: 152}]
+# MAUD expert labels, populated for every matter — the live axis deal size cannot be (#9)
+CONSIDERATION_ROWS = [
+    {CONSIDERATION_DIMENSION: "All Cash", COUNT_MEASURE: 89},
+    {CONSIDERATION_DIMENSION: "All Stock", COUNT_MEASURE: 39},
+    {CONSIDERATION_DIMENSION: "Mixed Cash/Stock", COUNT_MEASURE: 24},
+]
 
 
 class StubCube:
@@ -72,6 +79,8 @@ class StubCube:
             return list(YEAR_ROWS)
         if BAND_DIMENSION in dimensions:
             return list(BAND_ROWS)
+        if CONSIDERATION_DIMENSION in dimensions:
+            return list(CONSIDERATION_ROWS)
         if DEAL_POINT_COUNT in measures:
             return [{DEAL_POINT_COUNT: 12937}]
         return [{COUNT_MEASURE: 152}]
@@ -322,3 +331,31 @@ class TestTheRailExplainsItsOwnCounts:
             g for g in client.post("/facets", json={}).json()["groups"] if g["key"] == "year"
         )
         assert year["inferred"] is False
+
+
+class TestConsiderationIsALiveAxis:
+    """#9 could not be shipped as written — EDGAR carries no transaction value, so deal size
+    stays empty. Consideration type is the honest substitute: a MAUD *expert label* rather than
+    inference, populated for every matter, and the axis a partner reaches for after industry."""
+
+    def test_the_rail_offers_consideration(self, client) -> None:
+        keys = [g["key"] for g in client.post("/facets", json={}).json()["groups"]]
+        assert "consideration" in keys
+
+    def test_it_is_not_marked_inferred(self, client) -> None:
+        """Unlike industry. This one is read straight from a lawyer's annotation."""
+        group = next(
+            g
+            for g in client.post("/facets", json={}).json()["groups"]
+            if g["key"] == "consideration"
+        )
+        assert group["inferred"] is False
+
+    def test_it_appears_before_the_empty_deal_size_group(self, client) -> None:
+        keys = [g["key"] for g in client.post("/facets", json={}).json()["groups"]]
+        assert keys.index("consideration") < keys.index("band")
+
+    def test_selecting_it_filters_the_other_groups(self, client, cube) -> None:
+        client.post("/facets", json={"consideration_type": "All Cash"})
+        members = [f["member"] for f in cube.payload_for(YEAR_DIMENSION)["filters"]]
+        assert "comparable_deals.consideration_type" in members

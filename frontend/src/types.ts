@@ -57,6 +57,7 @@ export interface AppliedFilters {
   folio_industry_label: string | null
   rolled_up_to_descendants: number
   deal_size_band: string | null
+  consideration_type?: string | null
   signed_from: string | null
   signed_to: string | null
   ranked_by: string
