@@ -45,10 +45,35 @@ const CATALOG: CatalogResponse = {
   ],
 }
 
+const GRADING = {
+  cases: [
+    {
+      id: 'q01',
+      question: 'how many matters are there in total',
+      should_refuse: false,
+      expected_measures: ['deal_points.matters_total'],
+      actual_measures: ['deal_points.count_distinct_matters'],
+      expected_dimensions: [],
+      actual_dimensions: [],
+      correct: false,
+    },
+  ],
+  answerable_total: 20,
+  answerable_correct: 13,
+  refusal_total: 5,
+  refusal_correct: 1,
+  note: 'Graded from committed fixtures with no database and no model call.',
+}
+
+/** Routes by URL: the tab now calls three endpoints, and answering all of them with the
+ *  catalog made unrelated assertions fail for reasons that had nothing to do with them. */
 function mockCatalog(body: unknown = CATALOG, status = 200) {
-  const fetchMock = vi.fn(
-    async () => ({ ok: status < 400, status, json: async () => body }) as Response,
-  )
+  const fetchMock = vi.fn(async (url: string) => {
+    if (String(url).includes('/grading')) {
+      return { ok: true, status: 200, json: async () => GRADING } as Response
+    }
+    return { ok: status < 400, status, json: async () => body } as Response
+  })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }
@@ -67,7 +92,9 @@ describe('the vocabulary', () => {
   it('shows each entry description — an opaque identifier cannot be reviewed', async () => {
     mockCatalog()
     render(<SemanticLayer />)
-    expect(await screen.findByText(/percentile_cont/)).toBeInTheDocument()
+    // scoped: percentile_cont also appears in the freeform-SQL contrast block by design
+    const catalog = await screen.findByTestId('catalog')
+    expect(within(catalog).getByText(/percentile_cont/)).toBeInTheDocument()
   })
 
   it('states the label space size, because that is the gradeability claim', async () => {
@@ -149,6 +176,9 @@ describe('the query builder', () => {
 
   it('renders a refusal distinctly from an empty result', async () => {
     const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/grading')) {
+        return { ok: true, status: 200, json: async () => GRADING } as Response
+      }
       if (String(url).includes('run-selection')) {
         return {
           ok: true,
@@ -222,5 +252,31 @@ describe('inline jargon (#35)', () => {
     // the explainer prose carries clickable terms; clicking one reveals a definition in place
     const terms = document.querySelectorAll('.term__btn')
     expect(terms.length).toBeGreaterThan(0)
+  })
+})
+
+describe('the offline grade (#36)', () => {
+  it('shows the grade computed from committed fixtures', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    expect(await screen.findByTestId('grade-answerable')).toHaveTextContent('13 of 20')
+  })
+
+  it('reports refusal accuracy separately rather than averaging it away', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    expect(await screen.findByTestId('grade-refusal')).toHaveTextContent('1 of 5')
+  })
+
+  it('states the bad refusal number as the finding, not a footnote', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    expect(await screen.findByTestId('grade-finding')).toHaveTextContent(/min_n|enforced in the API/i)
+  })
+
+  it('shows the freeform arm for contrast, marked as not run', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/not run/i)
   })
 })

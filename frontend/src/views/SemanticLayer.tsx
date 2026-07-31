@@ -4,6 +4,7 @@ import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
 import { QueryBuilder } from '../components/QueryBuilder'
 import { Term } from '../components/Term'
+import { Grading } from '../components/Grading'
 
 /**
  * Semantic Layer (#36).
@@ -139,15 +140,49 @@ export function SemanticLayer() {
         <QueryBuilder measures={catalog.measures} dimensions={catalog.dimensions} />
       </section>
 
+      <Grading />
+
       <section className="sem__pane">
-        <h3 className="sem__h">The comparison</h3>
+        <h3 className="sem__h">The comparison — what the other route looks like</h3>
         <p className="sem__sub" data-testid="freeform-note">
-          The freeform text-to-SQL arm is generated for contrast and{' '}
+          The freeform text-to-SQL arm is shown for contrast and{' '}
           <strong>deliberately not run</strong>. The point is not that its SQL is wrong — it
-          is often right. The point is that two freeform queries can only be diffed against
-          each other, never scored, so there is no way to measure whether the system is
-          getting better.
+          is often right. The point is that there is no table like the one above for it: two
+          generated queries can be diffed against each other, never scored, so nothing tells
+          you whether the system is getting better.
         </p>
+        <div className="sem__cols">
+          <div>
+            <h4 className="sem__h4">Governed selection — what this app sends</h4>
+            <pre className="qb__json">{`{
+  "measures": ["deal_points.median_numeric_value"],
+  "dimensions": [],
+  "filters": [{
+    "member": "deal_points.deal_point_name",
+    "operator": "equals",
+    "values": ["Initial matching rights period (COR)-Answer"]
+  }]
+}`}</pre>
+            <p className="qb__hint">
+              Four names, all from the catalog. Wrong or right is one comparison against an
+              expected selection — which is the table above.
+            </p>
+          </div>
+          <div>
+            <h4 className="sem__h4">Freeform text-to-SQL — the usual approach</h4>
+            <pre className="qb__json">{`SELECT percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY numeric_value)
+FROM deal_points
+WHERE deal_point_name =
+  'Initial matching rights period (COR)-Answer'
+  AND numeric_value IS NOT NULL;`}</pre>
+            <p className="qb__hint">
+              Plausible, and probably right. But <code>avg</code> instead of{' '}
+              <code>percentile_cont</code> would look just as plausible and return a different
+              number — and grading that means diffing free text against free text.
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   )

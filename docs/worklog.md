@@ -2366,3 +2366,33 @@ than in `explainers.tsx`, so the first pass wired terms into every tab except th
 | D53 | Definitions live in **one module**, and a test enumerates the terms the UI uses | Retyping a definition per view guarantees drift, and two screens disagreeing about what MAUD is undermines the thing the glossary exists to fix | The enumeration is hand-maintained: adding a term to the UI without adding it to the list is not caught, only the reverse |
 | D54 | A term is a `<button>` revealing the definition **in place**, not a link or a tooltip | A tooltip is unreachable by keyboard and invisible on touch; a link leaves the screen the reader is trying to understand | Every glossary term is now in the tab order, which lengthens it on prose-heavy tabs |
 
+## #36 completion — offline grading and the freeform contrast
+
+`GET /agent/grading` grades 25 recorded selections against their expected ones using two
+committed fixtures, with **no database and no model**. A test forbids `psycopg.connect` for the
+duration of the call, so the claim is enforced rather than asserted.
+
+Live, 2026-07-31:
+
+```
+answerable  11 of 20   (exact-set match on measures AND dimensions)
+refusal      1 of 5
+✗ q01  expected deal_points.matters_total          got deal_points.count_distinct_matters
+✗ q03  expected comparable_deals.n                 got comparable_deals.n   (dimensions differ)
+✗ q07  expected present_count + n                  got count_distinct_matters
+```
+
+**q01 is arguably a false failure and the UI says so.** `cube/model/deal_points.yml:230`
+documents `matters_total` as an alias of `count_distinct_matters`; an exact-set grader punishes
+a correct answer. That is a finding about the vocabulary — two names for one measure — not about
+the model, and hiding it would make the score look cleaner than it is.
+
+The table originally showed measures only, which made q03 read as a false negative because its
+measures match and its *dimensions* do not. Both are now displayed.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D55 | Grading uses **exact-set match**, stricter than the precision/recall in `docs/results/measure-selection.md` | A partial-credit score is the right summary statistic and the wrong demo: "0.8 precision" invites nodding, "11 of 20" invites reading the failures | Two cases are penalised for selecting a documented alias, so the headline understates real performance — stated in the UI rather than corrected away |
+| D56 | Refusal accuracy is reported **beside** the main score, never folded into it | It is the worst number in the eval (1 of 5) and the direct argument for enforcing min_n in FastAPI instead of a prompt. Averaged in, it disappears | Two numbers to explain instead of one |
+| D57 | The freeform text-to-SQL arm is **shown, not executed** | The claim is not that its SQL is wrong — it is usually right. It is that no table like the grade above can exist for it | The comparison is rhetorical rather than empirical, which a sceptical reviewer may fairly push on |
+

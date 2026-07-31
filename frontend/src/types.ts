@@ -289,3 +289,24 @@ export interface RunSelectionResponse {
   threshold: number | null
   message: string | null
 }
+
+/** `GET /agent/grading` (#36) — the offline grade over recorded model output. */
+export interface GradedCase {
+  id: string
+  question: string
+  should_refuse: boolean
+  expected_measures: string[]
+  actual_measures: string[]
+  expected_dimensions: string[]
+  actual_dimensions: string[]
+  correct: boolean
+}
+
+export interface GradingResponse {
+  cases: GradedCase[]
+  answerable_total: number
+  answerable_correct: number
+  refusal_total: number
+  refusal_correct: number
+  note: string
+}

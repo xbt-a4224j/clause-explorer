@@ -24,6 +24,7 @@ from explorer.api.coverage import router as coverage_router
 from explorer.api.deal_terms import router as deal_terms_router
 from explorer.api.errors import install_error_handlers
 from explorer.api.facets import router as facets_router
+from explorer.api.grading import router as grading_router
 from explorer.api.label import router as label_router
 from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.matters import router as matters_router
@@ -55,6 +56,7 @@ app.include_router(tables_router)
 app.include_router(agent_router)
 app.include_router(catalog_router)
 app.include_router(run_selection_router)
+app.include_router(grading_router)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
