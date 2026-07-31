@@ -1841,3 +1841,73 @@ value, so a KM user sees a cell is thin before ever hitting the gate that enforc
 
 Gates: ruff/mypy clean, `env -u OPENAI_API_KEY pytest` 254 passed (was 239), frontend 59 passed
 (was 47), build clean. Verified through the nginx proxy at localhost:5173, not just curl to 8000.
+
+## #23 — min_n refusal: the single most important behavior in the product
+
+**The gap this closes.** Before this issue, a selection of n=1 rendered `"1 of 1"` in the
+existing count-vs-percentage rule — literally naming whether one specific client's deal has a
+given provision. That is the exact k-anonymity failure CLAUDE.md names: an analyst filtering
+until n=1 has extracted one client's negotiated term through the aggregate layer, around the
+ethical wall, without ever opening a document. `min_n` did not exist as a gate until now.
+
+**Server-side, both endpoints, before any query runs.**
+
+```
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":["contract_1","contract_2","contract_3"]}'
+{"selection_n": 3, "refused": true,
+ "refusal": {"reason": "insufficient_n", "n": 3, "threshold": 5,
+             "message": "n=3 — insufficient to characterize (threshold 5)"}, "rows": []}
+
+$ curl -s -X POST localhost:8000/deal-terms/drill \
+    -d '{"matter_ids":["contract_1","contract_2","contract_3"],"deal_point_name":"Ticking fee"}'
+{"matters": [], "refused": true, "refusal": {..., "n": 3, "threshold": 5}}
+```
+
+Drill-through is the sharper of the two: it returns a named matter's actual clause text, so if
+the rollup refused at n=3 but drill did not, the gate would be decorative — nothing would stop
+clicking straight through to the individual clauses of the matters the rollup declined to
+characterize. Both refuse from the same `_refusal()` check.
+
+**No bypass via the request body.**
+
+```
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":["contract_1"],"admin":true,"bypass_min_n":true}'
+refused: True | n=1 — insufficient to characterize (threshold 5)
+```
+
+There is no flag that turns it off because none is read. A test proves the refusal happens
+*before* any Cube query or database read: `cube.payloads == []` on a refused rollup, and a
+monkeypatched `_run_drill_query` that is never called on a refused drill.
+
+**The 8-matter demo path is unaffected.**
+
+```
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":[...8...]}'
+refused: False | rows: 92
+```
+
+**The second gate — extraction confidence — is built and tested but currently inert, on
+purpose.** MAUD's own labels are gold and are never gated by this (CLAUDE.md: do not re-extract
+what lawyers already labelled); it exists for extractor output. No extractor has run the #28
+calibration pass yet, so `confidence_lookup()` returns `None` for every deal point today —
+fabricating a plausible accuracy number to make the gate "do something" would violate the
+no-fabricated-numbers rule. The mechanism is proven with an injected confidence source in tests
+(`monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.3)` → row excluded,
+`display_kind: "low_confidence"`, distinct `gate_note`), and becomes live the day #28 publishes
+real per-deal-point accuracy.
+
+**The refusal is its own response shape**, not an empty `rows: []` — `refused: true` plus a
+`refusal` object with `n`, `threshold`, and `message`, checked before rows in the view so a
+client cannot mistake it for "no terms found." A dedicated `role="status"` panel renders it,
+styled distinctly from both the error state (red, `role="alert"`) and the empty state (neutral).
+
+### Gates
+
+```
+ruff + mypy                                       clean
+env -u OPENAI_API_KEY pytest backend/tests -q     263 passed        # was 254
+frontend: tsc + vitest + build                    62 passed         # was 59
+```
+
+Mutation check on the refusal itself (`if n >= settings.min_n` → `if n >= 0`): 5 of 6 refusal
+tests fail, confirming the gate is what they actually test rather than an artifact of the stub.

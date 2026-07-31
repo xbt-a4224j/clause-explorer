@@ -401,3 +401,9 @@ kbd {
 .cov__cell--thin { background: #fff1e5; }
 .cov__cell--thin .cov__hit { color: #9a6700; font-weight: 600; }
 .cov__thinlabel { font-size: 9px; font-weight: 400; color: #9a6700; white-space: normal; max-width: 8rem; }
+
+/* min_n refusal (#23) — its own visual state. Not an error (nothing is broken) and not an
+   empty result (there IS data; it is too small to show safely). Amber, between the neutral
+   empty state and the red error state, and framed by the accent rather than danger. */
+.state--refusal { border-left: 2px solid var(--accent); background: var(--surface-1); }
+.term__display--low_confidence { color: var(--ink-tertiary); font-style: italic; }

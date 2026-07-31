@@ -18,6 +18,15 @@ selection, because MAUD does not answer every deal point for every agreement.
 
 Numbers come from Cube, never from SQL written here: the facet count, the rollup and the
 coverage grid have to mean the same thing, and that only holds if there is one definition.
+
+**`min_n` refusal (#23) — the single most important behavior in the product.** Below
+`settings.min_n` selected matters, both endpoints refuse before running any query. This is not
+only statistical honesty: an analyst who narrows a filter to n=1 and asks "what does this deal
+say" has extracted one client's negotiated term through the aggregate layer, around the ethical
+wall, without ever retrieving a document. A count as small as "1 of 1" is exactly as identifying
+as the document itself, so the refusal applies even in count form — there is no rendering of a
+too-small selection that is safe to show. The gate is server-side and unconditional: nothing in
+either request body can disable it, because none exists to.
 """
 
 from __future__ import annotations
@@ -68,6 +77,13 @@ class DrillRequest(BaseModel):
     deal_point_name: str
 
 
+class Refusal(BaseModel):
+    reason: str = Field(description='"insufficient_n" — the only reason today.')
+    n: int
+    threshold: int
+    message: str
+
+
 class NumericSummary(BaseModel):
     numeric_n: int
     median: float | None
@@ -93,15 +109,26 @@ class DealTermRow(BaseModel):
     display_kind: str = Field(description='"count" below the threshold, "percentage" at or above.')
     positions: list[PositionCount]
     numeric: NumericSummary | None
+    gate_note: str | None = Field(
+        default=None,
+        description="Set only when display_kind is low_confidence: why this row is excluded.",
+    )
 
 
 class DealTermsResponse(BaseModel):
     selection_n: int
     percentage_threshold: int
+    min_extraction_confidence: float
     rows: list[DealTermRow]
     answered_deal_point_count: int
     absent_deal_point_count: int
     scope_note: str = SCOPE_NOTE
+    refused: bool = False
+    refusal: Refusal | None = Field(
+        default=None,
+        description="A distinct shape from an ordinary empty response — checking rows.length "
+        "alone must not read this as 'no terms found'.",
+    )
 
 
 class DrillMatter(BaseModel):
@@ -124,10 +151,36 @@ class DrillResponse(BaseModel):
     deal_point_name: str
     matters: list[DrillMatter]
     scope_note: str = SCOPE_NOTE
+    refused: bool = False
+    refusal: Refusal | None = None
 
 
 def _selection_filter(matter_ids: list[str]) -> list[dict[str, Any]]:
     return [{"member": MATTER_ID, "operator": "equals", "values": matter_ids}]
+
+
+def _refusal(matter_ids: list[str]) -> Refusal | None:
+    n = len(set(matter_ids))
+    if n >= settings.min_n:
+        return None
+    return Refusal(
+        reason="insufficient_n",
+        n=n,
+        threshold=settings.min_n,
+        message=f"n={n} — insufficient to characterize (threshold {settings.min_n})",
+    )
+
+
+def confidence_lookup(deal_point_name: str) -> float | None:
+    """Calibrated extraction accuracy for a deal point, or None if never measured.
+
+    Returns None for everything today: MAUD's labels are gold and are never gated by this
+    (CLAUDE.md — do not re-extract what lawyers already labelled), and no extractor has run
+    the #28 calibration pass yet. This is the honest state, not a stub to fill in later with a
+    guess — CLAUDE.md forbids a plausible invented number here. Once #28 publishes measured
+    per-deal-point accuracy, this becomes a lookup against that table.
+    """
+    return None
 
 
 def render(present: int, answered: int, selection_n: int, threshold: int) -> tuple[str, str]:
@@ -185,6 +238,22 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
     matter_ids = request.matter_ids
     threshold = settings.percentage_threshold
 
+    # The refusal check runs before any query — no number is computed, let alone shown, for a
+    # selection this small. Unconditional: the request body offers no way to disable it.
+    refusal = _refusal(matter_ids)
+    if refusal is not None:
+        log.info("deal_terms_refused", selection_n=refusal.n, min_n=refusal.threshold)
+        return DealTermsResponse(
+            selection_n=refusal.n,
+            percentage_threshold=threshold,
+            min_extraction_confidence=settings.min_extraction_confidence,
+            rows=[],
+            answered_deal_point_count=0,
+            absent_deal_point_count=0,
+            refused=True,
+            refusal=refusal,
+        )
+
     try:
         rollup = cube_query(
             {
@@ -207,6 +276,27 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
         name = str(row[NAME])
         answered = int(row.get(N) or 0)
         present = int(row.get(PRESENT) or 0)
+
+        confidence = confidence_lookup(name)
+        if confidence is not None and confidence < settings.min_extraction_confidence:
+            rows.append(
+                DealTermRow(
+                    deal_point_name=name,
+                    answered_n=answered,
+                    present_count=present,
+                    display="not characterized",
+                    display_kind="low_confidence",
+                    positions=[],
+                    numeric=None,
+                    gate_note=(
+                        f"Extraction confidence {confidence:.2f} is below the "
+                        f"{settings.min_extraction_confidence:.2f} threshold for this deal "
+                        "point; not aggregated."
+                    ),
+                )
+            )
+            continue
+
         display, kind = render(present, answered, selection_n, threshold)
 
         numeric_n = int(row.get(NUMERIC_N) or 0)
@@ -260,10 +350,29 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
     return DealTermsResponse(
         selection_n=selection_n,
         percentage_threshold=threshold,
+        min_extraction_confidence=settings.min_extraction_confidence,
         rows=rows,
         answered_deal_point_count=len(answered_names),
         absent_deal_point_count=len(absent),
     )
+
+
+def _run_drill_query(deal_point_name: str, matter_ids: list[str]) -> list[tuple[Any, ...]]:
+    """Isolated so the min_n refusal above can be proven to run first, in tests, without a
+    database — the refusal must never depend on this function having been reachable."""
+    with psycopg.connect(settings.database_url) as conn:
+        return conn.execute(
+            """
+            SELECT dp.matter_id, m.target_name, dp.position,
+                   m.source_file, dp.source_span_start, dp.source_span_end
+              FROM deal_points dp
+              JOIN matters m ON m.id = dp.matter_id
+             WHERE dp.deal_point_name = %(name)s
+               AND dp.matter_id = ANY(%(ids)s)
+             ORDER BY dp.matter_id
+            """,
+            {"name": deal_point_name, "ids": list(matter_ids)},
+        ).fetchall()
 
 
 @router.post("/deal-terms/drill", response_model=DrillResponse)
@@ -277,23 +386,23 @@ def drill(request: DrillRequest) -> DrillResponse:
     This reads Postgres rather than Cube deliberately. Cube's footprint is facet counts, the
     rollup and the coverage grid; fetching individual records and their source spans is outside
     it, and going through Cube for row-level text would put document text in the aggregate layer.
+
+    This is the sharper of the two k-anonymity risks: unlike the rollup, it returns a named
+    matter's actual clause text. If the rollup refuses at n=3 but this did not, the gate would
+    be decorative — nothing would stop clicking through to the individual clauses of the very
+    matters the rollup declined to characterize.
     """
-    with psycopg.connect(settings.database_url) as conn:
-        rows = conn.execute(
-            """
-            SELECT dp.matter_id, m.target_name, dp.position,
-                   m.source_file, dp.source_span_start, dp.source_span_end
-              FROM deal_points dp
-              JOIN matters m ON m.id = dp.matter_id
-             WHERE dp.deal_point_name = %(name)s
-               AND dp.matter_id = ANY(%(ids)s)
-             ORDER BY dp.matter_id
-            """,
-            {"name": request.deal_point_name, "ids": list(request.matter_ids)},
-        ).fetchall()
+    refusal = _refusal(request.matter_ids)
+    if refusal is not None:
+        log.info("deal_terms_drill_refused", selection_n=refusal.n, min_n=refusal.threshold)
+        return DrillResponse(
+            deal_point_name=request.deal_point_name, matters=[], refused=True, refusal=refusal
+        )
 
     matters: list[DrillMatter] = []
-    for matter_id, target_name, position, source_file, start, end in rows:
+    for matter_id, target_name, position, source_file, start, end in _run_drill_query(
+        request.deal_point_name, request.matter_ids
+    ):
         clause_text, unavailable = slice_source(source_file, start, end)
         matters.append(
             DrillMatter(

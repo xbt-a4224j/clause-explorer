@@ -77,7 +77,22 @@ export function DealTerms({ selection }: { selection: string[] }) {
         </div>
       )}
 
-      {data && (
+      {/* Its own state, distinct from both an error and an ordinary empty result: below
+          min_n, no figure — not even a count as small as "1 of 1" — is safe to show. A
+          selection this size, characterized at all, identifies one client's negotiated term. */}
+      {data?.refused && data.refusal && (
+        <div className="state state--refusal" role="status" data-testid="refusal">
+          <h3 className="state__title">Insufficient to characterize</h3>
+          <p className="state__body mono">{data.refusal.message}</p>
+          <p className="state__hint">
+            Below n={data.refusal.threshold}, no figure here is safe to show — a count this
+            small can identify a single client&rsquo;s negotiated term. Broaden the selection in
+            Explore.
+          </p>
+        </div>
+      )}
+
+      {data && !data.refused && (
         <>
           <p className="terms__caption">
             {data.answered_deal_point_count} deal points answered across{' '}
@@ -106,9 +121,10 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
   const [drilled, setDrilled] = useState<DrillMatter[] | null>(null)
   const [drillError, setDrillError] = useState<string | null>(null)
   const absent = row.answered_n === 0
+  const gated = row.display_kind === 'low_confidence'
 
   async function drill() {
-    if (drilled || absent) return
+    if (drilled || absent || gated) return
     try {
       const response = await fetch('/api/deal-terms/drill', {
         method: 'POST',
@@ -117,6 +133,12 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error?.message ?? 'drill-through failed')
+      // the server refuses drill-through the same way it refuses the rollup (#23) — a small
+      // selection must not leak a named client's clause text through this second door
+      if (payload.refused) {
+        setDrillError(payload.refusal?.message ?? 'This selection is too small to drill into.')
+        return
+      }
       setDrilled(payload.matters)
     } catch (e) {
       setDrillError((e as Error).message)
@@ -139,6 +161,8 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
           )}
         </span>
       </button>
+
+      {gated && row.gate_note && <p className="term__absent">{row.gate_note}</p>}
 
       {row.positions.length > 0 && (
         <ul className="term__positions">

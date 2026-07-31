@@ -114,18 +114,22 @@ export interface DealTermRow {
   present_count: number
   /** Pre-rendered server-side per the threshold rule: "6 of 8" or "62%". Never re-derive it. */
   display: string
-  display_kind: 'count' | 'percentage'
+  display_kind: 'count' | 'percentage' | 'low_confidence'
   positions: PositionCount[]
   numeric: NumericSummary | null
+  gate_note: string | null
 }
 
 export interface DealTermsResponse {
   selection_n: number
   percentage_threshold: number
+  min_extraction_confidence: number
   rows: DealTermRow[]
   answered_deal_point_count: number
   absent_deal_point_count: number
   scope_note: string
+  refused: boolean
+  refusal: Refusal | null
 }
 
 export interface DrillMatter {
@@ -164,4 +168,11 @@ export interface CoverageResponse {
   min_n: number
   thin_cell_count: number
   empty_cell_count: number
+}
+
+export interface Refusal {
+  reason: string
+  n: number
+  threshold: number
+  message: string
 }

@@ -245,6 +245,132 @@ class TestScopeIsStated:
         assert "not" in body["scope_note"].lower()
 
 
+class TestMinNRefusal:
+    """The single most important behavior in the product (#23): min_n does three jobs at once
+    — statistical honesty, extraction-confidence gating, and k-anonymity. An analyst who
+    narrows a filter to n=1 has extracted one client's negotiated term through the aggregate
+    layer, around the ethical wall, without ever retrieving a document. Below min_n, this
+    endpoint must refuse — including in the "count" form ("1 of 1"), which is exactly as
+    identifying as a raw document would be.
+    """
+
+    def test_a_selection_below_min_n_is_refused_not_answered(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cube = _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=2, present=1)]))
+        two = EIGHT[:2]
+        body = client.post("/deal-terms", json={"matter_ids": two}).json()
+        assert body["refused"] is True
+        assert body["rows"] == []
+        # no cube query at all: the refusal happens before any number could be computed
+        assert cube.payloads == []
+
+    def test_the_refusal_states_the_actual_n_and_the_threshold(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _stub(monkeypatch, StubCube([]))
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:3]}).json()
+        assert body["refusal"]["n"] == 3
+        assert body["refusal"]["threshold"] == module.settings.min_n
+        assert "n=3" in body["refusal"]["message"]
+        assert str(module.settings.min_n) in body["refusal"]["message"]
+
+    def test_a_selection_at_exactly_min_n_is_answered(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        threshold = module.settings.min_n
+        _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=threshold, present=1)]))
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:threshold]}).json()
+        assert body["refused"] is False
+        assert body["rows"]
+
+    def test_refusal_cannot_be_bypassed_by_a_direct_api_call(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The gate is server-side. There is no client flag, header, or parameter that
+        reaches this endpoint and turns it off — the request shape offers none."""
+        _stub(monkeypatch, StubCube([rollup_row("Ticking fee", n=1, present=1)]))
+        response = client.post(
+            "/deal-terms",
+            json={"matter_ids": ["contract_1"], "bypass_min_n": True, "admin": True},
+        )
+        assert response.json()["refused"] is True
+
+    def test_refused_response_is_not_shaped_like_an_empty_result(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Distinct response shape, not merely an empty rows list — a client checking only
+        `rows.length === 0` must not silently render this as "no terms found"."""
+        _stub(monkeypatch, StubCube([]))
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:1]}).json()
+        assert "refused" in body
+        assert "refusal" in body
+        assert body["refusal"] is not None
+
+
+class TestExtractionConfidenceGate:
+    """The second gate #23 requires: a deal point whose calibrated extraction accuracy is below
+    threshold must not be aggregated. MAUD's own labels are gold (never gated); this applies
+    only to extractor output, and no extractor has run a calibration pass yet (#28) — so the
+    mechanism is exercised here via an injected confidence source rather than real numbers,
+    which do not exist yet. Fabricating a plausible accuracy would violate the no-fabricated-
+    numbers rule; "not yet measured" is why this gate is currently inert in production.
+    """
+
+    def test_a_low_confidence_deal_point_is_excluded_with_its_own_message(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _stub(monkeypatch, StubCube([rollup_row("Extractor field", n=8, present=5)]))
+        monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.3)
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = _row(body, "Extractor field")
+        assert row["display_kind"] == "low_confidence"
+        assert row["display"] == "not characterized"
+        assert "confidence" in row["gate_note"].lower()
+
+    def test_a_deal_point_with_no_measured_confidence_is_not_gated(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The default: nothing has been calibrated yet, so nothing is excluded by this gate."""
+        _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
+        monkeypatch.setattr(module, "confidence_lookup", lambda name: None)
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = _row(body, "Fiduciary exception")
+        assert row["display_kind"] == "count"
+
+    def test_the_confidence_threshold_is_reported(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        assert body["min_extraction_confidence"] == module.settings.min_extraction_confidence
+
+
+class TestDrillThroughRefusal:
+    """Drill-through is the sharper k-anonymity risk of the two endpoints: it returns a named
+    matter's actual clause text. If the rollup refuses at n=3 but drill does not, the gate is
+    decorative — an analyst just clicks through the row that was refused."""
+
+    def test_drill_refuses_below_min_n_without_touching_the_database(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Drill reads Postgres directly (#20/#21), not Cube — the refusal must happen before
+        that query runs, or the DB is asked for a named client's clause text regardless."""
+        called = []
+        monkeypatch.setattr(
+            module,
+            "_run_drill_query",
+            lambda name, ids: called.append((name, ids)) or [],
+        )
+        response = client.post(
+            "/deal-terms/drill",
+            json={"matter_ids": ["contract_1", "contract_2"], "deal_point_name": "Ticking fee"},
+        )
+        body = response.json()
+        assert body["refused"] is True
+        assert called == []
+
+
 class TestCubeFailureIsNotAnEmptyRollup:
     def test_an_unavailable_cube_is_a_503(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

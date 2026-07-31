@@ -17,6 +17,9 @@ const EIGHT = ['contract_1', 'contract_2', 'contract_3', 'contract_4', 'contract
 const ROLLUP: DealTermsResponse = {
   selection_n: 8,
   percentage_threshold: 30,
+  min_extraction_confidence: 0.7,
+  refused: false,
+  refusal: null,
   answered_deal_point_count: 2,
   absent_deal_point_count: 1,
   scope_note:
@@ -34,6 +37,7 @@ const ROLLUP: DealTermsResponse = {
         { position: 'No', n: 2 },
       ],
       numeric: null,
+      gate_note: null,
     },
     {
       deal_point_name: 'Ticking fee',
@@ -43,6 +47,7 @@ const ROLLUP: DealTermsResponse = {
       display_kind: 'count',
       positions: [{ position: 'Yes', n: 2 }],
       numeric: { numeric_n: 2, median: 4, p25: 3, p75: 6.5 },
+      gate_note: null,
     },
     {
       deal_point_name: 'Go-shop period',
@@ -52,6 +57,7 @@ const ROLLUP: DealTermsResponse = {
       display_kind: 'count',
       positions: [],
       numeric: null,
+      gate_note: null,
     },
   ],
 }
@@ -170,6 +176,51 @@ describe('drill-through', () => {
 
     const hit = await within(row).findByTestId('drill-contract_2')
     expect(hit).toHaveTextContent(/located no character range/)
+  })
+})
+
+describe('min_n refusal', () => {
+  /**
+   * #23: the most important behavior in the product. A selection below min_n must render its
+   * own state — visually distinct from both "no terms found" and "the service is down".
+   */
+  const REFUSED = {
+    selection_n: 2,
+    percentage_threshold: 30,
+    min_extraction_confidence: 0.7,
+    answered_deal_point_count: 0,
+    absent_deal_point_count: 0,
+    scope_note: ROLLUP.scope_note,
+    refused: true,
+    refusal: {
+      reason: 'insufficient_n',
+      n: 2,
+      threshold: 5,
+      message: 'n=2 — insufficient to characterize (threshold 5)',
+    },
+    rows: [],
+  }
+
+  it('renders a distinct refusal state stating the actual n and the threshold', async () => {
+    vi.stubGlobal('fetch', mockApi(REFUSED))
+    render(<DealTerms selection={['contract_1', 'contract_2']} />)
+    const refusal = await screen.findByTestId('refusal')
+    expect(refusal).toHaveTextContent('n=2')
+    expect(refusal).toHaveTextContent('threshold 5')
+  })
+
+  it('does not render the empty-result copy for a refusal', async () => {
+    vi.stubGlobal('fetch', mockApi(REFUSED))
+    render(<DealTerms selection={['contract_1', 'contract_2']} />)
+    await screen.findByTestId('refusal')
+    expect(screen.queryByText(/Select deals in Explore/i)).not.toBeInTheDocument()
+  })
+
+  it('does not render the refusal state for an ordinary error', async () => {
+    vi.stubGlobal('fetch', mockApi({ error: { message: 'Cube did not answer' } }, false))
+    render(<DealTerms selection={EIGHT} />)
+    await screen.findByRole('alert')
+    expect(screen.queryByTestId('refusal')).not.toBeInTheDocument()
   })
 })
 

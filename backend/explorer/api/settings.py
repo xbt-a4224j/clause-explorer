@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     # analytics layer without retrieving a document.
     min_n: int = 5
 
+    # Deal points whose calibrated extraction accuracy (#28) falls below this are excluded from
+    # any rollup, distinct from the min_n refusal. 0.7 is a placeholder rationale (typical
+    # acceptability floor for an unreviewed classifier feeding a quoted figure) pending #28's
+    # measured per-deal-point accuracy table — MAUD's own labels are gold and never gated by
+    # this threshold; it exists for extractor output only.
+    min_extraction_confidence: float = 0.7
+
     # Present only so generation and fresh embeddings can work. The app must boot and
     # serve retrieval, facets, coverage and every table view without it.
     openai_api_key: str | None = None
@@ -52,6 +59,7 @@ def load_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         percentage_threshold=int(os.getenv("PERCENTAGE_THRESHOLD", "30")),
         min_n=int(os.getenv("MIN_N", "5")),
+        min_extraction_confidence=float(os.getenv("MIN_EXTRACTION_CONFIDENCE", "0.7")),
         openai_api_key=os.getenv("OPENAI_API_KEY") or None,
     )
 
