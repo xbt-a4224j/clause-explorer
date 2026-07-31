@@ -799,3 +799,6 @@ kbd {
 .arch__sub  { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9.5px; text-anchor: middle; }
 .arch__note { fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px; font-style: italic; text-anchor: middle; }
 .arch__legend { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9px; text-anchor: start; }
+/* ingested with full provenance, but no endpoint queries it — CUAD today. Faded plus an
+   explicit label, because fading alone reads as a rendering accident. */
+.arch__dormant rect { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; opacity: 0.55; }

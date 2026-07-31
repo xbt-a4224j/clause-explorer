@@ -2443,3 +2443,46 @@ Placed above Deal size in the rail: a live axis should not sit beneath a dead on
 | D59 | Ship **Consideration** as the third facet; leave deal value NULL and #9 open | The rail needed a third axis that actually narrows something, and this one is gold rather than inferred — the opposite trade from industry. Estimating a deal value to fill the original axis would have put a fabricated number on the landing screen | It is not the size filter the README and demo script 1 promise, so both still overstate the product until #9 lands or is rewritten |
 | D60 | The dimension is a **correlated subquery** in the Cube model, not a denormalised column on `matters` | Keeps `deal_points` the single source of truth for expert labels; a copied column would need its own sync and could disagree with the rows it was copied from | A subquery per facet query on this dimension; acceptable at 152 matters, would need denormalising at scale |
 
+## Audit: what CUAD and FOLIO actually earn
+
+Prompted by a direct question — "is MAUD the deal corpus while CUAD just provides the clauses?"
+Both answers were less flattering than the diagrams implied.
+
+**CUAD is loaded and unqueried.**
+
+```
+0 of 13,823 clauses attached to a matter    (deliberate — D26)
+0 of 13,823 with an industry                (deliberate — a keyword guess is worse than blank)
+endpoints that query `clauses`: tables.py only
+   deal_terms.py mentions clauses in a COMMENT, not a query
+```
+
+The architecture diagram drew CUAD as one of four equal source boxes, which implied four equal
+inputs. Now drawn muted and labelled LOADED · NOT YET QUERIED, with a matching legend entry and
+the same statement in the accessible description and the Tables explainer.
+
+**FOLIO's hierarchy roll-up is implemented and inert on this corpus.**
+
+```
+18,259 concepts, 47,523 aliases loaded
+crosswalk: 99 SIC rows → 20 distinct FOLIO codes
+distinct codes actually on matters: 14
+every matter sits at level 3 — the same level
+Health Care node has 92 descendants; matters on those descendants: 0
+matters on the exact Health Care node: 25
+```
+
+So the recursive descendant walk returns exactly what an equality match would. **The
+"healthcare rolls up devices and pharma" line was wrong** — that grouping happens in the
+checked-in SIC crosswalk (D30), not in the ontology. Corrected in the Explore explainer and in
+the deep-dive, with an explicit "do not claim this" note added to the latter.
+
+What FOLIO *does* earn, and this is real: a stable **code** to join on instead of a display
+label (D36), which is the actual defence against the silent-empty-result failure, plus the
+label vocabulary and the alias table behind `resolve()`.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D61 | CUAD stays loaded but is drawn and described as dormant rather than removed | Its parser holds two decisions worth keeping visible — the `char_end` collision that would have collapsed 244 expert spans, and the prune that makes reload idempotent across a corpus revision. Deleting it would remove evidence of care; leaving it unmarked overstated the product | 13,823 rows and an ingest stage that earn nothing today, and a reviewer may reasonably ask why it is there at all |
+| D62 | The roll-up claim is corrected everywhere rather than the crosswalk being re-pointed at leaf concepts | Re-pointing is the right fix and it is not a fifteen-minute one — it needs a per-SIC judgement against 18,259 concepts and would change every industry figure in the repo. Claiming less is free and honest; claiming more is the failure this project exists to avoid | The ontology is currently doing less work than its 18,259-concept headline suggests, and I now have to say so out loud |
+

@@ -28,9 +28,11 @@ export function ExploreExplainer() {
         <strong><Term>MAUD</Term></strong> — the <em>Merger Agreement Understanding Dataset</em>, public
         filings that lawyers annotated for research use. These are <em>public SEC filings, not
         any firm&rsquo;s own matter history</em>. Industry comes from <strong><Term>FOLIO</Term></strong>, an
-        open ontology of legal concepts — a formal vocabulary with hierarchy, so &ldquo;health
-        care&rdquo; is a branch containing pharma, devices and providers rather than a word to
-        string-match.
+        open ontology of legal concepts. It supplies the stable <em>codes</em> filtering joins on,
+        and the labels you see. Its hierarchy is loaded and the query walks it — but on this
+        corpus every matter sits at the same level, so the walk currently returns exactly what
+        an equality match would. The pharma-and-devices grouping happens in a checked-in SIC
+        crosswalk, not in the ontology.
       </p>
       <p>
         <strong>What you can do here.</strong> Type a description of your deal, or press{' '}
@@ -174,7 +176,7 @@ export function TablesExplainer() {
         comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
         agreement per ABA question, 12,937 of them. <code>clauses</code> is a separate corpus,
         <Term>CUAD</Term> (the <em>Contract Understanding Atticus Dataset</em>), 13,823 expert-annotated clauses
-        from 510 commercial contracts. <code>folio_concepts</code> is the 18,259-concept legal
+        from 510 commercial contracts — <strong>loaded but not yet used by any other tab</strong>. <code>folio_concepts</code> is the 18,259-concept legal
         ontology supplying the industry vocabulary. <code>labels</code> records human review
         decisions. <code>ingest_runs</code> records what was loaded, when, how long it took and
         with what checksum.

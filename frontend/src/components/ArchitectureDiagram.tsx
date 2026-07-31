@@ -25,7 +25,7 @@ export function ArchitectureDiagram() {
       <title id="arch-t">Clause Explorer architecture, engineering and product</title>
       <desc id="arch-d">
         Four public corpora feed an idempotent ingest into Postgres: MAUD supplies 152 merger
-        agreements and 12,937 expert-labelled deal points; CUAD supplies 13,823 clauses; FOLIO
+        agreements and 12,937 expert-labelled deal points; CUAD supplies 13,823 clauses from 510 commercial contracts, which are ingested with full provenance but which no endpoint currently queries — they are visible only in the raw Tables view; FOLIO
         supplies an 18,259-concept legal ontology used as the dimension vocabulary; SEC EDGAR
         supplies industry codes, which are inferred rather than labelled. Postgres holds six
         tables. Two independent query paths read from it: Cube Core defines 16 measures and 40
@@ -57,8 +57,13 @@ export function ArchitectureDiagram() {
       </text>
       <g className="arch__gold">
         <rect x="20" y="28" width="176" height="52" rx="6" />
-        <rect x="208" y="28" width="176" height="52" rx="6" />
         <rect x="396" y="28" width="176" height="52" rx="6" />
+      </g>
+      {/* CUAD is ingested with full provenance but no endpoint queries it. Drawn muted so it
+          cannot be misread as a peer of MAUD — the diagram showed four equal boxes and implied
+          four equal inputs. */}
+      <g className="arch__dormant">
+        <rect x="208" y="28" width="176" height="52" rx="6" />
       </g>
       <g className="arch__inferred">
         <rect x="584" y="28" width="176" height="52" rx="6" />
@@ -72,8 +77,8 @@ export function ArchitectureDiagram() {
       <g className="arch__sub">
         <text x="108" y="62">152 agreements</text>
         <text x="108" y="73">12,937 expert labels</text>
-        <text x="296" y="62">510 contracts</text>
-        <text x="296" y="73">13,823 clauses</text>
+        <text x="296" y="62">510 commercial contracts</text>
+        <text x="296" y="73">LOADED · NOT YET QUERIED</text>
         <text x="484" y="62">18,259 concepts</text>
         <text x="484" y="73">the dimension vocabulary</text>
         <text x="672" y="62">SIC → FOLIO crosswalk</text>
@@ -95,6 +100,9 @@ export function ArchitectureDiagram() {
       </text>
       <text className="arch__legend" x="790" y="80">
         dashed = the model may not reach it
+      </text>
+      <text className="arch__legend" x="790" y="94">
+        faded = ingested, but nothing queries it yet
       </text>
 
       {/* ── 2 · INGEST ─────────────────────────────────────────────── */}
@@ -129,10 +137,12 @@ export function ArchitectureDiagram() {
       <g className="arch__inner">
         <rect x="32" y="198" width="116" height="30" rx="4" />
         <rect x="156" y="198" width="116" height="30" rx="4" />
-        <rect x="280" y="198" width="116" height="30" rx="4" />
         <rect x="404" y="198" width="116" height="30" rx="4" />
         <rect x="528" y="198" width="106" height="30" rx="4" />
         <rect x="642" y="198" width="106" height="30" rx="4" />
+      </g>
+      <g className="arch__dormant">
+        <rect x="280" y="198" width="116" height="30" rx="4" />
       </g>
       <g className="arch__tbl">
         <text x="90" y="217">matters</text>
@@ -145,7 +155,7 @@ export function ArchitectureDiagram() {
       <g className="arch__sub">
         <text x="90" y="240">152</text>
         <text x="214" y="240">12,937 · LONG</text>
-        <text x="338" y="240">13,823</text>
+        <text x="338" y="240">13,823 · dormant</text>
         <text x="462" y="240">18,259</text>
         <text x="581" y="240">human review</text>
         <text x="695" y="240">run history</text>
