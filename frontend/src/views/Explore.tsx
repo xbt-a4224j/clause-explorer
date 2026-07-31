@@ -6,6 +6,7 @@ import type { ComparablesResponse, FacetsResponse, Matter } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { ExploreDiagram } from '../components/diagrams'
 import { ExploreExplainer } from '../components/explainers'
+import { Term } from '../components/Term'
 
 /**
  * Explore — faceted comparable-deal search (#19).
@@ -186,6 +187,13 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
         <p className="explore__corpus mono">
           {facets.corpus.matters} matters · {facets.corpus.deal_points.toLocaleString()} deal
           points · {facets.corpus.industries} industries
+          {/* #35: a figure with no source is unverifiable. Each of these three comes from a
+              different corpus, and one of them is inferred rather than labelled. */}
+          <span className="explore__prov">
+            matters and deal points from <Term>MAUD</Term> (expert-labelled) · industries from{' '}
+            <Term>FOLIO</Term> via <Term>EDGAR</Term> (<Term>inferred</Term>) · 2020-03-13 to
+            2021-11-21
+          </span>
         </p>
       )}
 

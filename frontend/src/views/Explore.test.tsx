@@ -346,3 +346,23 @@ describe('designed states', () => {
     expect(screen.queryByText(/No comparable deals in this slice/)).not.toBeInTheDocument()
   })
 })
+
+describe('provenance at the point of display (#35)', () => {
+  it('names the corpus behind each headline count', async () => {
+    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    const corpus = await screen.findByText(/matters ·/)
+    expect(corpus).toHaveTextContent(/MAUD/)
+    expect(corpus).toHaveTextContent(/FOLIO/)
+  })
+
+  it('says the industry figure is inferred, beside the figure', async () => {
+    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    const corpus = await screen.findByText(/matters ·/)
+    expect(corpus).toHaveTextContent(/inferred/)
+  })
+
+  it('states the corpus date range so nobody says "the last five years"', async () => {
+    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    expect(await screen.findByText(/2020-03-13 to\s+2021-11-21/)).toBeInTheDocument()
+  })
+})

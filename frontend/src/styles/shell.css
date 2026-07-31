@@ -753,3 +753,8 @@ kbd {
   color: var(--ink-tertiary);
 }
 .grade__dims { display: block; font-size: 9px; color: var(--ink-tertiary); }
+/* provenance beside the figure, not in a doc (#35) */
+.explore__prov {
+  display: block; margin-top: 3px; font-family: var(--font-sans);
+  font-size: 10px; line-height: 1.5; color: var(--ink-tertiary);
+}

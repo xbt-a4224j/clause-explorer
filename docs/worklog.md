@@ -2396,3 +2396,16 @@ measures match and its *dimensions* do not. Both are now displayed.
 | D56 | Refusal accuracy is reported **beside** the main score, never folded into it | It is the worst number in the eval (1 of 5) and the direct argument for enforcing min_n in FastAPI instead of a prompt. Averaged in, it disappears | Two numbers to explain instead of one |
 | D57 | The freeform text-to-SQL arm is **shown, not executed** | The claim is not that its SQL is wrong — it is usually right. It is that no table like the grade above can exist for it | The comparison is rhetorical rather than empirical, which a sceptical reviewer may fairly push on |
 
+## #35 completion — provenance beside the figure
+
+The Explore headline counts now name where each number came from, in the line under them:
+matters and deal points from MAUD (expert-labelled), industries from FOLIO via EDGAR
+(inferred), and the corpus date range 2020-03-13 to 2021-11-21.
+
+The date range is there specifically so nobody in a demo says "the last five years" — it is 20
+months, and the sentence is now on screen rather than in a README nobody opened.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D58 | The three headline counts carry their **source corpus and their gold/inferred status** inline | Three numbers sat side by side implying a common provenance; two are expert-labelled and one is classifier output over a self-assigned SEC code. Reading them as equivalent is exactly the quiet error the schema flags exist to prevent | A second line of small text under the headline, on the first thing a partner sees |
+
