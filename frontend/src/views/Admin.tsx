@@ -29,9 +29,14 @@ function IngestStatus() {
   const [runs, setRuns] = useState<IngestRun[] | null>(null)
 
   useEffect(() => {
+    // #38: every fetch in this file lacked the cancellation guard the other views already use
+    let cancelled = false
     fetch('/api/admin/ingest-status')
       .then((r) => r.json())
-      .then((d) => setRuns(d.runs))
+      .then((d) => !cancelled && setRuns(d.runs))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -79,16 +84,21 @@ function ReportSection({
   const [missing, setMissing] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     fetch(path)
       .then(async (r) => {
+        if (cancelled) return
         if (!r.ok) {
           setMissing(true)
           return
         }
         const body = await r.json()
-        setMarkdown(body.markdown ?? null)
+        if (!cancelled) setMarkdown(body.markdown ?? null)
       })
-      .catch(() => setMissing(true))
+      .catch(() => !cancelled && setMissing(true))
+    return () => {
+      cancelled = true
+    }
   }, [path])
 
   return (
@@ -113,12 +123,17 @@ function EvalResults() {
   const [measureSelection, setMeasureSelection] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     fetch('/api/admin/evals')
       .then((r) => r.json())
       .then((d) => {
+        if (cancelled) return
         setGitSha(d.git_sha)
         setMeasureSelection(d.measure_selection)
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -147,12 +162,17 @@ function LogViewer() {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
     if (level) params.set('level', level)
     if (q) params.set('q', q)
+    let cancelled = false
     fetch(`/api/admin/logs?${params}`)
       .then((r) => r.json())
       .then((d) => {
+        if (cancelled) return
         setLines(d.lines)
         setTotalMatched(d.total_matched)
       })
+    return () => {
+      cancelled = true
+    }
   }, [level, q, offset])
 
   return (

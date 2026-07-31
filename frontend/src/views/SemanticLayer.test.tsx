@@ -178,3 +178,38 @@ describe('the query builder', () => {
     expect(screen.queryByTestId('qb-rows')).not.toBeInTheDocument()
   })
 })
+
+describe('worked examples (#37)', () => {
+  it('offers examples to start from — 56 names with no entry point is a reference card', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const ex = await screen.findByTestId('qb-examples')
+    expect(ex.querySelectorAll('button').length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('loading one fills the builder and explains it in English', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const ex = await screen.findByTestId('qb-examples')
+
+    fireEvent.click(within(ex).getByText(/COVID-19 by name/i))
+
+    expect(screen.getByTestId('qb-note')).toHaveTextContent(/lawyer gave|carve-out/i)
+    expect(screen.getByTestId('qb-query')).toHaveTextContent('deal_points.present_count')
+    expect(screen.getByTestId('qb-filters')).toBeInTheDocument()
+  })
+
+  it('includes one that is meant to be refused', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const ex = await screen.findByTestId('qb-examples')
+    expect(within(ex).getByText(/single company/i)).toBeInTheDocument()
+  })
+
+  it('says why Run is disabled rather than leaving a dead button', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const qb = await screen.findByTestId('query-builder')
+    expect(qb).toHaveTextContent(/also need a measure/i)
+  })
+})

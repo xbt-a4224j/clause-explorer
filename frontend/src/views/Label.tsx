@@ -21,9 +21,15 @@ export function Label() {
   const [labelledThisSession, setLabelledThisSession] = useState(0)
 
   useEffect(() => {
+    // guarded like Coverage, DealTerms and Explore: without it the response can land after the
+    // view is gone and set state on an unmounted component (#38)
+    let cancelled = false
     fetch('/api/label/queue')
       .then((r) => r.json())
-      .then(setQueue)
+      .then((d) => !cancelled && setQueue(d))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const item: LabelQueueItem | undefined = queue?.items[cursor]

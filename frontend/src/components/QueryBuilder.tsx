@@ -37,6 +37,91 @@ function Chip({
   )
 }
 
+interface QueryFilter {
+  member: string
+  operator: string
+  values: string[]
+}
+
+interface Example {
+  question: string
+  explains: string
+  expect: string
+  measures: string[]
+  dimensions: string[]
+  filters: QueryFilter[]
+}
+
+/**
+ * Worked examples. Every one was run against the live stack before being written down, and the
+ * `expect` line is the observed result — not a plausible-looking guess. If the corpus changes
+ * and one of these stops matching, that is a real signal, not a stale string to quietly edit.
+ *
+ * They exist because 56 names with no starting point is not an interface, it is a reference
+ * card. The fourth deliberately fails.
+ */
+const EXAMPLES: Example[] = [
+  {
+    question: 'How many of these agreements mention COVID-19 by name?',
+    explains:
+      'Every deal point is a yes/no or graded answer a lawyer gave. This counts how many of the 152 agreements answered “present” for the pandemic-specific carve-out. The corpus is 2020–21, so this is the question the era forced into every negotiation.',
+    expect: '144 of 152',
+    measures: ['deal_points.n', 'deal_points.present_count'],
+    dimensions: [],
+    filters: [
+      {
+        member: 'deal_points.deal_point_name',
+        operator: 'equals',
+        values: ['Pandemic or other public health event: Specific reference to COVID-19'],
+      },
+    ],
+  },
+  {
+    question: 'How long does a target get to match a competing offer?',
+    explains:
+      'A median, computed by Postgres with percentile_cont — never an average, because on this corpus the two diverge. The units live in the deal point, not the column, which is why you filter to one deal point before taking a median of it.',
+    expect: 'median 4 business days, n=147',
+    measures: ['deal_points.numeric_n', 'deal_points.median_numeric_value'],
+    dimensions: [],
+    filters: [
+      {
+        member: 'deal_points.deal_point_name',
+        operator: 'equals',
+        values: ['Initial matching rights period (COR)-Answer'],
+      },
+    ],
+  },
+  {
+    question: 'How many deals do we have in each industry?',
+    explains:
+      'Industry comes from FOLIO, an open legal ontology, resolved from the SEC’s own code. Note the row with no label: 18 of 152 agreements could not be resolved to an industry at all, and they are shown rather than dropped.',
+    expect: 'Health Care 25 · Finance 25 · Manufacturing 22',
+    measures: ['comparable_deals.n'],
+    dimensions: ['comparable_deals.label'],
+    filters: [],
+  },
+  {
+    question: 'What if I narrow it down to a single company?',
+    explains:
+      'This one is meant to fail. Filtering to one target leaves a sample of one — and an answer describing a single party is that party’s negotiated term, extracted through the analytics layer without opening a document. The server refuses, and it refuses to a raw curl too.',
+    expect: 'refused: n=1, threshold 5',
+    measures: ['deal_points.n'],
+    dimensions: [],
+    filters: [
+      {
+        member: 'deal_points.deal_point_name',
+        operator: 'equals',
+        values: ['FLS (MAE) Standard-Answer'],
+      },
+      {
+        member: 'comparable_deals.target_name',
+        operator: 'equals',
+        values: ['TCF FINANCIAL CORPORATION'],
+      },
+    ],
+  },
+]
+
 export function QueryBuilder({
   measures,
   dimensions,
@@ -46,19 +131,40 @@ export function QueryBuilder({
 }) {
   const [pickedM, setPickedM] = useState<string[]>([])
   const [pickedD, setPickedD] = useState<string[]>([])
+  const [filters, setFilters] = useState<QueryFilter[]>([])
+  const [note, setNote] = useState<Example | null>(null)
   const [result, setResult] = useState<RunSelectionResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
 
   const query = useMemo(
-    () => ({ measures: pickedM, dimensions: pickedD, filters: [] }),
-    [pickedM, pickedD],
+    () => ({ measures: pickedM, dimensions: pickedD, filters }),
+    [pickedM, pickedD, filters],
   )
+
+  function load(ex: Example) {
+    setPickedM(ex.measures)
+    setPickedD(ex.dimensions)
+    setFilters(ex.filters)
+    setNote(ex)
+    setResult(null)
+    setError(null)
+  }
+
+  function clear() {
+    setPickedM([])
+    setPickedD([])
+    setFilters([])
+    setNote(null)
+    setResult(null)
+    setError(null)
+  }
 
   function toggle(list: string[], set: (v: string[]) => void, name: string) {
     set(list.includes(name) ? list.filter((x) => x !== name) : [...list, name])
     setResult(null)
     setError(null)
+    setNote(null)
   }
 
   async function run() {
@@ -91,6 +197,33 @@ export function QueryBuilder({
         does not exist; there is no way to express one.
       </p>
 
+      <h4 className="sem__h4">Start with a worked example</h4>
+      <div className="qb__examples" data-testid="qb-examples">
+        {EXAMPLES.map((ex) => (
+          <button
+            key={ex.question}
+            type="button"
+            className={`qb__example${note?.question === ex.question ? ' is-on' : ''}`}
+            onClick={() => load(ex)}
+          >
+            <span className="qb__exq">{ex.question}</span>
+            <span className="qb__exe">{ex.expect}</span>
+          </button>
+        ))}
+      </div>
+      {note && (
+        <div className="qb__note" data-testid="qb-note">
+          <p>{note.explains}</p>
+          <p className="qb__hint">
+            Loaded below. Press <strong>Run against Postgres</strong> — expected:{' '}
+            <span className="mono">{note.expect}</span>.{' '}
+            <button type="button" className="qb__linkbtn" onClick={clear}>
+              clear
+            </button>
+          </p>
+        </div>
+      )}
+
       <h4 className="sem__h4">Measures</h4>
       <div className="qb__chips">
         {measures.map((m) => (
@@ -115,6 +248,32 @@ export function QueryBuilder({
         ))}
       </div>
 
+      {filters.length > 0 && (
+        <>
+          <h4 className="sem__h4">Filters</h4>
+          <div className="qb__chips" data-testid="qb-filters">
+            {filters.map((f) => (
+              <button
+                key={f.member + f.values.join()}
+                type="button"
+                className="qb__chip is-on"
+                onClick={() => {
+                  setFilters(filters.filter((x) => x !== f))
+                  setNote(null)
+                  setResult(null)
+                }}
+                title="remove this filter"
+              >
+                <span className="qb__chipname">
+                  {f.member.split('.').slice(1).join('.')} = {f.values.join(', ').slice(0, 46)}
+                </span>
+                <span className="qb__chipcube">click to remove</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="qb__cols">
         <div>
           <h4 className="sem__h4">The query this builds</h4>
@@ -125,7 +284,11 @@ export function QueryBuilder({
             {running ? 'running…' : 'Run against Postgres'}
           </button>
           {pickedM.length === 0 && (
-            <p className="qb__hint">Pick at least one measure — there is nothing to compute yet.</p>
+            <p className="qb__blocked">
+              <strong>Nothing to run yet.</strong> A dimension only says how to <em>group</em> —
+              you also need a measure, which is the thing being counted or averaged. Pick one
+              above, or load a worked example.
+            </p>
           )}
         </div>
 

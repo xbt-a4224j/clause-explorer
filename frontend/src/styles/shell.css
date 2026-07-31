@@ -664,3 +664,38 @@ kbd {
 .qb__rejected { border: 1px solid #d1242f; background: #fff5f5; color: #8a1a22; }
 .qb__refused strong, .qb__rejected strong { display: block; margin-bottom: 2px; }
 .qb__refused p, .qb__rejected p { margin: 0 0 4px; }
+
+/* worked examples (#37) — 56 names with no starting point is a reference card, not an interface */
+.qb__examples { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: var(--pad-sm); }
+@media (max-width: 900px) { .qb__examples { grid-template-columns: 1fr; } }
+.qb__example {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: var(--pad-sm) var(--pad-md); border: 1px solid var(--hairline);
+  border-radius: var(--radius); background: var(--surface-2);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.qb__example:hover { border-color: var(--hairline-strong); background: var(--surface-1); }
+.qb__example:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.qb__example.is-on { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-1); }
+.qb__exq { font-size: 12px; color: var(--ink); line-height: 1.4; }
+.qb__exe { font-family: var(--font-mono); font-size: 10px; color: var(--ink-tertiary); }
+
+.qb__note {
+  padding: var(--pad-sm) var(--pad-md); margin-bottom: var(--pad-sm);
+  border-left: 2px solid var(--accent); background: var(--surface-2);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.qb__note p { margin: 0 0 4px; font-size: 12px; line-height: 1.55; color: var(--ink-muted); }
+.qb__note p:last-child { margin-bottom: 0; }
+.qb__note .mono { font-family: var(--font-mono); color: var(--ink); }
+.qb__linkbtn {
+  border: 0; background: none; padding: 0; font: inherit; font-size: 11px;
+  color: var(--accent); text-decoration: underline; cursor: pointer;
+}
+/* the disabled Run button needs a reason beside it, not a whisper */
+.qb__blocked {
+  margin: var(--pad-sm) 0 0; padding: var(--pad-sm) var(--pad-md);
+  border-left: 2px solid var(--hairline-strong); background: var(--surface-2);
+  font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
+}
+.qb__blocked strong { color: var(--ink); font-weight: 500; }

@@ -2281,3 +2281,47 @@ consecutive runs (see #38 — a pre-existing flake scattered across files, not i
 | D47 | The builder has **no free-text input of any kind**, and a test asserts zero `input`/`textarea` elements inside it | Telling a reviewer the model cannot invent a measure is a claim; handing them the same interface and letting them fail to express one is a demonstration. The absence is the feature | Filter values must be picked from enumerated values, so a filter the UI has not enumerated cannot be built at all — less capable than a text box, deliberately |
 | D48 | Validation runs **before** the query reaches Cube, asserted by a test that checks Cube was never called on the reject path | Validating afterwards still returns 422 while having already executed whatever was asked for. Ordering is the guarantee, not the status code | An extra `/meta` fetch on every run; cached by Cube but a real round trip |
 
+## #37 follow-up — worked examples, and #38 not fixed
+
+**Worked examples.** 56 names with no starting point is a reference card, not an interface. Four
+presets, each replayed against the live stack immediately before being written into the UI:
+
+```
+1. COVID-19 named explicitly       144 of 152
+2. Initial matching rights (COR)   median 4 business days, n=147
+3. Deals per industry              Health Care 25 · Finance 25 · Manufacturing 22
+4. Filter to one target company    refused: n=1, threshold 5
+```
+
+The fourth is deliberately a failure — it is the k-anonymity beat, reachable in one click.
+
+Corrected before shipping: example 3's expected line originally read "unresolved 18", but the
+Information industry is *also* 18, so the string was ambiguous about which row it meant. Dropped
+rather than disambiguated in a label that has no room for it.
+
+Also: the disabled Run button now states *why* (a dimension groups, a measure computes), instead
+of a one-line hint that read as a dead control.
+
+**#38 is NOT fixed.** Hypothesis was that views set state after unmount. Audit found the guard
+already present in Coverage, DealTerms, Explore and MatterCard, and absent in Admin (4 fetches),
+Label (2), SemanticLayer (1), Tables (3). All were guarded — one of the new guards was initially
+dead (declared `cancelled` with no cleanup to flip it), caught by a check asserting declarations
+equal flips.
+
+Result, 20 consecutive full runs after the fix:
+
+```
+11 passed / 9 failed of 20
+```
+
+Before the fix it was roughly 2 of 5. **No improvement.** The stale-promise hypothesis is
+therefore wrong, or at least not the dominant cause. What is now established:
+
+- `--no-file-parallelism`: 3 of 3 clean, repeatedly. The failure is concurrency-dependent.
+- Each affected file passes 4 of 4 in isolation.
+- The failing test differs per run and spans unrelated files.
+
+The abort guards are kept regardless — setting state after unmount is a real defect, just
+evidently not this one. Next hypothesis to test is shared jsdom/global state across workers
+rather than anything inside a component.
+

@@ -37,9 +37,15 @@ export function Tables() {
   }, [table, sort, dir, filterColumn, filterValue, offset])
 
   useEffect(() => {
+    // #38: a response landing after the table changed would overwrite the new schema with the
+    // old one — the same guard Coverage and Explore already use
+    let cancelled = false
     fetch(`/api/tables/${table}/schema`)
       .then((r) => r.json())
-      .then(setSchema)
+      .then((d) => !cancelled && setSchema(d))
+    return () => {
+      cancelled = true
+    }
   }, [table])
 
   useEffect(() => {
@@ -50,9 +56,13 @@ export function Tables() {
       params.set('filter_column', filterColumn)
       params.set('filter_value', filterValue)
     }
+    let cancelled = false
     fetch(`/api/tables/${table}/rows?${params}`)
       .then((r) => r.json())
-      .then(setData)
+      .then((d) => !cancelled && setData(d))
+    return () => {
+      cancelled = true
+    }
   }, [table, sort, dir, filterColumn, filterValue, offset])
 
   function toggleExpand(rowId: string) {
