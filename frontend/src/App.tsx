@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { Coverage } from './views/Coverage'
+import { Admin } from './views/Admin'
+import { Label } from './views/Label'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
@@ -111,6 +113,10 @@ export function App() {
               setActive('explore')
             }}
           />
+        ) : active === 'label' ? (
+          <Label />
+        ) : active === 'admin' ? (
+          <Admin />
         ) : (
           <p className="shell__pending">
             This view lands in its own issue. The shell, keyboard contract and health strip are

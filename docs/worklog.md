@@ -2076,3 +2076,58 @@ env -u OPENAI_API_KEY pytest backend/tests -q      296 passed, 1 deselected   # 
 - No attempt to improve the extractor after seeing the numbers — #28 asks for the measurement,
   not a target score, and a worse-than-hoped result is the finding, not something to iterate
   away before publishing (CLAUDE.md).
+
+## #29 — Label review queue · #30 — Admin (ingest, calibration, evals, logs)
+
+**#29.** Queue built from #28's already-committed LLM predictions (no new API call to serve it)
+scored against a free keyword-count baseline extractor, ranked by disagreement between the two —
+the AC's own point: disagreement needs no calibrated confidence, the cheapest useful signal
+before #28 has measured one for a given deal point.
+
+```
+$ curl -s localhost:8000/label/queue
+queue_size: 100  labelled_count: 0
+disagreement items: 15 of 100
+```
+
+Accepting an item writes to `labels` (`target_kind='deal_point'`, `field='position'`, prior
+prediction recorded), verified with a real row:
+
+```
+$ curl -s -X POST localhost:8000/label/decide -d '{...}'
+{"ok": true}
+$ psql ... select * from labels;
+deal_point | contract_10:Acquisition Proposal required to be publicly disclosed... | position | Yes | No | local
+```
+
+Keyboard-only (`y`/`n`/`e`/`s`/`?`), no confirmation dialog — every key either posts a decision
+or explicitly skips and advances, which is what "under 5 seconds per item" actually requires.
+
+**#30.** Composition, not new computation — every number here is read from an artefact another
+issue already produces (`ingest_runs`, `docs/results/*.md`), so there's exactly one place any of
+them can drift from what actually ran.
+
+```
+$ curl -s localhost:8000/admin/ingest-status | # per-source latest run
+cuad: 13823 rows, 755ms, sha f8161d18...
+```
+
+Log viewer measured against the real file this session accumulated — **15,784 lines**, not a
+synthetic fixture — paginated query returned in **87ms**. Redaction verified with an actual
+`sk-proj-` shaped fake key: the viewer re-redacts defensively on top of the write-time structlog
+processor (D5), since it must not trust that every line on disk went through that pipeline.
+
+**A Dockerfile gap found and fixed**, same class as #20's `source_file` path bug: neither
+`admin.py` nor `label.py` could read anything, because the `api` image never `COPY`'d `docs/` —
+both 404'd until the Dockerfile was corrected.
+
+`git_sha` reports `"unknown"` inside the container (no `.git` in the image) and the real short
+SHA locally — a stated, not hidden, limitation of the containerized deployment.
+
+### Gates
+
+```
+ruff + mypy                                        clean
+env -u OPENAI_API_KEY pytest backend/tests -q      313 passed, 1 deselected   # was 296
+frontend: tsc + vitest + build                     81 passed                 # was 68
+```

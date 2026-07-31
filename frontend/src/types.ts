@@ -201,3 +201,40 @@ export interface AgentSelection {
   n: number
   is_inferred: boolean
 }
+
+export interface LabelQueueItem {
+  matter_id: string
+  deal_point_name: string
+  llm_prediction: string
+  deterministic_prediction: string
+  disagreement: boolean
+  quoted_text: string | null
+  span_start: number | null
+  span_end: number | null
+}
+
+export interface LabelQueueResponse {
+  items: LabelQueueItem[]
+  queue_size: number
+  labelled_count: number
+}
+
+export interface IngestRun {
+  source: string
+  rows_read: number
+  rows_upserted: number
+  duration_ms: number | null
+  sha256: string | null
+  status: string
+  detail: string | null
+  started_at: string | null
+}
+
+export interface LogLine {
+  timestamp?: string
+  level?: string
+  request_id?: string
+  event?: string
+  duration_ms?: number
+  [key: string]: unknown
+}
