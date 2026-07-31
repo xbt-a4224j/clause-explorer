@@ -2131,3 +2131,42 @@ ruff + mypy                                        clean
 env -u OPENAI_API_KEY pytest backend/tests -q      313 passed, 1 deselected   # was 296
 frontend: tsc + vitest + build                     81 passed                 # was 68
 ```
+
+## #31 — Tables: browsable raw data so nobody opens psql
+
+Generic `GET /tables/{table}/{schema,rows,rows/{id},export.csv}` over a whitelist of six tables.
+Every identifier (table name, sort column, filter column) is checked against
+`information_schema` before it can reach a query string; every value is a bound parameter.
+
+```
+$ curl -s "localhost:8000/tables/matters%3B%20DROP%20TABLE%20matters/rows" -> 404
+$ curl -s "localhost:8000/tables/matters/rows?sort=id%3B%20DROP%20TABLE%20matters" -> 422
+$ psql ... select count(*) from matters;  -> 152   # unaffected
+```
+
+Real row counts, measured against the running stack:
+
+```
+matters 152 · deal_points 12937 · clauses 13823 · folio_concepts 18259 · labels 1 · ingest_runs 462
+```
+
+`limit` is capped server-side at 500 and **rejected, not silently clamped**, above that — the AC
+is "the frontend never loads a whole table," and a silent cap would let a caller believe it
+received everything when it did not. CSV export bypasses the pagination ceiling deliberately
+(it exists to download the current filtered view) but is capped at 50,000 rows as a safety valve,
+verified with a real multi-column export against `matters`.
+
+Column headers show live type + null count from `information_schema`, not asserted — e.g.
+`deal_value_usd: numeric · null=152`, the #9 gap made visible generically rather than special-
+cased. `is_inferred_*` columns are flagged the same way the matter card (#20) flags them, read
+by naming convention rather than hardcoded per table, so a new inferred column is flagged
+automatically. Sort/filter/page state mirrors into the URL query string via
+`history.replaceState` — no router needed for a single-page shell.
+
+### Gates
+
+```
+ruff + mypy                                        clean
+env -u OPENAI_API_KEY pytest backend/tests -q      326 passed, 1 deselected   # was 313
+frontend: tsc + vitest + build                     86 passed                 # was 81
+```
