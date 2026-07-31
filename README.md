@@ -23,6 +23,7 @@ are described consistently.
 | **Explore** | Faceted comparable-deal search. Filter by industry, deal size, date, transaction type — facet counts update live. Ranked by similarity to your deal. |
 | **Deal Terms** | Rollup across the selected set: *fiduciary out in 6 of 8, ticking fee in 2, median reverse termination fee 4.2%*. Every row drills through to the actual clause language. |
 | **Coverage** | Where experience is thick or thin, by practice area and deal size. Thin cells are the signal — a gap is more actionable than a strength you already know about. |
+| **Semantic Layer** | The vocabulary the agent may select from, read live from Cube, with a query builder that has no free-text box and an offline grade of the selections. |
 | **Tables / Admin / Label** | Browsable raw data, ingest and calibration status, live logs, and keyboard-driven labeling. |
 
 ## Why it refuses to answer sometimes
@@ -81,11 +82,14 @@ is measured rather than estimated (see `docs/worklog.md` for the commands).
   20-matter hand check found the identified registrant was the target in 17 and the acquirer
   in 3.
 - **Deal value is not populated** for any of the 152 matters. EDGAR's company endpoints do not
-  carry transaction value, so `deal_size_band` is empty and size-based filtering does not work
-  yet.
+  carry transaction value, so `deal_size_band` is empty and **size-based filtering does not
+  exist** (#9). Consideration type — All Cash / All Stock / Mixed, a MAUD expert label — is the
+  third facet instead.
 - **The corpus spans 20 months**, 2020-03-13 to 2021-11-21 — not five years.
-- **Health Care is 3 matters of 152.** Pharma and biotech file under SIC 2834/2836, which NAICS
-  and FOLIO both place under Manufacturing (42 matters).
+- **Health Care is 25 matters of 152** — but that grouping is ours, not a standard. The
+  crosswalk places pharma, biotech, devices and CROs with providers; straight NAICS leaves
+  Health Care at 3 and Manufacturing at 42. After the revision Manufacturing is 22. The UI
+  says the grouping is ours wherever it appears.
 - **3.8% of deal points have no source span** (495 of 12,937) and cannot drill through; MAUD's
   excerpts could not be anchored back into the contract text for those.
 

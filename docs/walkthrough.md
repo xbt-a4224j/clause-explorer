@@ -113,7 +113,7 @@ contract_104 (PPD, INC.) -> Actual knowledge
 that's what makes it *Constructive* rather than merely *Actual* knowledge, and reading the two
 excerpts side by side is what makes the distinction legible instead of taken on trust. Every
 quoted string above is byte-identical to the downloaded contract at the stated offsets — asserted
-by a pinning test (`backend/tests/test_deal_terms.py::TestDrillThroughIsTraceable`), not just
+by a pinning test (`backend/tests/test_matter_detail.py::TestDrillThroughIsTraceable`), not just
 eyeballed here. The scope note ships
 on the response itself: *"These are comparable PUBLIC deals from the MAUD study... not this
 firm's own matter history"* — stated on the data, not left to UI copy that could drift from it.

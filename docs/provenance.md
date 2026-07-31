@@ -3,7 +3,7 @@
 Every corpus records the exact acquisition command, the resulting filename, byte size, and
 `shasum -a 256`. A row whose text cannot be traced to a byte range in the downloaded source is a bug.
 
-> Nothing below is filled in yet. Populated by the ingest issues; do not write a checksum you
+> Populated. Every checksum and byte count below came from a command that ran; the commands are shown alongside; do not write a checksum you
 > have not computed.
 
 ## MAUD — Merger Agreement Understanding Dataset
