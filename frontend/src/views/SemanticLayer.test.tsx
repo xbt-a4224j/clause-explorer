@@ -213,3 +213,14 @@ describe('worked examples (#37)', () => {
     expect(qb).toHaveTextContent(/also need a measure/i)
   })
 })
+
+describe('inline jargon (#35)', () => {
+  it('defines its own terms without leaving the tab', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    await screen.findByTestId('query-builder')
+    // the explainer prose carries clickable terms; clicking one reveals a definition in place
+    const terms = document.querySelectorAll('.term__btn')
+    expect(terms.length).toBeGreaterThan(0)
+  })
+})

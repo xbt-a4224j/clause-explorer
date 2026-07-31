@@ -2348,3 +2348,21 @@ already stated in the README and worklog. The rail was the one place claiming 15
 | D51 | Absence buckets carry a **server-supplied, per-dimension** reason | The causes genuinely differ — unresolved registrant, unparsed date, unpopulated value — and one generic string would be wrong twice out of three times. Server-side so the client cannot drift from the data | Three strings to keep accurate; the band one must be deleted when #9 lands, and nothing fails if it is not |
 | D52 | Inferred dimensions are marked `inferred` **in the rail** | Industry is classifier output over a self-assigned SIC code, and the README calls inference the largest source of quiet error. The rail is where someone filters on it and was the one surface that did not say so | A hardcoded `INFERRED_GROUPS` set rather than reading the schema flag through Cube — honest but not data-driven |
 
+## #35 — inline glossary
+
+Every jargon term the product puts in front of a user is now defined without leaving the screen:
+MAUD, CUAD, FOLIO, EDGAR, deal point, public target, fiduciary out, reverse termination fee,
+min_n, k-anonymity, inferred. One module, `components/Term.tsx`.
+
+A test enumerates the eleven terms and fails if one is used but undefined — the failure mode of
+a scattered glossary is that copies drift and the app ends up asserting two different things
+about the same word.
+
+Writing the test found a real gap: the Semantic Layer tab's prose is inline in the view rather
+than in `explainers.tsx`, so the first pass wired terms into every tab except that one.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D53 | Definitions live in **one module**, and a test enumerates the terms the UI uses | Retyping a definition per view guarantees drift, and two screens disagreeing about what MAUD is undermines the thing the glossary exists to fix | The enumeration is hand-maintained: adding a term to the UI without adding it to the list is not caught, only the reverse |
+| D54 | A term is a `<button>` revealing the definition **in place**, not a link or a tooltip | A tooltip is unreachable by keyboard and invisible on touch; a link leaves the screen the reader is trying to understand | Every glossary term is now in the tab order, which lengthens it on prose-heavy tabs |
+

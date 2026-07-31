@@ -3,6 +3,7 @@ import type { CatalogEntry, CatalogResponse } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
 import { QueryBuilder } from '../components/QueryBuilder'
+import { Term } from '../components/Term'
 
 /**
  * Semantic Layer (#36).
@@ -88,7 +89,9 @@ export function SemanticLayer() {
           picks both the answer and the definition of the answer, and you are left comparing
           two plausible queries with no way to score either. Constraining it to a published
           vocabulary makes correctness a single discrete question: did it pick the right
-          measure and filters? That is gradeable offline — no database, no model.
+          measure and filters? That is gradeable offline — no database, no model. The same
+          discipline gives <Term>min_n</Term> somewhere to stand: the gate is applied to the
+          resolved query, whoever assembled it.
         </p>
         <p data-testid="relocated-risk">
           <strong>What this does not fix.</strong> The risk moves; it does not disappear. A{' '}
@@ -100,7 +103,8 @@ export function SemanticLayer() {
         <p data-testid="keyless-note">
           <strong>No API key needed for any of this.</strong> The vocabulary, the routing
           argument and the refusal behaviour are all keyless. A key is needed only to run a
-          live selection.
+          live selection. The measures are defined over <Term>MAUD</Term>&rsquo;s expert
+          annotations, so the numbers are lawyer-labelled data, not model output.
         </p>
       </ExplainerPanel>
 

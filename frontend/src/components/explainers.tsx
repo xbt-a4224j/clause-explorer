@@ -1,3 +1,5 @@
+import { Term } from './Term'
+
 /**
  * The standing per-tab explanation (#35).
  *
@@ -23,9 +25,9 @@ export function ExploreExplainer() {
       </p>
       <p>
         <strong>What you are searching.</strong> 152 real merger agreements from{' '}
-        <strong>MAUD</strong> — the <em>Merger Agreement Understanding Dataset</em>, public
+        <strong><Term>MAUD</Term></strong> — the <em>Merger Agreement Understanding Dataset</em>, public
         filings that lawyers annotated for research use. These are <em>public SEC filings, not
-        any firm&rsquo;s own matter history</em>. Industry comes from <strong>FOLIO</strong>, an
+        any firm&rsquo;s own matter history</em>. Industry comes from <strong><Term>FOLIO</Term></strong>, an
         open ontology of legal concepts — a formal vocabulary with hierarchy, so &ldquo;health
         care&rdquo; is a branch containing pharma, devices and providers rather than a word to
         string-match.
@@ -52,7 +54,7 @@ export function ExploreExplainer() {
         (March 2020 – November 2021), not five years. Deal value is empty for all 152 agreements —
         the SEC endpoints do not carry transaction value — so size filtering does not work yet, and
         the rail says so rather than offering a filter that cannot narrow anything. And every
-        industry is <em>inferred</em> from a coarse, self-assigned SEC code through a hand-written
+        industry is <em><Term>inferred</Term></em> from a coarse, self-assigned SEC code through a hand-written
         crosswalk; 134 of 152 resolved, and a hand check of 20 found 3 carrying the acquirer&rsquo;s
         industry rather than the target&rsquo;s.
       </p>
@@ -71,10 +73,10 @@ export function DealTermsExplainer() {
       <p>
         <strong>What a &ldquo;deal point&rdquo; is.</strong> One negotiated provision, written as a
         question with a fixed answer set. The American Bar Association maintains 92 of them for
-        public-target deals — <em>public target</em> meaning the company being acquired is publicly
+        public-target deals — <em><Term>public target</Term></em> meaning the company being acquired is publicly
         traded, which is why these agreements are public records at all. Examples: does the target&rsquo;s
-        board keep a <em>fiduciary out</em>, letting it change its recommendation if a better offer
-        arrives? Is there a <em>reverse termination fee</em> — what the buyer pays to walk away? Is
+        board keep a <em><Term>fiduciary out</Term></em>, letting it change its recommendation if a better offer
+        arrives? Is there a <em><Term>reverse termination fee</Term></em> — what the buyer pays to walk away? Is
         knowledge <em>Actual</em> or <em>Constructive</em>?
       </p>
       <p>
@@ -138,7 +140,7 @@ export function CoverageExplainer() {
         <em>Statistical honesty</em> — a median over three deals is not market.{' '}
         <em>Extraction confidence</em> — where accuracy has been measured, 4 of the 5 deal points
         tested fall below the reporting gate, and a thin slice is exactly where that bites. And{' '}
-        <em>k-anonymity</em>: an analyst who can filter until one deal remains has extracted a
+        <em><Term>k-anonymity</Term></em>: an analyst who can filter until one deal remains has extracted a
         single client&rsquo;s negotiated term through the analytics layer without ever opening a
         document. In a firm that is a confidentiality control, not a nicety.
       </p>
@@ -171,7 +173,7 @@ export function TablesExplainer() {
         <strong>What the six tables are.</strong> <code>matters</code> is the universe of
         comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
         agreement per ABA question, 12,937 of them. <code>clauses</code> is a separate corpus,
-        CUAD (the <em>Contract Understanding Atticus Dataset</em>), 13,823 expert-annotated clauses
+        <Term>CUAD</Term> (the <em>Contract Understanding Atticus Dataset</em>), 13,823 expert-annotated clauses
         from 510 commercial contracts. <code>folio_concepts</code> is the 18,259-concept legal
         ontology supplying the industry vocabulary. <code>labels</code> records human review
         decisions. <code>ingest_runs</code> records what was loaded, when, how long it took and
@@ -219,7 +221,7 @@ export function AdminExplainer() {
         product.
       </p>
       <p>
-        <strong>Calibration — the most important table here.</strong> MAUD&rsquo;s answers were
+        <strong>Calibration — the most important table here.</strong> <Term>MAUD</Term>&rsquo;s answers were
         written by lawyers, so they are ground truth, not model output. That makes it possible to
         run an extractor over agreements deliberately held back, compare its answers to the human
         ones, and publish accuracy <em>per deal point</em> with a confidence interval. That is what
