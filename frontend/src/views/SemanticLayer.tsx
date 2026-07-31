@@ -1,0 +1,141 @@
+import { useEffect, useState } from 'react'
+import type { CatalogEntry, CatalogResponse } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { RoutingDiagram } from '../components/RoutingDiagram'
+
+/**
+ * Semantic Layer (#36).
+ *
+ * The product's central engineering claim lived only in the README: an agent answering
+ * analytical questions has two independent ways to be wrong — the number, and the
+ * *definition* of the number. This tab makes that inspectable.
+ *
+ * The vocabulary is read live from Cube rather than checked in. A stale copy could disagree
+ * with `cube/model/*.yml`, and then any selection failure becomes an unfalsifiable argument
+ * about which list was authoritative.
+ *
+ * Keyless by design: the catalog, the routing argument and the refusal behaviour are all
+ * database-and-model-free. Only live selection needs a key, and its absence is a designed
+ * state rather than a broken tab.
+ */
+
+function EntryList({ entries, testId }: { entries: CatalogEntry[]; testId: string }) {
+  return (
+    <ul className="cat__list" data-testid={testId}>
+      {entries.map((e) => (
+        <li className="cat__item" key={e.name}>
+          <code className="cat__name">{e.name}</code>
+          <span className="cat__type">{e.type}</span>
+          {e.description && <p className="cat__desc">{e.description}</p>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function SemanticLayer() {
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/agent/catalog')
+      .then(async (r) => {
+        const body = await r.json()
+        if (!r.ok) throw new Error(body?.detail ?? 'The semantic layer did not answer.')
+        return body as CatalogResponse
+      })
+      .then(setCatalog)
+      .catch((e: Error) => setError(e.message))
+  }, [])
+
+  if (error) {
+    // Distinct from an empty vocabulary on purpose: "the model may select nothing" is a
+    // different and much worse claim than "Cube is unreachable".
+    return (
+      <div className="state state--error">
+        <h3 className="state__title">Semantic layer unavailable</h3>
+        <p className="state__body">{error}</p>
+        <p className="state__body">
+          The vocabulary is read live from Cube, so it cannot be shown from cache without
+          risking a catalog that disagrees with the models it claims to describe.
+        </p>
+      </div>
+    )
+  }
+
+  if (!catalog) return <div className="skeleton skeleton--row" aria-label="loading catalog" />
+
+  return (
+    <div className="sem">
+      <ExplainerPanel
+        id="semantic-layer"
+        title="What the semantic layer is for"
+        diagram={<RoutingDiagram />}
+      >
+        <p>
+          <strong>What this tab is for.</strong> Showing what the language model is and is not
+          allowed to do. Ask a question in plain English and something has to decide which
+          number answers it. The model makes that decision — it is a <em>router</em>, not a
+          calculator. Every number on this screen is computed by Postgres.
+        </p>
+        <p>
+          <strong>Why that is worth the trouble.</strong> If the model writes SQL freely, it
+          picks both the answer and the definition of the answer, and you are left comparing
+          two plausible queries with no way to score either. Constraining it to a published
+          vocabulary makes correctness a single discrete question: did it pick the right
+          measure and filters? That is gradeable offline — no database, no model.
+        </p>
+        <p data-testid="relocated-risk">
+          <strong>What this does not fix.</strong> The risk moves; it does not disappear. A{' '}
+          <em>wrong selection returns a real number for the wrong question</em>, which is
+          harder to spot than an obvious error. The mitigation is the resolved query line
+          shown above every answer, which puts the interpretation in front of the one person
+          qualified to catch it.
+        </p>
+        <p data-testid="keyless-note">
+          <strong>No API key needed for any of this.</strong> The vocabulary, the routing
+          argument and the refusal behaviour are all keyless. A key is needed only to run a
+          live selection.
+        </p>
+      </ExplainerPanel>
+
+      <section className="sem__pane" data-testid="catalog">
+        <h3 className="sem__h">The vocabulary a selection may draw from</h3>
+        <p className="sem__sub">
+          Read live from Cube&rsquo;s metadata endpoint, not a checked-in copy.{' '}
+          <span data-testid="label-space">
+            Label space: <span className="mono">{catalog.label_space}</span>
+          </span>{' '}
+          — the model chooses from these names and no others, and an offline eval grades
+          against exactly this list.
+        </p>
+
+        <div className="sem__cols">
+          <div>
+            <h4 className="sem__h4">
+              Measures <span className="mono">{catalog.measures.length}</span>
+            </h4>
+            <EntryList entries={catalog.measures} testId="catalog-measures" />
+          </div>
+          <div>
+            <h4 className="sem__h4">
+              Dimensions <span className="mono">{catalog.dimensions.length}</span>
+            </h4>
+            <EntryList entries={catalog.dimensions} testId="catalog-dimensions" />
+          </div>
+        </div>
+      </section>
+
+      <section className="sem__pane">
+        <h3 className="sem__h">The comparison</h3>
+        <p className="sem__sub" data-testid="freeform-note">
+          The freeform text-to-SQL arm is generated for contrast and{' '}
+          <strong>deliberately not run</strong>. The point is not that its SQL is wrong — it
+          is often right. The point is that two freeform queries can only be diffed against
+          each other, never scored, so there is no way to measure whether the system is
+          getting better.
+        </p>
+      </section>
+    </div>
+  )
+}

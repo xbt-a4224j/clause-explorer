@@ -259,3 +259,19 @@ export interface TableRowsResponse {
   limit: number
   offset: number
 }
+
+/** `GET /agent/catalog` (#36) — the vocabulary a selection may draw from. */
+export interface CatalogEntry {
+  name: string
+  title: string
+  type: string
+  cube: string
+  description: string
+}
+
+export interface CatalogResponse {
+  measures: CatalogEntry[]
+  dimensions: CatalogEntry[]
+  /** measures + dimensions: the discrete label space an offline eval grades against */
+  label_space: number
+}

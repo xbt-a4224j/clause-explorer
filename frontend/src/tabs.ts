@@ -1,30 +1,43 @@
 /**
- * The six tabs, in demo order. Explore is first because it is the entry point for demo
+ * The seven tabs, in demo order. Explore is first because it is the entry point for demo
  * script 1 and the only view a partner would open unprompted.
  *
  * Order is load-bearing: the number-key shortcut is the index, so reordering this array
  * silently rebinds every shortcut.
  */
-export type TabId = 'explore' | 'deal-terms' | 'coverage' | 'tables' | 'admin' | 'label'
+export type TabId =
+  | 'explore'
+  | 'deal-terms'
+  | 'coverage'
+  | 'semantic-layer'
+  | 'tables'
+  | 'admin'
+  | 'label'
 
 export interface Tab {
   id: TabId
   label: string
   hint: string
-  audience: 'partner' | 'km' | 'operator'
+  audience: 'partner' | 'km' | 'operator' | 'engineer'
 }
 
 export const TABS: readonly Tab[] = [
   { id: 'explore', label: 'Explore', hint: 'find comparable deals', audience: 'partner' },
   { id: 'deal-terms', label: 'Deal Terms', hint: 'what was negotiated across a set', audience: 'partner' },
   { id: 'coverage', label: 'Coverage', hint: 'where experience is thick or thin', audience: 'km' },
+  {
+    id: 'semantic-layer',
+    label: 'Semantic Layer',
+    hint: 'how a question becomes a number',
+    audience: 'engineer',
+  },
   { id: 'tables', label: 'Tables', hint: 'browse the raw data', audience: 'operator' },
   { id: 'admin', label: 'Admin', hint: 'ingest, calibration, evals, logs', audience: 'operator' },
   { id: 'label', label: 'Label', hint: 'review the uncertainty queue', audience: 'km' },
 ] as const
 
 export const SHORTCUTS: ReadonlyArray<[string, string]> = [
-  ['1 – 6', 'switch tab'],
+  ['1 – 7', 'switch tab'],
   ['/', 'focus search'],
   ['j / k', 'move through results'],
   ['Enter', 'open the focused result'],

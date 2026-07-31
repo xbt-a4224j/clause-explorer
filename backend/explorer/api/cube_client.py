@@ -76,3 +76,30 @@ def query(payload: dict[str, Any], timeout: float = 20.0) -> list[dict[str, Any]
         duration_ms=round((time.perf_counter() - started) * 1000, 1),
     )
     return list(rows)
+
+
+def meta(timeout: float = 20.0) -> dict[str, Any]:
+    """Cube's `/meta` — the vocabulary a selection may draw from.
+
+    Read live rather than checked in: a copy would drift from `cube/model/*.yml` silently,
+    and the eval grades against exactly this list. A catalog that disagrees with the models
+    turns every selection failure into an unfalsifiable argument about which list was right.
+    """
+    started = time.perf_counter()
+    try:
+        response = httpx.get(f"{settings.cube_api_url}/meta", timeout=timeout)
+        response.raise_for_status()
+        body: dict[str, Any] = response.json()
+    except Exception as exc:
+        log.warning("cube_meta_failed", error=type(exc).__name__)
+        raise CubeUnavailable(
+            "The semantic layer (Cube) did not return its metadata, so the set of measures "
+            "the agent may select from is unknown. Reported rather than shown as empty."
+        ) from exc
+
+    log.info(
+        "cube_meta",
+        cubes=len(body.get("cubes", [])),
+        duration_ms=round((time.perf_counter() - started) * 1000, 1),
+    )
+    return body

@@ -79,12 +79,14 @@ describe('shell', () => {
     expect(screen.getByText('clause explorer')).toBeInTheDocument()
   })
 
-  it('renders all six tabs', () => {
+  it('renders every registered tab', () => {
     render(<App />)
     for (const tab of TABS) {
       expect(screen.getByRole('tab', { name: new RegExp(tab.label, 'i') })).toBeInTheDocument()
     }
-    expect(TABS).toHaveLength(6)
+    // asserted against the constant rather than a literal: adding a tab is a product
+    // decision, not a test failure, but a tab that renders no button is a bug
+    expect(screen.getAllByRole('tab')).toHaveLength(TABS.length)
   })
 
   it('marks exactly one tab selected', () => {

@@ -2196,3 +2196,4 @@ Linked from the README under a new "Walkthrough" section.
 ### Gates
 
 No code changed — documentation only, verified against the already-green stack.
+| D46 | The Semantic Layer tab reads Cube's `/meta` **live**; the freeform text-to-SQL arm is generated but **never executed** | A checked-in catalog can drift from `cube/model/*.yml`, and then a selection failure becomes an unfalsifiable argument about which list was authoritative. The freeform arm is not executed because the honest claim is not "its SQL is wrong" — it is often right — but that two freeform queries can only be diffed, never scored | The tab hard-depends on Cube being up and cannot degrade to a cached vocabulary; and the comparison is rhetorical rather than empirical, which a sceptical reviewer may fairly push on |

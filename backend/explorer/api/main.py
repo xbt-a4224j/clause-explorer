@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from explorer import __version__
 from explorer.api.admin import router as admin_router
 from explorer.api.agent import router as agent_router
+from explorer.api.catalog import router as catalog_router
 from explorer.api.comparables import router as comparables_router
 from explorer.api.coverage import router as coverage_router
 from explorer.api.deal_terms import router as deal_terms_router
@@ -51,6 +52,7 @@ app.include_router(admin_router)
 app.include_router(label_router)
 app.include_router(tables_router)
 app.include_router(agent_router)
+app.include_router(catalog_router)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 

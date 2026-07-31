@@ -563,3 +563,45 @@ kbd {
 }
 .label__why strong { color: var(--ink); font-weight: 500; }
 .label__why .mono { font-family: var(--font-mono); color: var(--ink); }
+
+/* ── Semantic Layer (#36) ────────────────────────────────────────────────────────────────
+   The vocabulary is the argument, so it gets the space. Monospace on the identifiers
+   because they are the exact strings the model selects from — a prettified label would
+   undercut the claim that this is the live catalog. */
+
+.sem { display: flex; flex-direction: column; gap: var(--pad-lg); }
+.sem__pane {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--surface-1); padding: var(--pad-md);
+}
+.sem__h { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--ink); }
+.sem__h4 {
+  margin: 0 0 var(--pad-sm); font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted);
+}
+.sem__h4 .mono { font-family: var(--font-mono); color: var(--ink-tertiary); }
+.sem__sub {
+  margin: 0 0 var(--pad-md); font-size: 12px; line-height: 1.55;
+  color: var(--ink-subtle); max-width: 46rem;
+}
+.sem__sub strong { color: var(--ink); font-weight: 500; }
+.sem__sub .mono { font-family: var(--font-mono); color: var(--ink); }
+.sem__cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-lg); }
+@media (max-width: 900px) { .sem__cols { grid-template-columns: 1fr; } }
+
+.cat__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.cat__item { padding: var(--pad-sm); border-radius: var(--radius); background: var(--surface-2); }
+.cat__name { font-family: var(--font-mono); font-size: 11px; color: var(--ink); }
+.cat__type {
+  margin-left: 6px; font-family: var(--font-mono); font-size: 10px;
+  color: var(--ink-tertiary);
+}
+.cat__desc { margin: 2px 0 0; font-size: 11px; line-height: 1.45; color: var(--ink-subtle); }
+
+/* the routing diagram's freeform lane terminates in a dead end; mark it without colour,
+   because colour alone is not an accessible distinction */
+.loop__node--out rect { fill: var(--surface-3); stroke-dasharray: 3 2; }
+.loop__lane {
+  fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px;
+  text-anchor: start; font-style: italic;
+}

@@ -3,6 +3,7 @@ import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
 import { Label } from './views/Label'
+import { SemanticLayer } from './views/SemanticLayer'
 import { Tables } from './views/Tables'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
@@ -118,6 +119,8 @@ export function App() {
           <Label />
         ) : active === 'admin' ? (
           <Admin />
+        ) : active === 'semantic-layer' ? (
+          <SemanticLayer />
         ) : active === 'tables' ? (
           <Tables />
         ) : (
