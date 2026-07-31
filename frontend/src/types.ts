@@ -238,3 +238,24 @@ export interface LogLine {
   duration_ms?: number
   [key: string]: unknown
 }
+
+export interface TableColumn {
+  name: string
+  type: string
+  null_count: number
+  is_inferred_flag: boolean
+}
+
+export interface TableSchema {
+  table: string
+  row_count: number
+  columns: TableColumn[]
+}
+
+export interface TableRowsResponse {
+  table: string
+  total_count: number
+  rows: Record<string, unknown>[]
+  limit: number
+  offset: number
+}

@@ -27,6 +27,7 @@ from explorer.api.label import router as label_router
 from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.matters import router as matters_router
 from explorer.api.settings import settings
+from explorer.api.tables import router as tables_router
 
 configure_logging(settings.log_level)
 log = get_logger()
@@ -48,6 +49,7 @@ app.include_router(deal_terms_router)
 app.include_router(coverage_router)
 app.include_router(admin_router)
 app.include_router(label_router)
+app.include_router(tables_router)
 app.include_router(agent_router)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"

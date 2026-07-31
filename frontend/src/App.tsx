@@ -3,6 +3,7 @@ import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
 import { Label } from './views/Label'
+import { Tables } from './views/Tables'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
@@ -117,6 +118,8 @@ export function App() {
           <Label />
         ) : active === 'admin' ? (
           <Admin />
+        ) : active === 'tables' ? (
+          <Tables />
         ) : (
           <p className="shell__pending">
             This view lands in its own issue. The shell, keyboard contract and health strip are
