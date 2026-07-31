@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CatalogEntry, CatalogResponse } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
+import { QueryBuilder } from '../components/QueryBuilder'
 
 /**
  * Semantic Layer (#36).
@@ -124,6 +125,10 @@ export function SemanticLayer() {
             <EntryList entries={catalog.dimensions} testId="catalog-dimensions" />
           </div>
         </div>
+      </section>
+
+      <section className="sem__pane">
+        <QueryBuilder measures={catalog.measures} dimensions={catalog.dimensions} />
       </section>
 
       <section className="sem__pane">

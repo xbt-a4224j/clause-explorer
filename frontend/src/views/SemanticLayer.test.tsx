@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SemanticLayer } from './SemanticLayer'
 import type { CatalogResponse } from '../types'
@@ -112,5 +112,69 @@ describe('designed states', () => {
     render(<SemanticLayer />)
     expect(await screen.findByTestId('catalog')).toBeInTheDocument()
     expect(screen.getByTestId('keyless-note')).toBeInTheDocument()
+  })
+})
+
+/**
+ * #37 — the builder. The claim it makes is structural: there is no way to express an invalid
+ * measure, because there is no free-text input. That absence is what earns a test, along with
+ * the query pane matching what would actually be sent.
+ */
+describe('the query builder', () => {
+  it('offers no free-text input at all — that absence is the argument', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const qb = await screen.findByTestId('query-builder')
+    expect(within(qb).queryByRole('textbox')).not.toBeInTheDocument()
+    expect(qb.querySelectorAll('input, textarea')).toHaveLength(0)
+  })
+
+  it('builds the query from clicks, and shows exactly what it will send', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const qb = await screen.findByTestId('query-builder')
+
+    fireEvent.click(within(qb).getByRole('button', { name: /median_numeric_value/ }))
+    await waitFor(() =>
+      expect(screen.getByTestId('qb-query')).toHaveTextContent('deal_points.median_numeric_value'),
+    )
+  })
+
+  it('will not run without a measure — there is nothing to compute', async () => {
+    mockCatalog()
+    render(<SemanticLayer />)
+    const qb = await screen.findByTestId('query-builder')
+    expect(within(qb).getByRole('button', { name: /run against postgres/i })).toBeDisabled()
+  })
+
+  it('renders a refusal distinctly from an empty result', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('run-selection')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            query: {},
+            rows: [],
+            n: 3,
+            refused: true,
+            threshold: 5,
+            message: 'n=3 — insufficient to characterize (threshold 5).',
+          }),
+        } as Response
+      }
+      return { ok: true, status: 200, json: async () => CATALOG } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<SemanticLayer />)
+    const qb = await screen.findByTestId('query-builder')
+
+    fireEvent.click(within(qb).getByRole('button', { name: /^n deal_points$/ }))
+    fireEvent.click(within(qb).getByRole('button', { name: /run against postgres/i }))
+
+    const refused = await screen.findByTestId('qb-refused')
+    expect(refused).toHaveTextContent(/insufficient/i)
+    expect(refused).toHaveTextContent('3')
+    expect(screen.queryByTestId('qb-rows')).not.toBeInTheDocument()
   })
 })

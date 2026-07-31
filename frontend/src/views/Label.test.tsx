@@ -98,7 +98,10 @@ describe('keyboard flow', () => {
     await screen.findByText(/a fee shall accrue/)
 
     fireEvent.keyDown(window, { key: 'n' })
-    expect(await screen.findByLabelText('correct value')).toBeInTheDocument()
+    // synchronous on purpose: the keydown handler sets state in the same flush, so there is
+    // nothing to await. findBy* wrapped it in a 1s poll that expired under parallel load —
+    // a flake caused entirely by asking for asynchrony that never existed.
+    expect(screen.getByLabelText('correct value')).toBeInTheDocument()
   })
 
   it('e opens the span editor without rejecting first', async () => {
@@ -108,7 +111,7 @@ describe('keyboard flow', () => {
     await screen.findByText(/a fee shall accrue/)
 
     fireEvent.keyDown(window, { key: 'e' })
-    expect(await screen.findByLabelText('correct value')).toBeInTheDocument()
+    expect(screen.getByLabelText('correct value')).toBeInTheDocument()
   })
 
   it('s skips without posting a decision', async () => {

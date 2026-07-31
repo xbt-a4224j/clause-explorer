@@ -275,3 +275,13 @@ export interface CatalogResponse {
   /** measures + dimensions: the discrete label space an offline eval grades against */
   label_space: number
 }
+
+/** `POST /agent/run-selection` (#37) — the click-built query. */
+export interface RunSelectionResponse {
+  query: Record<string, unknown>
+  rows: Array<Record<string, unknown>>
+  n: number | null
+  refused: boolean
+  threshold: number | null
+  message: string | null
+}

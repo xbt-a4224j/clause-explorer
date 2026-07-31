@@ -2220,3 +2220,64 @@ Still open on #36: the freeform text-to-SQL comparison arm, the "healthcare" vs
 "Health Care Industry" silent-empty beat, the offline grading table, and live selection.
 The tab currently argues the case and shows the vocabulary; it does not yet run a query.
 
+## #37 — the click-to-build query panel
+
+Verified against the running stack, 2026-07-31, after `docker compose up -d --build api web`.
+
+**1. A valid selection returns real numbers computed by Postgres**
+
+```
+POST /agent/run-selection {"measures":["deal_points.n"],"dimensions":["deal_points.deal_point_name"],"limit":3}
+  "War, terrorism, natural disasters, \"acts of God\" or force majeure-Answer (Y/N)"  n=152
+  "FLS (MAE) Standard-Answer"                                                        n=152
+  "Pandemic or other public health event: Specific reference to COVID-19"             n=152
+unfiltered deal_points.n = 12937
+```
+
+**2. An invented measure is rejected before Cube is touched**
+
+```
+{"measures":["deal_points.totally_made_up"]}   HTTP 422
+  "'deal_points.totally_made_up' is not a known measure."
+```
+
+**3. The banned mean is not selectable even by direct API call** — stronger than expected.
+`EXCLUDED_MEASURES` (`agent/select.py:41`) removes it from the vocabulary, so the ugly name is
+belt and the exclusion is braces:
+
+```
+{"measures":["deal_points.mean_numeric_value_do_not_use_for_market"]}   HTTP 422
+  "... is not a known measure."
+```
+
+**4. Only the `comparable_deals` view and `deal_points` are reachable.** `SELECTABLE`
+(`agent/select.py:34`) keeps the raw `matters` cube out of the agent's surface entirely, so
+provenance columns cannot be filtered on:
+
+```
+filter on matters.source_file    HTTP 422  "'matters.source_file' is not a selectable field."
+filter on matters.target_name    HTTP 422  (the view exposes comparable_deals.target_name instead)
+```
+
+**5. k-anonymity, live, through a raw curl** — filter to a single target company:
+
+```
+filters: deal_point_name = "FLS (MAE) Standard-Answer"
+         comparable_deals.target_name = "TCF FINANCIAL CORPORATION"
+-> {"rows": [], "n": 1, "refused": true, "threshold": 5,
+    "message": "n=1 - insufficient to characterize (threshold 5). The same gate applies to
+                the dashboard and to a direct API call."}
+```
+
+This is the demo beat: a reviewer can filter to one client through the analytics layer and the
+system declines, with `rows: []` **and** `refused: true` — an empty list alone would be
+indistinguishable from "there is nothing here".
+
+Gates: backend 343 passed, ruff + mypy clean. Frontend tsc + build clean; suite green on 2 of 5
+consecutive runs (see #38 — a pre-existing flake scattered across files, not introduced here).
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D47 | The builder has **no free-text input of any kind**, and a test asserts zero `input`/`textarea` elements inside it | Telling a reviewer the model cannot invent a measure is a claim; handing them the same interface and letting them fail to express one is a demonstration. The absence is the feature | Filter values must be picked from enumerated values, so a filter the UI has not enumerated cannot be built at all — less capable than a text box, deliberately |
+| D48 | Validation runs **before** the query reaches Cube, asserted by a test that checks Cube was never called on the reject path | Validating afterwards still returns 422 while having already executed whatever was asked for. Ordering is the guarantee, not the status code | An extra `/meta` fetch on every run; cached by Cube but a real round trip |
+

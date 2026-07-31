@@ -611,3 +611,56 @@ kbd {
 
 /* per-tab diagram variants (#35) */
 .loop__node--key rect { fill: var(--surface-3); stroke: var(--hairline-strong); }
+
+/* ── Query builder (#37) ─────────────────────────────────────────────────────────────────
+   No free-text input exists in this panel by design, so there is no input styling here —
+   only selectable chips. If a text field ever appears, the argument the panel makes is gone. */
+
+.qb { display: flex; flex-direction: column; gap: var(--pad-sm); }
+.qb__chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: var(--pad-sm); }
+.qb__chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 4px 8px; border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--ink-subtle); font: inherit; cursor: pointer;
+  text-align: left;
+}
+.qb__chip:hover { border-color: var(--hairline-strong); color: var(--ink); }
+.qb__chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* selection is marked by border AND weight, not colour alone */
+.qb__chip.is-on {
+  background: var(--surface-1); border-color: var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent); color: var(--ink);
+}
+.qb__chipname { font-family: var(--font-mono); font-size: 11px; }
+.qb__chip.is-on .qb__chipname { font-weight: 600; }
+.qb__chipcube { font-family: var(--font-mono); font-size: 9px; color: var(--ink-tertiary); }
+
+.qb__cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-lg); align-items: start; }
+@media (max-width: 900px) { .qb__cols { grid-template-columns: 1fr; } }
+
+.qb__json {
+  margin: 0 0 var(--pad-sm); padding: var(--pad-sm);
+  background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.5;
+  max-height: 260px; overflow: auto; color: var(--ink-muted);
+}
+.qb__run {
+  padding: 6px 12px; border: 1px solid var(--accent); border-radius: var(--radius);
+  background: var(--accent); color: #fff; font: inherit; font-size: 12px; cursor: pointer;
+}
+.qb__run:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.qb__run:disabled { opacity: 0.45; cursor: not-allowed; }
+.qb__hint { margin: var(--pad-sm) 0 0; font-size: 11px; line-height: 1.5; color: var(--ink-tertiary); }
+.qb__n { margin: 0 0 var(--pad-sm); font-size: 12px; color: var(--ink-subtle); }
+.qb__n .mono { font-family: var(--font-mono); color: var(--ink); font-weight: 600; }
+
+/* refusal and rejection are visually distinct from each other AND from an empty result:
+   one is "the slice is too thin", the other is "that name does not exist" */
+.qb__refused, .qb__rejected {
+  padding: var(--pad-sm) var(--pad-md); border-radius: var(--radius); font-size: 12px;
+  line-height: 1.5;
+}
+.qb__refused { border: 1px solid #9a6700; background: #fff8e5; color: #6a4500; }
+.qb__rejected { border: 1px solid #d1242f; background: #fff5f5; color: #8a1a22; }
+.qb__refused strong, .qb__rejected strong { display: block; margin-bottom: 2px; }
+.qb__refused p, .qb__rejected p { margin: 0 0 4px; }
