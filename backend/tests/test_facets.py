@@ -187,9 +187,15 @@ class TestZeroCounts:
 
 
 class TestDenominators:
-    def test_every_group_carries_its_own_total(self, client: TestClient, cube: StubCube) -> None:
+    def test_a_group_total_counts_only_matters_it_can_actually_filter(
+        self, client: TestClient, cube: StubCube
+    ) -> None:
+        """#34 changed this deliberately. The total used to include the `unclassified` bucket,
+        which is what produced `DEAL SIZE  n=152` sitting directly above prose saying nothing
+        was filterable — all 152 were in the unknown bucket. A group total now answers "how
+        many matters could this dimension narrow", which is the question the header implies."""
         body = client.post("/facets", json={}).json()
-        assert _group(body, "industry")["total_n"] == 25 + 22 + 0 + 18
+        assert _group(body, "industry")["total_n"] == 25 + 22 + 0
         assert _group(body, "year")["total_n"] == 116 + 33
 
     def test_the_response_carries_both_selected_and_unfiltered_totals(
@@ -265,3 +271,54 @@ class TestYearIsComparedAsAString:
         body = client.post("/facets", json={"signing_year": 2021}).json()
         selected = [v["value"] for v in _group(body, "year")["values"] if v["selected"]]
         assert selected == ["2021"]
+
+
+class TestTheRailExplainsItsOwnCounts:
+    """#34 — the rail was all numbers and no meaning.
+
+    The sharpest defect: `n=` on a group header and `n=` on a value are *different
+    denominators* rendered identically. "Every figure carries its denominator" is this
+    product's central claim, and the one screen where a partner does the filtering was
+    ambiguous about which denominator it meant.
+    """
+
+    def test_a_group_says_what_its_total_counts(self, client) -> None:
+        body = client.post("/facets", json={}).json()
+        group = body["groups"][0]
+        assert group["total_basis"]
+        assert "matter" in group["total_basis"].lower()
+
+    def test_an_unclassified_bucket_carries_a_reason(self, client) -> None:
+        """Three matters with no signing year read as a bug. They are a provenance fact:
+        EDGAR did not resolve a date. The rail must say so rather than leave a bare count."""
+        body = client.post("/facets", json={}).json()
+        buckets = [
+            v
+            for g in body["groups"]
+            for v in g["values"]
+            if v["value"].lower() in {"unclassified", "unknown"}
+        ]
+        assert buckets, "expected at least one unclassified bucket in this corpus"
+        assert all(v["reason"] for v in buckets)
+
+    def test_an_unavailable_group_does_not_advertise_a_filterable_total(self, client) -> None:
+        """`DEAL SIZE  n=152` directly above "not filterable" is the header contradicting its
+        own note. A group that cannot narrow anything reports no total."""
+        body = client.post("/facets", json={}).json()
+        for group in body["groups"]:
+            if group["unavailable"]:
+                assert group["total_n"] is None
+
+    def test_an_inferred_dimension_is_marked_inferred(self, client) -> None:
+        """Industry is classifier output over a self-assigned SIC code. The facet rail is
+        exactly where someone filters on it, and it was the one place that did not say so."""
+        industry = next(
+            g for g in client.post("/facets", json={}).json()["groups"] if g["key"] == "industry"
+        )
+        assert industry["inferred"] is True
+
+    def test_a_gold_dimension_is_not_marked_inferred(self, client) -> None:
+        year = next(
+            g for g in client.post("/facets", json={}).json()["groups"] if g["key"] == "year"
+        )
+        assert year["inferred"] is False

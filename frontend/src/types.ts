@@ -4,6 +4,8 @@ export interface FacetValue {
   value: string
   n: number
   selected: boolean
+  /** why an absence bucket exists; null for a real value (#34) */
+  reason?: string | null
   /** Stable identifier to filter by. Null for buckets with no concept behind them. */
   code?: string | null
 }
@@ -12,7 +14,9 @@ export interface FacetGroup {
   key: string
   label: string
   values: FacetValue[]
-  total_n: number
+  total_n: number | null
+  total_basis: string
+  inferred: boolean
   /** Set when the group has nothing worth filtering on, with the reason. Renders disabled. */
   unavailable?: string | null
 }

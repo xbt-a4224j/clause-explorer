@@ -699,3 +699,19 @@ kbd {
   font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
 }
 .qb__blocked strong { color: var(--ink); font-weight: 500; }
+
+/* #34 — the rail was all numbers and no meaning */
+.facet__title > span:first-child { display: inline-flex; align-items: baseline; gap: 5px; }
+.facet__inferred {
+  font-size: 9px; letter-spacing: 0.04em; text-transform: none;
+  color: var(--warn-ink, #6a4500); background: #fff8e5;
+  border: 1px solid #e6d3a3; border-radius: 3px; padding: 0 3px;
+}
+.facet__n { font-family: var(--font-mono); text-transform: none; letter-spacing: 0; }
+/* an absence bucket states its cause; "unclassified · 3" otherwise reads as a bug */
+.facet__reason {
+  margin: 2px 0 4px var(--pad-sm);
+  padding-left: var(--pad-sm);
+  border-left: 2px solid var(--hairline);
+  font-size: 10px; line-height: 1.45; color: var(--ink-tertiary);
+}

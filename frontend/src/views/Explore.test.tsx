@@ -21,7 +21,9 @@ const FACETS: FacetsResponse = {
     {
       key: 'industry',
       label: 'Industry',
-      total_n: 152,
+      total_n: 47,
+      total_basis: 'matters in this slice with any industry resolved',
+      inferred: true,
       values: [
         // the code travels with the label: /comparables filters by FOLIO code, and resolving a
         // label back to a code in the client is exactly the lookup #25 exists to prevent
@@ -34,6 +36,8 @@ const FACETS: FacetsResponse = {
       key: 'year',
       label: 'Signing year',
       total_n: 149,
+      total_basis: 'matters in this slice with a signing year',
+      inferred: false,
       values: [
         { value: '2021', n: 116, selected: false },
         { value: '2020', n: 33, selected: false },

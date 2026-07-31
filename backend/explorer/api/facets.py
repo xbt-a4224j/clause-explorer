@@ -43,6 +43,14 @@ class FacetValue(BaseModel):
     value: str
     n: int
     selected: bool
+    reason: str | None = Field(
+        default=None,
+        description=(
+            "Why this bucket exists, for buckets that are an absence rather than a value. "
+            "`unclassified` with a bare count reads as a bug; it is a provenance fact, and "
+            "which fact differs per dimension (#34)."
+        ),
+    )
     code: str | None = Field(
         default=None,
         description=(
@@ -57,7 +65,31 @@ class FacetGroup(BaseModel):
     key: str
     label: str
     values: list[FacetValue]
-    total_n: int
+    total_n: int | None = Field(
+        default=None,
+        description=(
+            "Matters in the current slice that carry ANY value for this dimension. None when "
+            "the group is unavailable — advertising a filterable total directly above 'not "
+            "filterable' is the header contradicting its own note (#34)."
+        ),
+    )
+    total_basis: str = Field(
+        default="",
+        description=(
+            "What total_n counts, in words. A group total and a value count are different "
+            "denominators and were rendered identically; on a product whose central claim is "
+            "that every figure carries its denominator, that ambiguity was the worst one (#34)."
+        ),
+    )
+    inferred: bool = Field(
+        default=False,
+        description=(
+            "True where the dimension's values are classifier output rather than expert "
+            "labels. Industry is derived from a self-assigned SIC code through a checked-in "
+            "crosswalk; the rail is where someone filters on it and was the one place that "
+            "did not say so (#34)."
+        ),
+    )
     unavailable: str | None = Field(
         default=None,
         description=(
@@ -71,6 +103,33 @@ class FacetGroup(BaseModel):
 # A dimension whose only value is this carries no information: every matter is in one bucket,
 # so selecting it filters nothing. Distinct from a value that is genuinely zero.
 UNINFORMATIVE = {"unknown", "unclassified"}
+
+# Why an absence bucket exists, per dimension. Server-side and per-key rather than one
+# generic string, because the causes are genuinely different: EDGAR resolved no industry for
+# some registrants, parsed no signing date for others, and deal value is not populated at all.
+VALUE_REASONS = {
+    "industry": (
+        "No industry: EDGAR did not resolve this matter's registrant to an SIC code, so the "
+        "SIC to FOLIO crosswalk had nothing to map. 134 of 152 matters resolved."
+    ),
+    "year": (
+        "No signing year: no signing date was parsed from the filing header for these matters."
+    ),
+    "band": (
+        "No size band: deal value is not populated for any matter, so every one falls in the "
+        "same bucket. Issue #9."
+    ),
+}
+
+#: dimensions whose values are classifier output, not expert labels
+INFERRED_GROUPS = {"industry"}
+
+#: what a group's total_n counts, in words — the denominator, stated
+TOTAL_BASIS = {
+    "industry": "matters in this slice with any industry resolved",
+    "year": "matters in this slice with a signing year",
+    "band": "matters in this slice with a size band",
+}
 
 REASONS = {
     "band": (
@@ -165,6 +224,15 @@ def _group(
                 if code_dimension and row.get(code_dimension) is not None
                 else None
             ),
+            # an absence bucket gets its cause; a real value gets none
+            reason=(
+                VALUE_REASONS.get(key)
+                if (str(row[dimension]) if row[dimension] is not None else "unclassified")
+                .lower()
+                .strip()
+                in UNINFORMATIVE
+                else None
+            ),
         )
         for row in rows
     ]
@@ -173,11 +241,18 @@ def _group(
     if values and not informative:
         unavailable = REASONS.get(key, "no values have been loaded for this dimension yet")
 
+    # Only count matters that actually carry a value. Summing every bucket including
+    # `unclassified` produced the contradiction in #34: DEAL SIZE reported n=152 directly above
+    # prose saying nothing was filterable, because all 152 sat in the unknown bucket.
+    filterable_n = sum(v.n for v in informative)
+
     return FacetGroup(
         key=key,
         label=label,
         values=values,
-        total_n=sum(v.n for v in values),
+        total_n=None if unavailable else filterable_n,
+        total_basis="" if unavailable else TOTAL_BASIS.get(key, "matters in this slice"),
+        inferred=key in INFERRED_GROUPS,
         unavailable=unavailable,
     )
 

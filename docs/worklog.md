@@ -2325,3 +2325,26 @@ The abort guards are kept regardless — setting state after unmount is a real d
 evidently not this one. Next hypothesis to test is shared jsdom/global state across workers
 rather than anything inside a component.
 
+## #34 — the facet rail explains its own counts
+
+Verified live after `docker compose up -d --build api web`:
+
+```
+industry  total_n=134   inferred=True   basis='matters in this slice with any industry resolved'
+    unclassified  n=18   "EDGAR did not resolve this matter's registrant to an SIC code..."
+year      total_n=149   inferred=False  basis='matters in this slice with a signing year'
+    unclassified  n=3    "no signing date was parsed from the filing header"
+band      total_n=None  inferred=False
+    unknown       n=152  "deal value is not populated for any matter. Issue #9."
+```
+
+The industry header now reads **134**, not 152 — which is the real resolution figure and was
+already stated in the README and worklog. The rail was the one place claiming 152.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D49 | A group total counts only matters the dimension can **actually filter**, excluding `unclassified`/`unknown` | The old total summed every bucket, which is how `DEAL SIZE  n=152` came to sit directly above prose saying nothing was filterable — all 152 were in the unknown bucket. A header total now answers the question the header implies | A pre-existing test asserted the old sum and had to be rewritten; the two numbers now differ (industry 134 vs 152 matters) and a reader who does not hover the basis may wonder why |
+| D50 | The group total renders as `134 filterable` rather than `n=134`, and carries `total_basis` in words | A group total and a value count are different denominators and were rendered with the identical `n=` glyph. On a product whose central claim is that every figure carries its denominator, that was the worst place for the ambiguity | More text in a 15rem rail; the basis is a tooltip, which is not reachable by keyboard alone |
+| D51 | Absence buckets carry a **server-supplied, per-dimension** reason | The causes genuinely differ — unresolved registrant, unparsed date, unpopulated value — and one generic string would be wrong twice out of three times. Server-side so the client cannot drift from the data | Three strings to keep accurate; the band one must be deleted when #9 lands, and nothing fails if it is not |
+| D52 | Inferred dimensions are marked `inferred` **in the rail** | Industry is classifier output over a self-assigned SIC code, and the README calls inference the largest source of quiet error. The rail is where someone filters on it and was the one surface that did not say so | A hardcoded `INFERRED_GROUPS` set rather than reading the schema flag through Cube — honest but not data-driven |
+
