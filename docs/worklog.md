@@ -2026,3 +2026,53 @@ ruff + mypy                                        clean
 env -u OPENAI_API_KEY pytest backend/tests -q       289 passed, 1 deselected   # was 281
 frontend: tsc + vitest + build                      68 passed
 ```
+
+## #28 — Calibration: extractor vs held-out MAUD labels
+
+No production extraction pipeline exists in this app (MAUD's labels are loaded, not
+re-extracted). This measures a minimal GPT-4o-mini extractor against 20 held-out matters
+(`docs/eval/calibration_split.json`, deterministic `sha256(matter_id)` split, committed) across
+5 deal points chosen — before any prediction ran — for having a small closed position vocabulary.
+
+```
+$ PYTHONPATH=backend python -c "from explorer.evals.calibration import record_predictions; record_predictions()"
+$ PYTHONPATH=backend python -m explorer.evals.calibration
+
+Announcement, pendency or consummation of deal (Y/N)   n=20  0.950  CI[0.764, 0.991]  reportable
+Acquisition Proposal publicly disclosed (Y/N)           n=20  0.500  CI[0.299, 0.701]  not reportable
+"Ability to consummate" subject to MAE carveouts        n=20  0.300  CI[0.145, 0.519]  not reportable
+Action prohibited/omission required                     n=20  0.300  CI[0.145, 0.519]  not reportable
+Actions taken by Buyer-Answer (Y/N)                     n=20  0.200  CI[0.081, 0.416]  not reportable
+```
+
+95% Wilson interval (stable at small n and near 0/1, unlike the normal approximation). 4 of 5
+deal points fall below `min_extraction_confidence=0.7`'s lower CI bound and are correctly marked
+not reportable — the honest result, published as-is. One deal point (near-universal boilerplate,
+well inside the 12k-character context window) generalizes; the other four require reading
+covenant language the truncated context often doesn't reach, or a legal distinction (e.g.
+Constructive vs. Actual knowledge — the same pair #21's drill-through surfaced as real and
+subtle) the minimal extractor wasn't built to make.
+
+Cost: 317,553 total tokens over 100 predictions, measured from `response.usage`. Input/output
+split wasn't captured, so cost is a bound rather than a false-precision figure: $0.048–$0.190
+at gpt-4o-mini pricing read from developers.openai.com/api/docs/pricing on 2026-07-30
+($0.15/$0.60 per 1M input/output tokens), actual likely near the low end given ~3000-token
+context per call against a short structured-output completion.
+
+Full analysis, the exact per-case table, and what this accuracy does and does not generalize to
+are in `docs/results/calibration.md`.
+
+### Gates
+
+```
+ruff + mypy                                        clean
+env -u OPENAI_API_KEY pytest backend/tests -q      296 passed, 1 deselected   # was 289
+```
+
+### Not done
+
+- 5 of 92 deal points — the easiest by position-vocabulary shape, a real sampling bias toward
+  the easy end of the task. Full coverage is materially more cost/time than this issue's scope.
+- No attempt to improve the extractor after seeing the numbers — #28 asks for the measurement,
+  not a target score, and a worse-than-hoped result is the finding, not something to iterate
+  away before publishing (CLAUDE.md).

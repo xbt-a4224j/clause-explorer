@@ -1,0 +1,27 @@
+{
+  "method": "sha256(matter_id) ascending, first 20 of 152 (~13%)",
+  "holdout_count": 20,
+  "train_count": 132,
+  "holdout_matter_ids": [
+    "contract_4",
+    "contract_8",
+    "contract_10",
+    "contract_12",
+    "contract_18",
+    "contract_25",
+    "contract_43",
+    "contract_47",
+    "contract_68",
+    "contract_84",
+    "contract_88",
+    "contract_92",
+    "contract_93",
+    "contract_108",
+    "contract_113",
+    "contract_119",
+    "contract_121",
+    "contract_137",
+    "contract_143",
+    "contract_150"
+  ]
+}

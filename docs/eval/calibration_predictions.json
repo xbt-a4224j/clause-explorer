@@ -1,0 +1,902 @@
+[
+  {
+    "matter_id": "contract_4",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Boards of Directors of each of the Company, Parent and Merger Sub have approved this Agreement and deem it advisable and in the best interests of their respective stockholders to consummate the merger of Merger Sub with and into the Company (the \u201cMerger\u201d), with the Company surviving the Merger as a wholly-owned Subsidiary of Parent in accordance with the Delaware General Corporation Law (the \u201cDGCL\u201d);",
+    "span_start": 5323,
+    "span_end": 5730,
+    "tokens": 3066
+  },
+  {
+    "matter_id": "contract_4",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the ability of the parties to consummate the Merger is subject to the conditions set forth in this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3004
+  },
+  {
+    "matter_id": "contract_4",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "(i) the Boards of Directors of each of the Company, Parent and Merger Sub have (A) determined that this Agreement and the Merger are advisable and in the best interests of their respective stockholders, (B) approved the Merger on the terms and subject to the conditions set forth herein, and (C) adopted and approved this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3051
+  },
+  {
+    "matter_id": "contract_4",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.02 No Solicitation",
+    "span_start": 2729,
+    "span_end": 2757,
+    "tokens": 2991
+  },
+  {
+    "matter_id": "contract_4",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "the Company is terminating that certain Amended and Restated Agreement and Plan of Merger, dated December 10, 2020, by and among the Company, Juneau Parent Co, Inc. and Juneau Merger Co, Inc.",
+    "span_start": 7087,
+    "span_end": 7278,
+    "tokens": 3029
+  },
+  {
+    "matter_id": "contract_8",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Company and Parent are Maryland corporations operating as real estate investment trusts within the meaning, and under the provisions, of Sections 856 through 860 of the Internal Revenue Code of 1986, as amended (the \"Code\"), for U.S. federal income tax purposes (\"REITs\");",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3315
+  },
+  {
+    "matter_id": "contract_8",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The conditions to each party's obligation to consummate the Merger are satisfied, except to the extent that any failure of such conditions shall be due to a Material Adverse Effect.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3286
+  },
+  {
+    "matter_id": "contract_8",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Merger Sub Sole Member has by written consent (i) determined that this Agreement and the Transactions, including the Merger, are in the best interests of Merger Sub; (ii) approved this Agreement and declared that the Transactions, including the Merger, are advisable; (iii) approved this Agreement and the Transactions, including the Merger, and has taken all actions required to be taken by the Merger Sub Sole Member for the adoption, approval and due execution of this Agreement by Merger Sub and the consummation by Merger Sub of the Transactions, including the Merger;",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3366
+  },
+  {
+    "matter_id": "contract_8",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3252
+  },
+  {
+    "matter_id": "contract_8",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "6.3     No Solicitation by the Company.",
+    "span_start": 2749,
+    "span_end": 2788,
+    "tokens": 3259
+  },
+  {
+    "matter_id": "contract_10",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Company Board unanimously has (a) approved and declared advisable this Agreement and the consummation of the Merger and the other transactions contemplated hereby,",
+    "span_start": 6527,
+    "span_end": 6703,
+    "tokens": 3104
+  },
+  {
+    "matter_id": "contract_10",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the consummation of the Merger (the \u201cClosing\u201d) shall take place via the electronic exchange of documents and signature pages",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3096
+  },
+  {
+    "matter_id": "contract_10",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Company Board unanimously has (a) approved and declared advisable this Agreement and the consummation of the Merger and the other transactions contemplated hereby.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3098
+  },
+  {
+    "matter_id": "contract_10",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3074
+  },
+  {
+    "matter_id": "contract_10",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.1 Conduct of Company Business prior to the Effective Time",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3084
+  },
+  {
+    "matter_id": "contract_12",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, following the consummation of the Offer, subject to the terms and conditions of this Agreement and in accordance with Section 251(h) of the General Corporation Law of the State of Delaware (the \u201cDGCL\u201d), Merger Sub will be merged with and into the Company (the \u201cMerger\u201d), with the Company surviving the Merger...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3165
+  },
+  {
+    "matter_id": "contract_12",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the ability to consummate the transactions contemplated by this Agreement is subject to the conditions set forth in Section 7.01.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3120
+  },
+  {
+    "matter_id": "contract_12",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Company Board has unanimously (a) approved and declared advisable this Agreement and the transactions contemplated by this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3114
+  },
+  {
+    "matter_id": "contract_12",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.02. Acquisition Proposals; Change of Recommendation",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3109
+  },
+  {
+    "matter_id": "contract_12",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.02. Acquisition Proposals; Change of Recommendation",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3106
+  },
+  {
+    "matter_id": "contract_18",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the respective Boards of Directors of BancorpSouth and Cadence have approved the Merger and adopted this Agreement and have resolved to submit this Agreement to their respective shareholders for approval and to recommend that their respective shareholders approve this Agreement.",
+    "span_start": 9101,
+    "span_end": 9380,
+    "tokens": 3229
+  },
+  {
+    "matter_id": "contract_18",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The Boards of Directors of BancorpSouth and Cadence have determined that it is in the best interests of their respective companies and their shareholders to consummate the strategic business combination transaction provided for in this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3225
+  },
+  {
+    "matter_id": "contract_18",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "In furtherance thereof, the respective Boards of Directors of BancorpSouth and Cadence have approved the Merger and adopted this Agreement and have resolved to submit this Agreement to their respective shareholders for approval and to recommend that their respective shareholders approve this Agreement.",
+    "span_start": 9077,
+    "span_end": 9380,
+    "tokens": 3231
+  },
+  {
+    "matter_id": "contract_18",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "The Company shall promptly disclose to the public any Acquisition Proposal that is made to the Company or its shareholders.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3206
+  },
+  {
+    "matter_id": "contract_18",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Cadence shall merge with and into BancorpSouth pursuant to this Agreement.",
+    "span_start": 11136,
+    "span_end": 11210,
+    "tokens": 3197
+  },
+  {
+    "matter_id": "contract_25",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS the Board of Directors of the Company and the Board of Directors of Merger Sub each has resolved to recommend that its shareholders adopt this Agreement;",
+    "span_start": 5395,
+    "span_end": 5556,
+    "tokens": 2978
+  },
+  {
+    "matter_id": "contract_25",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2949
+  },
+  {
+    "matter_id": "contract_25",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "each of the Board of Directors of the Company, the Board of Directors of Parent and the Board of Directors of Merger Sub has approved and declared advisable this Agreement and determined that the Merger on the terms provided for in this Agreement is advisable and in the best interests of the Company, Parent or Merger Sub, as applicable, and its respective stockholders or shareholders, as applicable.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3022
+  },
+  {
+    "matter_id": "contract_25",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2950
+  },
+  {
+    "matter_id": "contract_25",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Each party shall use its reasonable best efforts to take all actions and to do all things necessary, proper or advisable to consummate the transactions contemplated by this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2978
+  },
+  {
+    "matter_id": "contract_43",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "As soon as practicable following the consummation of the Offer, Purchaser will be merged with and into the Company (the \u201cMerger\u201d), with the Company continuing as the surviving corporation in the Merger.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3189
+  },
+  {
+    "matter_id": "contract_43",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The obligations of Purchaser to accept for payment, and pay for, any Shares validly tendered (and not validly withdrawn) pursuant to the Offer are subject only to the terms and conditions set forth in this Agreement, including the satisfaction of the Minimum Condition, the Termination Condition and the other conditions set forth in Annex I (collectively, the \u201cOffer Conditions\u201d).",
+    "span_start": 7852,
+    "span_end": 8233,
+    "tokens": 3222
+  },
+  {
+    "matter_id": "contract_43",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "(D) The boards of directors of Parent and Purchaser have each approved this Agreement and declared it advisable for Parent and Purchaser, respectively, to enter into this Agreement.",
+    "span_start": 6305,
+    "span_end": 6486,
+    "tokens": 3179
+  },
+  {
+    "matter_id": "contract_43",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Purchaser expressly reserves the right to (i) increase the Offer Price, (ii) waive any Offer Condition and (iii) make any other changes in the terms and conditions of the Offer not inconsistent with the terms of this Agreement; provided, however, notwithstanding anything to the contrary contained in this Agreement, without the prior written consent of the Company, Parent and Purchaser shall not (A) decrease the Offer Price, (B) change the form of consideration payable in the Offer, (C) decrease the maximum number of Shares sought to be purchased in the Offer, (D) impose conditions or requirements to the Offer in addition to the Offer Conditions.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3279
+  },
+  {
+    "matter_id": "contract_43",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "without the prior written consent of the Company, Parent and Purchaser shall not (A) decrease the Offer Price,",
+    "span_start": 8768,
+    "span_end": 8878,
+    "tokens": 3168
+  },
+  {
+    "matter_id": "contract_47",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the parties hereto intend that Merger Sub be merged with and into the Company with the Company being the surviving corporation on the terms and subject to the conditions set forth herein (the \u201cMerger\u201d);",
+    "span_start": 2880,
+    "span_end": 3091,
+    "tokens": 3096
+  },
+  {
+    "matter_id": "contract_47",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The ability of Parent and Merger Sub to consummate the transactions contemplated by this Agreement is subject to the conditions set forth in Article V.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3080
+  },
+  {
+    "matter_id": "contract_47",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the parties hereto intend that Merger Sub be merged with and into the Company with the Company being the surviving corporation on the terms and subject to the conditions set forth herein",
+    "span_start": 2889,
+    "span_end": 3075,
+    "tokens": 3083
+  },
+  {
+    "matter_id": "contract_47",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "The Company shall not, and shall not permit any of its Subsidiaries to, directly or indirectly, (a) solicit, initiate or encourage (including by way of furnishing information or assistance), or take any other action to facilitate, any inquiries or the making of any proposal that constitutes or may reasonably be expected to lead to, any Acquisition Proposal.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3123
+  },
+  {
+    "matter_id": "contract_47",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3051
+  },
+  {
+    "matter_id": "contract_68",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, Parent intends to acquire 100% of the issued and outstanding shares of capital stock of the Company on the terms and subject to the conditions set forth herein;",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3283
+  },
+  {
+    "matter_id": "contract_68",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "Parent intends to commence an exchange offer (the \u201cExchange Offer\u201d) to effect the exchange of any or all of the Company Senior Notes for a combination of (x) 9,314,214 shares of common stock of Parent Common Stock, which, based on the number of shares of Parent Common Stock outstanding as of the date hereof, would constitute approximately 30.4% of the fully diluted aggregate outstanding shares of Parent Common Stock immediately after giving effect to the Merger and the Exchange Offer (subject to dilution as permitted herein) and (y) up to $100 million in principal of Parent Senior Notes.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3372
+  },
+  {
+    "matter_id": "contract_68",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, Parent desires to acquire 100% of the issued and outstanding shares of capital stock of the Company on the terms and subject to the conditions set forth herein;",
+    "span_start": 8665,
+    "span_end": 8834,
+    "tokens": 3280
+  },
+  {
+    "matter_id": "contract_68",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3251
+  },
+  {
+    "matter_id": "contract_68",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.1 Conduct of Company Business Pending the Merger",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3260
+  },
+  {
+    "matter_id": "contract_84",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Parties wish to effect a business combination through (a) a merger of the Company with and into REIT Merger Sub, with REIT Merger Sub being the surviving entity (the \u201cREIT Merger\u201d), on the terms and subject to the conditions set forth in this Agreement and in accordance with the Delaware Limited Liability Company Act (\u201cDLLCA\u201d); and (b) following the REIT Merger, a merger of the REIT Surviving Entity with and into the Company LP, with the Company LP being the surviving entity (the \u201cPartnership Merger\u201d and, together with the REIT Merger, the \u201cMergers\u201d), on the terms and subject to the conditions set forth in this Agreement and in accordance with the Delaware Revised Uniform Limited Partnership Act (the \u201cDRULPA\u201d) and the DLLCA;",
+    "span_start": 9549,
+    "span_end": 10296,
+    "tokens": 3552
+  },
+  {
+    "matter_id": "contract_84",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The conditions to each Party's obligation to effect the Mergers are subject to the occurrence of a Material Adverse Effect (\"MAE\").",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3411
+  },
+  {
+    "matter_id": "contract_84",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Parties wish to effect a business combination through (a) a merger of the Company with and into REIT Merger Sub, with REIT Merger Sub being the surviving entity (the \u201cREIT Merger\u201d), on the terms and subject to the conditions set forth in this Agreement and in accordance with the Delaware Limited Liability Company Act (\u201cDLLCA\u201d); and (b) following the REIT Merger, a merger of the REIT Surviving Entity with and into the Company LP, with the Company LP being the surviving entity (the 'Partnership Merger' and, together with the REIT Merger, the 'Mergers')...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3511
+  },
+  {
+    "matter_id": "contract_84",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 8.4 No Solicitation by the Company; Company Acquisition Proposals.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3399
+  },
+  {
+    "matter_id": "contract_84",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 8.4   No Solicitation by the Company; Company Acquisition Proposals",
+    "span_start": 4989,
+    "span_end": 5064,
+    "tokens": 3396
+  },
+  {
+    "matter_id": "contract_88",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Company Board unanimously has (a) approved and declared advisable this Agreement and the consummation of the Merger and the other transactions contemplated hereby...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2982
+  },
+  {
+    "matter_id": "contract_88",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The ability to consummate the transactions contemplated by this Agreement is subject to the satisfaction or waiver of certain conditions as set forth in Article VI.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2978
+  },
+  {
+    "matter_id": "contract_88",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2948
+  },
+  {
+    "matter_id": "contract_88",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2952
+  },
+  {
+    "matter_id": "contract_88",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 5.1 Conduct of Company Business Prior to the Effective Time",
+    "span_start": 2260,
+    "span_end": 2327,
+    "tokens": 2962
+  },
+  {
+    "matter_id": "contract_92",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the board of directors of the Company (the \u201cCompany Board\u201d) has unanimously (a) determined that this Agreement, the plan of merger with respect to the Merger, substantially in the form attached hereto as Exhibit A (the \u201cPlan of Merger\u201d) and the transactions contemplated hereby and thereby, including the Merger, are advisable, fair to, and in the best interests of, the Company and its shareholders,",
+    "span_start": 7366,
+    "span_end": 7775,
+    "tokens": 3147
+  },
+  {
+    "matter_id": "contract_92",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "it is a condition to the Merger that prior to the Merger, (i) the Company distribute to the Company\u2019s shareholders all of the issued and outstanding shares of common stock of Meredith Holdings Corporation, an Iowa corporation and wholly owned subsidiary of the Company (\"SpinCo\", and such distribution referred to as the \"Distribution\"), and (ii) SpinCo makes the SpinCo Cash Payment (as defined in the Separation and Distribution Agreement), in each case in accordance with the Spin-Off Agreements (as defined herein);",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3164
+  },
+  {
+    "matter_id": "contract_92",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Company distribute to the Company\u2019s shareholders all of the issued and outstanding shares of common stock of Meredith Holdings Corporation",
+    "span_start": 6903,
+    "span_end": 7045,
+    "tokens": 3079
+  },
+  {
+    "matter_id": "contract_92",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "any such agreement shall contain a standstill no less beneficial to the Company in the aggregate than the standstill in the Confidentiality Agreement prohibiting a counterparty from acquiring any additional equity or voting securities of the Company or any of its Subsidiaries or any Company Securities and that does not contain any provision that would prevent the Company from complying with its obligation to provide any disclosure to Parent required pursuant to Section 7.3.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3146
+  },
+  {
+    "matter_id": "contract_92",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "It is a condition to the Merger that prior to the Merger, (i) the Company distribute to the Company\u2019s shareholders all of the issued and outstanding shares of common stock of Meredith Holdings Corporation, an Iowa corporation and wholly owned subsidiary of the Company (\u201cSpinCo\u201d, and such distribution referred to as the \u201cDistribution\u201d), and (ii) SpinCo makes the SpinCo Cash Payment...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3136
+  },
+  {
+    "matter_id": "contract_93",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Subject to the terms and conditions of this Agreement, at the Effective Time, Merger Sub shall merge with and into the Company in accordance with the Maryland General Corporation Law (the \u201cMGCL\u201d), regulatory requirements, and other applicable Law.",
+    "span_start": 10009,
+    "span_end": 10256,
+    "tokens": 3061
+  },
+  {
+    "matter_id": "contract_93",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the ability of each party to consummate the transactions contemplated by this Agreement is subject to the conditions set forth in this Agreement, including the occurrence of a material adverse effect on the other party.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3052
+  },
+  {
+    "matter_id": "contract_93",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Buyer agrees to take all action necessary and appropriate, including (i) causing Buyer Bank and Company Bank to enter into an appropriate Plan of Bank Merger and (ii) Buyer and Company approving the Plan of Bank Merger and the Bank Merger as the sole shareholder of Buyer Bank and Company Bank, respectively, to cause Company Bank to merge with Buyer Bank in accordance with applicable Laws and the terms of the Plan of Bank Merger.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3098
+  },
+  {
+    "matter_id": "contract_93",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, as a material inducement to Buyer, Buyer Bank and Merger Sub to enter into this Agreement, each director and Executive Officer of Company has entered into a voting agreement with Buyer dated as of this date (a \u201cVoting Agreement\u201d), substantially in the form attached as Exhibit A, pursuant to which each has agreed to vote all Shares of Company Common Stock (as defined in this Agreement) he or she owns in favor of the approval of this Agreement and the transactions it contemplates;",
+    "span_start": 8233,
+    "span_end": 8725,
+    "tokens": 3113
+  },
+  {
+    "matter_id": "contract_93",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3013
+  },
+  {
+    "matter_id": "contract_108",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "The Mergers shall be consummated on a date to be designated by Parent, which shall be no later than the second business day following the satisfaction or waiver of the conditions set forth in Article VI.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3863
+  },
+  {
+    "matter_id": "contract_108",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3823
+  },
+  {
+    "matter_id": "contract_108",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3820
+  },
+  {
+    "matter_id": "contract_108",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Any Acquisition Proposal (as defined in Section 5.2(j)(i)) shall be required to be publicly disclosed.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3847
+  },
+  {
+    "matter_id": "contract_108",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 5.2  No Solicitation; Recommendations",
+    "span_start": 3934,
+    "span_end": 3979,
+    "tokens": 3831
+  },
+  {
+    "matter_id": "contract_113",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, as soon as practicable following the consummation of the Offer, Purchaser will merge with and into the Company (the \u201cMerger\u201d) in accordance with Section 251(h) of the General Corporation Law of the State of Delaware.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3290
+  },
+  {
+    "matter_id": "contract_113",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The obligation of Purchaser to accept for payment and to pay for any Shares validly tendered and not validly withdrawn pursuant to the Offer shall be subject only to the satisfaction or waiver (to the extent permitted hereunder) of those conditions set forth in Annex I (the \u201cOffer Conditions\u201d).",
+    "span_start": 9932,
+    "span_end": 10227,
+    "tokens": 3299
+  },
+  {
+    "matter_id": "contract_113",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Purchaser shall, and Parent shall cause Purchaser to, as promptly as practicable after the date of this Agreement... commence the Offer to purchase for cash any (subject to the Minimum Tender Condition) and all Shares at the Offer Price.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3285
+  },
+  {
+    "matter_id": "contract_113",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the Company shall, and shall cause its Subsidiaries and its and their respective Representatives to, (i) promptly (and in any event within 48 hours) notify Parent after receipt of any Acquisition Proposal or any inquiry that could reasonably be expected to lead to an Acquisition Proposal.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3297
+  },
+  {
+    "matter_id": "contract_113",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Purchaser may not (A) decrease the Closing Amount or amend the terms of the CVR or the CVR Agreement, (B) change the form of the consideration payable in the Offer, (C) decrease the number of Shares sought pursuant to the Offer, (D) amend or waive the Minimum Tender Condition, (E) add to the conditions set forth on Annex I, (F) modify the conditions set forth on Annex I in a manner adverse to the holders of Shares, (G) extend the Expiration Date of the Offer except as required or permitted by Section 1.1(a)(ii) or (H) make any other change in the terms or conditions of the Offer that is adverse to the holders of Shares.",
+    "span_start": 11136,
+    "span_end": 11763,
+    "tokens": 3387
+  },
+  {
+    "matter_id": "contract_119",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, on the terms and subject to the conditions set forth in this Agreement, the parties intend that Merger Subsidiary be merged with and into the Company (the \u201cMerger\u201d), with the Company surviving the Merger as a wholly owned Subsidiary of Parent;",
+    "span_start": 4971,
+    "span_end": 5223,
+    "tokens": 3167
+  },
+  {
+    "matter_id": "contract_119",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the transactions contemplated by this Agreement (including the Merger) is a \"covered transaction\" subject to review under the DPA;",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3137
+  },
+  {
+    "matter_id": "contract_119",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the respective Boards of Directors of the Company, Parent and Merger Subsidiary have approved the execution of this Agreement and the transactions contemplated hereby and, in the case of the Board of Directors of each of the Company and Merger Subsidiary, resolved to recommend that the shareholders of the Company and Merger Subsidiary (as applicable) approve this Agreement pursuant to which, among other things, Parent would acquire the Company by means of the Merger.",
+    "span_start": 5240,
+    "span_end": 5711,
+    "tokens": 3200
+  },
+  {
+    "matter_id": "contract_119",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Each of the Company and Parent shall promptly disclose to the other Party any written Acquisition Proposal that it receives or becomes aware of.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3137
+  },
+  {
+    "matter_id": "contract_119",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.03. No Solicitation; Other Offers",
+    "span_start": 2733,
+    "span_end": 2776,
+    "tokens": 3121
+  },
+  {
+    "matter_id": "contract_121",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Parties wish to effect a business combination transaction in which Company will be merged with and into Merger Sub (the \u201cMerger\u201d)...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2988
+  },
+  {
+    "matter_id": "contract_121",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "The ability of the parties to consummate the transactions contemplated by this Agreement is subject to the conditions set forth in Article 8, which include customary material adverse effect conditions.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2991
+  },
+  {
+    "matter_id": "contract_121",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Parent, in its capacity as the sole member of Merger Sub, has taken all actions required for the execution of this Agreement by Merger Sub and has adopted and approved this Agreement and approved the consummation by Merger Sub of the Merger and the other transactions contemplated by this Agreement.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3012
+  },
+  {
+    "matter_id": "contract_121",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Each Party agrees to promptly respond to any Acquisition Proposal and to provide such information relating to the Party as is reasonably necessary to facilitate discussions regarding any Acquisition Proposal.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 2989
+  },
+  {
+    "matter_id": "contract_121",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "Section 6.1 Conduct of Business by Company",
+    "span_start": 3282,
+    "span_end": 3324,
+    "tokens": 2965
+  },
+  {
+    "matter_id": "contract_137",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "WHEREAS, the Parties hereto wish to effect a business combination through a merger of TRMT with and into RMRM, with RMRM being the surviving entity in the merger (the \u201cMerger\u201d), upon the terms and conditions set forth in this Agreement...",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3084
+  },
+  {
+    "matter_id": "contract_137",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the ability to consummate the Merger is subject to Material Adverse Effect (MAE) exceptions.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3051
+  },
+  {
+    "matter_id": "contract_137",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the RMRM Board has unanimously (a) determined and declared that this Agreement, the Merger, the issuance of RMRM Common Shares in the Merger and the other Transactions to which RMRM is a party are fair and reasonable and advisable to, and in the best interests of, RMRM",
+    "span_start": 7347,
+    "span_end": 7616,
+    "tokens": 3090
+  },
+  {
+    "matter_id": "contract_137",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the confidentiality agreement shall not prohibit compliance by RMRM or TRMT with any of the provisions of Section 7.3 and shall not restrict the making of a Competing Proposal.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3068
+  },
+  {
+    "matter_id": "contract_137",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3029
+  },
+  {
+    "matter_id": "contract_143",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the merger of Merger Sub Inc. with and into the Company, with the Company continuing as the surviving entity following such merger (the \u201cFirst Merger\u201d), and the subsequent merger of the Company with and into Merger Sub LLC, with Merger Sub LLC continuing as the surviving entity following such merger (the \u201cSecond Merger\u201d and, together with the First Merger, the \u201cMerger\u201d or the \u201cIntegrated Mergers\u201d)",
+    "span_start": 6844,
+    "span_end": 7244,
+    "tokens": 3213
+  },
+  {
+    "matter_id": "contract_143",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "Ability to consummate the Merger is subject to the conditions set forth in Section 7.1.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3145
+  },
+  {
+    "matter_id": "contract_143",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "Parent, in its capacity as the sole member of Merger Sub LLC, has (i) determined that this Agreement and the Transactions are fair and reasonable to, and advisable and in the best interests of, Merger Sub LLC and its sole member and (ii) approved the execution, delivery and performance of this Agreement and the consummation of the Transactions.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3192
+  },
+  {
+    "matter_id": "contract_143",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3126
+  },
+  {
+    "matter_id": "contract_143",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3123
+  },
+  {
+    "matter_id": "contract_150",
+    "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the parties intend that Acquisition Sub be merged with and into the Company (the \u201cMerger\u201d) in accordance with this Agreement and the General Corporation Law of the State of Delaware (the \u201cDGCL\u201d).",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3070
+  },
+  {
+    "matter_id": "contract_150",
+    "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+    "predicted_position": "Yes",
+    "quoted_text": "the consummation of the Merger (the \u201cClosing\u201d) shall be held... subject to the satisfaction or waiver of each of such conditions at the Closing.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3061
+  },
+  {
+    "matter_id": "contract_150",
+    "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+    "predicted_position": "Yes",
+    "quoted_text": "the parties shall take all requisite actions so that, from and after the Effective Time, the bylaws of the Company shall be amended and restated in their entirety to conform to the bylaws of Acquisition Sub as in effect immediately prior to the Effective Time",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3077
+  },
+  {
+    "matter_id": "contract_150",
+    "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+    "predicted_position": "No",
+    "quoted_text": null,
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3032
+  },
+  {
+    "matter_id": "contract_150",
+    "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+    "predicted_position": "Yes",
+    "quoted_text": "The Company shall not, and shall not permit any of its Subsidiaries to, (i) solicit, initiate or encourage any Takeover Proposal or (ii) enter into any agreement with respect to any Takeover Proposal.",
+    "span_start": null,
+    "span_end": null,
+    "tokens": 3073
+  }
+]
