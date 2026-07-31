@@ -1,0 +1,31 @@
+=== SCRIPT 1: Find comparable deals — healthcare, sponsor-side context ===
+
+$ curl -s -X POST localhost:8000/facets -d '{}'
+corpus: 152 matters · 12937 deal points · 14 industries
+unfiltered_n=152
+
+$ curl -s -X POST localhost:8000/facets -d '{}' | industry facet
+  Finance and Insurance Services Industry    n=25   code=RCksXAlY9lRN16wERqZZ8Tk
+  Health Care Industry                       n=25   code=RCSG4k3ah1Pu5YgPexPgOmL
+  Manufacturing Industry                     n=22   code=RBOjgvcq6Z33XxMhTxWiiDS
+  unclassified                               n=18   code=None
+  Information Industry                       n=18   code=RHwCmZ2yKrJobzC86GC6Ep
+
+$ curl -s -X POST localhost:8000/facets -d '{"folio_industry_label":"Health Care Industry"}'  # narrow
+total_n=25 of unfiltered_n=152
+  year 2021   n=19
+  year 2020   n=5
+  year unclassified n=1
+
+$ curl -s -X POST localhost:8000/comparables -d '{"folio_industry_code":"RCSG4k3ah1Pu5YgPexPgOmL","limit":8}'
+candidate_count=25 returned_count=8
+applied: {"folio_industry_code": "RCSG4k3ah1Pu5YgPexPgOmL", "folio_industry_label": "Health Care Industry", "rolled_up_to_descendants": 91, "deal_size_band": null, "signed_from": null, "signed_to": null, "ranked_by": "matter id (no description given)"}
+
+  contract_1     ACCELERON PHARMA INC.                2021-09-29  inferred=True
+  contract_104   PPD, INC.                            2021-04-15  inferred=True
+  contract_105   PRA HEALTH SCIENCES, INC.            2021-02-24  inferred=True
+  contract_107   MERCK SHARP & DOHME CORP.            2021-02-24  inferred=True
+  contract_113   PREVAIL THERAPEUTICS INC.            2020-12-14  inferred=True
+  contract_12    BIOTELEMETRY, INC.                   2020-12-18  inferred=True
+  contract_127   SOLITON, INC.                        2021-05-08  inferred=True
+  contract_136   TRANSLATE BIO, INC.                  2021-08-02  inferred=True

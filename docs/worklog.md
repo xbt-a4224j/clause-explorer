@@ -2170,3 +2170,29 @@ ruff + mypy                                        clean
 env -u OPENAI_API_KEY pytest backend/tests -q      326 passed, 1 deselected   # was 313
 frontend: tsc + vitest + build                     86 passed                 # was 81
 ```
+
+## #32 — Walkthrough: three worked examples, real observed output
+
+`docs/walkthrough.md`, run against the live stack this session — not a script written first and
+back-filled. Terminal transcripts committed under `docs/results/walkthrough-script{1,2,3}.txt`.
+
+Script 1 (Explore): landing counts (152/12,937/14) → Health Care facet (n=25, self-filtering
+verified) → 8 ranked comparables, `candidate_count=25` matching the facet count exactly.
+
+Script 2 (Deal Terms): the same 8 matters rolled up (`answered=90`, zero rows render as a
+percentage at n=8) → `Knowledge Definition-Answer` splits 5 Constructive / 3 Actual across the
+8 → drill-through to the actual clause language, byte-verified against the downloaded contract,
+showing *why* the two contracts read differently ("reasonable inquiry" is the distinguishing
+phrase).
+
+Script 3 (refusal): Coverage's real thin-cell count (33 of 45) → a 3-matter Deal Terms request
+refused (`n=3 < min_n=5`, distinct response shape) → the gate proven server-side with two direct
+curl attempts (empty selection → 422; extra `admin`/`bypass_min_n` fields → still refused,
+because nothing reads them) → the three-jobs-at-once rationale (statistical honesty, extraction
+confidence, k-anonymity) stated alongside the numbers, not left implicit.
+
+Linked from the README under a new "Walkthrough" section.
+
+### Gates
+
+No code changed — documentation only, verified against the already-green stack.

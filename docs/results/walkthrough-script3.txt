@@ -1,0 +1,33 @@
+=== SCRIPT 3: It declines when it can't answer ===
+
+$ curl -s -X POST localhost:8000/coverage -d '{}'  # thin-cell survey
+grid 15x3 = 45 cells · min_n=5
+thin: 33 of 45  ·  reportable: 12 of 45
+ example thin cell: n=0 — insufficient to characterize (threshold 5)
+ example thin cell: n=1 — insufficient to characterize (threshold 5)
+ example thin cell: n=4 — insufficient to characterize (threshold 5)
+
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":["contract_1","contract_104","contract_105"]}'  # n=3 < min_n=5
+{
+    "selection_n": 3,
+    "percentage_threshold": 30,
+    "min_extraction_confidence": 0.7,
+    "rows": [],
+    "answered_deal_point_count": 0,
+    "absent_deal_point_count": 0,
+    "scope_note": "These are comparable PUBLIC deals from the MAUD study of SEC-filed merger agreements. This is not this firm's own matter history and must not be described as it.",
+    "refused": true,
+    "refusal": {
+        "reason": "insufficient_n",
+        "n": 3,
+        "threshold": 5,
+        "message": "n=3 \u2014 insufficient to characterize (threshold 5)"
+    }
+}
+
+$ curl -s -o /dev/null -w '%{http_code}
+' -X POST localhost:8000/deal-terms -d '{"matter_ids":[]}'  # server-side, no bypass
+422
+
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":["contract_1"],"admin":true,"bypass_min_n":true}'  # extra fields ignored
+refused: True | n=1 — insufficient to characterize (threshold 5)

@@ -1,0 +1,25 @@
+=== SCRIPT 2: What was negotiated across these 8 ===
+
+$ curl -s -X POST localhost:8000/deal-terms -d '{"matter_ids":[...8 from script 1...]}'
+selection_n=8  threshold=30  answered=90  absent=2
+scope_note: These are comparable PUBLIC deals from the MAUD study of SEC-filed merger agreements. This is not this firm's own matter history and must not be described as it.
+
+rows rendered as a percentage: 0 (must be 0 at n=8)
+
+Knowledge Definition-Answer: 8 of 8
+    Constructive knowledge = 5
+    Actual knowledge = 3
+
+$ curl -s -X POST localhost:8000/deal-terms/drill -d '{"matter_ids":[...],"deal_point_name":"Knowledge Definition-Answer"}'
+  contract_1 (ACCELERON PHARMA INC.) -> Constructive knowledge
+    maud/data/contracts/contract_1.txt [255704, 256033)
+    text: “Knowledge” of Parent or the Company, as applicable means the actual knowledge of the individuals set forth on Schedule 9.3 after making reasonable inquiry of a…
+
+  contract_104 (PPD, INC.) -> Actual knowledge
+    maud/data/contracts/contract_104.txt [279332, 279676)
+    text: “knowledge” of any Person that is not an individual means, with respect to any matter in question, the actual knowledge of such Person’s executive officers; pro…
+
+  contract_105 (PRA HEALTH SCIENCES, INC.) -> Constructive knowledge
+    maud/data/contracts/contract_105.txt [43505, 43708)
+    text: “Knowledge” means:  (a) with respect to the Company and its Subsidiaries, the actual knowledge after reasonable inquiry of each of the individuals listed in Sec…
+

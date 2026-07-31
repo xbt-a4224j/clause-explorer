@@ -95,6 +95,11 @@ Python 3.12 · FastAPI · Postgres 16 · Cube Core · React + TypeScript + Vite 
 structlog. All open source. Retrieval, facets, coverage, and every table view work **without an API
 key**; the key is needed only for generation and fresh embeddings.
 
+## Walkthrough
+
+Three worked examples — find comparables, roll up what was negotiated, and the refusal state —
+each with real observed output from the running stack: [`docs/walkthrough.md`](docs/walkthrough.md).
+
 ## Quickstart
 
 ```bash
