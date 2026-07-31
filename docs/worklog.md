@@ -1911,3 +1911,76 @@ frontend: tsc + vitest + build                    62 passed         # was 59
 
 Mutation check on the refusal itself (`if n >= settings.min_n` → `if n >= 0`): 5 of 6 refusal
 tests fail, confirming the gate is what they actually test rather than an artifact of the stub.
+
+## #24 — NL to Cube selection, enum-constrained · #25 — filter-value resolution
+
+**#24.** `POST /agent/select` reads Cube's live `/meta`, builds a JSON schema whose measure and
+dimension fields are `enum` arrays from that vocabulary, and gets a structured-output selection
+back from the model — never a number. The number always comes from `cube_client.query()`
+executing the *validated* selection, same as every other endpoint.
+
+```
+$ curl -s -X POST localhost:8000/agent/select -d '{"question":"how many matters are there"}'
+{"selection": {"measures": ["deal_points.matters_total"], ...},
+ "rows": [{"deal_points.matters_total": "152"}]}
+
+$ curl -s -X POST localhost:8000/agent/select -d '{"question":"count of matters by industry"}'
+{"selection": {"measures": ["deal_points.count_distinct_matters"],
+               "dimensions": ["comparable_deals.label"]},
+ "rows": [{"comparable_deals.label": "Health Care Industry",
+           "deal_points.count_distinct_matters": "25"}, ...]}
+```
+
+25 matches the facet count exactly — same number, same definition, because it's the same query
+path. A third live query (filtering `deal_points` by `comparable_deals.label`) hit a real Cube
+join-path limit and came back as a 503 with the standard error envelope, not a wrong number or a
+500 — the enum guarantees the *names* exist, not that every name pairing is jointly queryable,
+and the failure mode for the gap is exactly the one this app uses everywhere else.
+
+Server-side validation is defense in depth: the schema should make an invalid name
+undecodable, and a test proves the rejection path never reaches `cube_query()` (monkeypatched
+`cube_query` records zero calls on an invalid stubbed selection). "No number from the model" is
+its own test: `select_via_llm` is stubbed to return a selection containing no numbers at all,
+and `152` is asserted absent from the response's `selection` field — the only place `152` can
+come from is the `cube_query` stub.
+
+No key → 503, not a silent skip. 12 tests run keyless (vocabulary parsing, schema shape,
+validation, the no-number guarantee); one real call is marked `needs_key` and passed against
+live Cube and the actual API key configured in this environment.
+
+**#25.** `resolve_filter_value()` — exact → alias → embedding, first match wins, unresolved
+fails loud with candidates. Extended `warm_cache` to embed the corpus's actual industry labels
+(14, not the 18k-concept ontology) plus a handful of representative free-text terms, so the
+embedding tier runs from the committed cache with no key at test time.
+
+The similarity floor was measured, not guessed, and the first guess (0.35) was wrong:
+
+```
+'healthcare'                   -> Health Care Industry            0.602  (real hit)
+'not a real industry at all'   -> Real Estate, Rental and Leasing 0.493  (false positive)
+'medical devices'/'life sciences'/'pharma' -> 0.35-0.43            (real near-misses)
+```
+
+At 0.35, the nonsense phrase resolves to a real industry — a silent wrong answer, the exact
+failure this module exists to prevent. Floor set to 0.55: clears every observed real hit,
+refuses the false positive and the ambiguous near-misses. Refusing a resolvable value costs a
+retry; a false resolution looks like a right answer and is far worse.
+
+```
+$ curl -s -X POST localhost:8000/agent/resolve-filter-value -d '{"value":"healthcare"}'
+{"raw": "healthcare", "resolved": "Health Care Industry", "method": "embedding",
+ "matter_count": 25, "similarity": 0.6025}
+
+$ curl -s -o /dev/null -w '%{http_code}' -X POST .../resolve-filter-value \
+    -d '{"value":"not a real industry at all"}'
+422
+```
+
+### Gates
+
+```
+ruff + mypy                                        clean
+env -u OPENAI_API_KEY pytest backend/tests -q       281 passed, 1 deselected   # was 270
+env pytest backend/tests -q -m needs_key            1 passed
+frontend                                            unchanged (backend-only issues)
+```

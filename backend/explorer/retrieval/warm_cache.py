@@ -50,6 +50,31 @@ WHERE text <> ''
 ORDER BY id
 """
 
+# The distinct industry labels actually used on matters — not the 18k-concept ontology
+# (CLAUDE.md: map five or six dimensions, do not attempt the ontology). This is the closed
+# vocabulary #25's embedding-resolution tier matches a free-text filter value against.
+INDUSTRY_LABEL_SQL = """
+SELECT DISTINCT f.label
+FROM matters m
+JOIN folio_concepts f ON f.code = m.folio_industry_code
+WHERE f.label IS NOT NULL
+"""
+
+# Representative free-text terms a partner or agent might type, so #25's exact/alias/embedding
+# resolution ladder is exercisable with no API key. Not exhaustive — the point is coverage of
+# the three resolution paths (case variants, spacing, a genuine near-miss), not every synonym.
+FILTER_VALUE_EVAL_TERMS = [
+    "healthcare",
+    "Healthcare",
+    "health care",
+    "medical devices",
+    "life sciences",
+    "pharma",
+    "manufacturing",
+    "financial services",
+    "not a real industry at all",
+]
+
 
 def gather_texts(dsn: str | None = None) -> dict[str, str]:
     """Everything the product needs a vector for, keyed by a readable source id.
@@ -62,12 +87,16 @@ def gather_texts(dsn: str | None = None) -> dict[str, str]:
     texts: dict[str, str] = {}
     for index, query in enumerate(eval_query_texts(dsn)):
         texts[f"evalquery:{index}"] = query
+    for index, term in enumerate(FILTER_VALUE_EVAL_TERMS):
+        texts[f"filterterm:{index}"] = term
     with psycopg.connect(dsn or settings.database_url) as conn:
         for matter_id, summary in conn.execute(MATTER_SUMMARY_SQL):
             if summary:
                 texts[f"matter:{matter_id}"] = summary
         for clause_id, text in conn.execute(CLAUSE_SQL):
             texts[f"clause:{clause_id}"] = text
+        for (label,) in conn.execute(INDUSTRY_LABEL_SQL):
+            texts[f"industrylabel:{label}"] = label
     return texts
 
 
