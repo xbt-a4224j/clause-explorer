@@ -73,7 +73,10 @@
 .shell__search::placeholder { color: var(--ink-tertiary); }
 
 /* ---- main ---- */
-.shell__main { padding: var(--pad-lg); overflow: auto; }
+/* padding-bottom is deliberately large: this is the scroll container, and the last control in
+   a tab (the Admin log filter) sat flush against the fixed status strip with 20px of clearance,
+   which read as clipped. */
+.shell__main { padding: var(--pad-lg) var(--pad-lg) 4rem; overflow: auto; }
 .shell__title { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: -0.2px; }
 .shell__hint { margin: 2px 0 0; color: var(--ink-subtle); font-size: 13px; }
 .shell__pending {
@@ -605,3 +608,6 @@ kbd {
   fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px;
   text-anchor: start; font-style: italic;
 }
+
+/* per-tab diagram variants (#35) */
+.loop__node--key rect { fill: var(--surface-3); stroke: var(--hairline-strong); }

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { DealTermRow, DealTermsResponse, DrillMatter } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { DealTermsDiagram } from '../components/diagrams'
+import { DealTermsExplainer } from '../components/explainers'
 
 /**
  * Deal Terms — what was negotiated across the selected set (#21).
@@ -44,6 +47,9 @@ export function DealTerms({ selection }: { selection: string[] }) {
   if (selection.length === 0) {
     return (
       <div className="state state--empty">
+      <ExplainerPanel id="deal-terms" title="What this tab is for: what was negotiated" diagram={<DealTermsDiagram />}>
+        <DealTermsExplainer />
+      </ExplainerPanel>
         <h3 className="state__title">No deals selected</h3>
         <p className="state__body">
           Select deals in Explore and this rolls up what was negotiated across them. Nothing is

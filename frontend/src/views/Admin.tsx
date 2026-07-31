@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { IngestRun, LogLine } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { AdminDiagram } from '../components/diagrams'
+import { AdminExplainer } from '../components/explainers'
 
 /**
  * Admin — ingest status, calibration, evals, live log viewer (#30).
@@ -11,6 +14,9 @@ import type { IngestRun, LogLine } from '../types'
 export function Admin() {
   return (
     <div className="admin">
+      <ExplainerPanel id="admin" title="What this tab is for: did the data land?" diagram={<AdminDiagram />}>
+        <AdminExplainer />
+      </ExplainerPanel>
       <IngestStatus />
       <CalibrationReport />
       <EvalResults />
@@ -89,7 +95,11 @@ function ReportSection({
     <section className="admin__section">
       <h2 className="admin__heading">{title}</h2>
       {missing && <p className="admin__missing">Not run yet.</p>}
-      {markdown && <pre className="admin__report">{markdown}</pre>}
+      {markdown && (
+        <pre className="admin__report" data-testid="calibration-report">
+          {markdown}
+        </pre>
+      )}
     </section>
   )
 }

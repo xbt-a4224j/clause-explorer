@@ -3,6 +3,9 @@ import { FacetRail } from '../components/FacetRail'
 import { MatterCard } from '../components/MatterCard'
 import { ResultsSkeleton } from '../components/Skeleton'
 import type { ComparablesResponse, FacetsResponse, Matter } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { ExploreDiagram } from '../components/diagrams'
+import { ExploreExplainer } from '../components/explainers'
 
 /**
  * Explore — faceted comparable-deal search (#19).
@@ -174,6 +177,9 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
 
   return (
     <div className="explore">
+      <ExplainerPanel id="explore" title="What this tab is for: finding comparable deals" diagram={<ExploreDiagram />}>
+        <ExploreExplainer />
+      </ExplainerPanel>
       {/* demo script 1 beat 1: what is loaded, before any interaction. An empty-looking rail
           could be a small corpus or a broken ingest; these tell the two apart. */}
       {facets?.corpus && (

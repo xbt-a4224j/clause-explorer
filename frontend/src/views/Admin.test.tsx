@@ -63,7 +63,8 @@ describe('ingest status', () => {
 describe('calibration and evals', () => {
   it('renders the committed calibration report', async () => {
     render(<Admin />)
-    expect(await screen.findByText(/deal point/)).toBeInTheDocument()
+    // scoped to the report: #35's explainer prose also says "deal point", by design
+    expect(await screen.findByTestId('calibration-report')).toHaveTextContent(/deal point/)
   })
 
   it('tags eval results with the git sha', async () => {

@@ -1,5 +1,8 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { TableRowsResponse, TableSchema } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { TablesDiagram } from '../components/diagrams'
+import { TablesExplainer } from '../components/explainers'
 
 const TABLE_NAMES = ['matters', 'deal_points', 'clauses', 'folio_concepts', 'labels', 'ingest_runs']
 
@@ -77,6 +80,9 @@ export function Tables() {
 
   return (
     <div className="tables">
+      <ExplainerPanel id="tables" title="What this tab is for: checking the numbers" diagram={<TablesDiagram />}>
+        <TablesExplainer />
+      </ExplainerPanel>
       <div className="tables__bar">
         <select
           aria-label="table"

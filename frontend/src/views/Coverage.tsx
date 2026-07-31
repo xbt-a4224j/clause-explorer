@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CoverageResponse } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { CoverageDiagram } from '../components/diagrams'
+import { CoverageExplainer } from '../components/explainers'
 
 /**
  * Coverage — FOLIO industry × period, for KM triage (#22).
@@ -44,6 +47,9 @@ export function Coverage({
   if (error) {
     return (
       <div className="state state--error" role="alert">
+      <ExplainerPanel id="coverage" title="What this tab is for: where experience is thin" diagram={<CoverageDiagram />}>
+        <CoverageExplainer />
+      </ExplainerPanel>
         <h3 className="state__title">Coverage grid unavailable</h3>
         <p className="state__body">{error}</p>
         <p className="state__hint">
