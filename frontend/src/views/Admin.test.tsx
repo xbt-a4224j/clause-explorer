@@ -85,3 +85,32 @@ describe('log viewer', () => {
     expect(await screen.findByText(/1 matched/)).toBeInTheDocument()
   })
 })
+
+describe('architecture diagram (#35)', () => {
+  it('renders as a labelled image with a text description carrying the same content', async () => {
+    render(<Admin />)
+    const svg = await screen.findByRole('img', { name: /architecture/i })
+    expect(svg).toBeInTheDocument()
+  })
+
+  it('stands alone rather than hiding inside the collapsible explainer', async () => {
+    render(<Admin />)
+    const heading = await screen.findByRole('heading', { name: /what this is made of/i })
+    // the explainer body is hidden when collapsed; this section must never be inside it
+    expect(heading.closest('.explain')).toBeNull()
+  })
+
+  it('names both query paths, because the split is the point', async () => {
+    render(<Admin />)
+    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
+    expect(desc).toMatch(/Cube Core/)
+    expect(desc).toMatch(/hybrid retrieval/i)
+    expect(desc).toMatch(/does not go through Cube|not go through Cube/i)
+  })
+
+  it('marks the inferred source as inferred', async () => {
+    render(<Admin />)
+    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
+    expect(desc).toMatch(/inferred rather than labelled/i)
+  })
+})

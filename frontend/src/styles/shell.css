@@ -758,3 +758,41 @@ kbd {
   display: block; margin-top: 3px; font-family: var(--font-sans);
   font-size: 10px; line-height: 1.5; color: var(--ink-tertiary);
 }
+
+/* ── Architecture diagram (#35) ──────────────────────────────────────────────────────────
+   Standalone on Admin rather than inside the collapsible explainer: it is a reference a
+   reader returns to, not something read once and folded away. */
+.arch__panel {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--surface-1); padding: var(--pad-md);
+}
+.arch__intro {
+  margin: 4px 0 var(--pad-md); max-width: 52rem;
+  font-size: 12px; line-height: 1.55; color: var(--ink-subtle);
+}
+.arch__intro strong { color: var(--ink); font-weight: 500; }
+/* the diagram has a real minimum legible width; scroll it rather than shrink the type */
+.arch__scroll { overflow-x: auto; }
+.arch { width: 100%; min-width: 900px; height: auto; display: block; }
+
+.arch__box rect   { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; }
+.arch__box2 rect  { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; }
+.arch__store rect { fill: #e8eef5; stroke: #9db8d0; stroke-width: 1; }
+.arch__inner rect { fill: var(--surface-1); stroke: var(--hairline); stroke-width: 1; }
+/* gold vs inferred is a fill AND a stroke pattern — colour alone is not an accessible cue */
+.arch__gold rect     { fill: var(--surface-2); stroke: #1a6b34; stroke-width: 1.5; }
+.arch__inferred rect { fill: #fff8e5; stroke: #9a6700; stroke-width: 1.5; stroke-dasharray: 4 2; }
+.arch__gate rect     { fill: #fff8e5; stroke: #9a6700; stroke-width: 1.5; }
+.arch__agent rect    { fill: var(--surface-2); stroke: var(--hairline-strong); stroke-dasharray: 4 2; }
+.arch__rule rect     { fill: var(--surface-2); stroke: var(--hairline); }
+
+.arch__edge path { fill: none; stroke: var(--hairline-strong); stroke-width: 1; }
+.arch__band {
+  fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9.5px;
+  letter-spacing: 0.07em; text-anchor: start;
+}
+.arch__lbl  { fill: var(--ink); font-family: var(--font-sans); font-size: 11.5px; text-anchor: middle; }
+.arch__tbl  { fill: var(--ink); font-family: var(--font-mono); font-size: 10px; text-anchor: middle; }
+.arch__sub  { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9px; text-anchor: middle; }
+.arch__note { fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 8.5px; font-style: italic; text-anchor: middle; }
+.arch__legend { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9px; text-anchor: start; }
