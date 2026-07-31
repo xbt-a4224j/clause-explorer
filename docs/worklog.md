@@ -2197,3 +2197,26 @@ Linked from the README under a new "Walkthrough" section.
 
 No code changed — documentation only, verified against the already-green stack.
 | D46 | The Semantic Layer tab reads Cube's `/meta` **live**; the freeform text-to-SQL arm is generated but **never executed** | A checked-in catalog can drift from `cube/model/*.yml`, and then a selection failure becomes an unfalsifiable argument about which list was authoritative. The freeform arm is not executed because the honest claim is not "its SQL is wrong" — it is often right — but that two freeform queries can only be diffed, never scored | The tab hard-depends on Cube being up and cannot degrade to a cached vocabulary; and the comparison is rhetorical rather than empirical, which a sceptical reviewer may fairly push on |
+
+## #36 — Semantic Layer tab (partial)
+
+`GET /agent/catalog` verified against the running stack, 2026-07-31:
+
+```
+$ docker compose up -d --build api      # no source bind-mount; restart alone cannot pick up new code
+$ curl -s localhost:8000/agent/catalog
+label_space: 56
+measures: 16 | dimensions: 40
+  deal_points.n                     THE DENOMINATOR. The number of labelled matters in the current...
+  deal_points.median_numeric_value  The median of the numeric answers in the selection...
+```
+
+**56 is the gradeability claim made numeric**: the model selects from 56 names and no others,
+so an offline eval has a 56-way label space rather than the open set of all valid SQL.
+
+Backend: 332 passed, ruff + mypy clean. Frontend: 100 passed, tsc + build clean.
+
+Still open on #36: the freeform text-to-SQL comparison arm, the "healthcare" vs
+"Health Care Industry" silent-empty beat, the offline grading table, and live selection.
+The tab currently argues the case and shows the vocabulary; it does not yet run a query.
+
