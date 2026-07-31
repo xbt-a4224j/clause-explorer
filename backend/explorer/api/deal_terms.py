@@ -24,12 +24,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import psycopg
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from explorer.api.cube_client import CubeUnavailable
 from explorer.api.cube_client import query as cube_query
 from explorer.api.logging import get_logger
+from explorer.api.matters import slice_source
 from explorer.api.settings import settings
 
 router = APIRouter()
@@ -104,7 +106,18 @@ class DealTermsResponse(BaseModel):
 
 class DrillMatter(BaseModel):
     matter_id: str
+    target_name: str | None
     position: str
+    source_file: str | None
+    source_span_start: int | None
+    source_span_end: int | None
+    clause_text: str | None = Field(
+        default=None,
+        description="The exact characters at [start, end) in the source agreement.",
+    )
+    text_unavailable: str | None = Field(
+        default=None, description="Why there is no clause text. Set whenever clause_text is null."
+    )
 
 
 class DrillResponse(BaseModel):
@@ -255,34 +268,52 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
 
 @router.post("/deal-terms/drill", response_model=DrillResponse)
 def drill(request: DrillRequest) -> DrillResponse:
-    """Which selected matters answer this deal point, and how.
+    """Which selected matters answer this deal point, how, and **the clause language itself**.
 
-    The clause text itself comes from `GET /matters/{id}` (#20), which is the one place that
-    reads a byte range out of the source agreement.
+    Returning the matter id and the position alone is a list of pointers, not a drill-through:
+    the associate this view exists to replace would still have to open eight agreements. So the
+    text comes back with the source file and the character range it was taken from.
+
+    This reads Postgres rather than Cube deliberately. Cube's footprint is facet counts, the
+    rollup and the coverage grid; fetching individual records and their source spans is outside
+    it, and going through Cube for row-level text would put document text in the aggregate layer.
     """
-    try:
-        rows = cube_query(
-            {
-                "measures": [N],
-                "dimensions": [MATTER_ID, POSITION],
-                "filters": _selection_filter(request.matter_ids)
-                + [
-                    {
-                        "member": NAME,
-                        "operator": "equals",
-                        "values": [request.deal_point_name],
-                    }
-                ],
-            }
-        )
-    except CubeUnavailable as unavailable:
-        raise HTTPException(status_code=503, detail=str(unavailable)) from unavailable
+    with psycopg.connect(settings.database_url) as conn:
+        rows = conn.execute(
+            """
+            SELECT dp.matter_id, m.target_name, dp.position,
+                   m.source_file, dp.source_span_start, dp.source_span_end
+              FROM deal_points dp
+              JOIN matters m ON m.id = dp.matter_id
+             WHERE dp.deal_point_name = %(name)s
+               AND dp.matter_id = ANY(%(ids)s)
+             ORDER BY dp.matter_id
+            """,
+            {"name": request.deal_point_name, "ids": list(request.matter_ids)},
+        ).fetchall()
 
-    matters = [
-        DrillMatter(matter_id=str(r[MATTER_ID]), position=str(r.get(POSITION)))
-        for r in rows
-        if r.get(MATTER_ID)
-    ]
+    matters: list[DrillMatter] = []
+    for matter_id, target_name, position, source_file, start, end in rows:
+        clause_text, unavailable = slice_source(source_file, start, end)
+        matters.append(
+            DrillMatter(
+                matter_id=matter_id,
+                target_name=target_name,
+                position=position,
+                source_file=source_file,
+                source_span_start=start,
+                source_span_end=end,
+                clause_text=clause_text,
+                text_unavailable=unavailable,
+            )
+        )
+
+    log.info(
+        "deal_terms_drill",
+        deal_point_name=request.deal_point_name,
+        matters=len(matters),
+        located=sum(1 for m in matters if m.clause_text),
+    )
     return DrillResponse(deal_point_name=request.deal_point_name, matters=matters)
 
 

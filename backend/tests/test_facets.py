@@ -23,6 +23,7 @@ from explorer.api.facets import (
     BAND_DIMENSION,
     CODE_DIMENSION,
     COUNT_MEASURE,
+    DEAL_POINT_COUNT,
     INDUSTRY_DIMENSION,
     YEAR_DIMENSION,
 )
@@ -64,12 +65,15 @@ class StubCube:
     def __call__(self, payload: dict[str, Any], timeout: float = 20.0) -> list[dict[str, Any]]:
         self.payloads.append(payload)
         dimensions = payload.get("dimensions") or []
+        measures = payload.get("measures") or []
         if INDUSTRY_DIMENSION in dimensions:
             return list(INDUSTRY_ROWS)
         if YEAR_DIMENSION in dimensions:
             return list(YEAR_ROWS)
         if BAND_DIMENSION in dimensions:
             return list(BAND_ROWS)
+        if DEAL_POINT_COUNT in measures:
+            return [{DEAL_POINT_COUNT: 12937}]
         return [{COUNT_MEASURE: 152}]
 
     def payload_for(self, dimension: str) -> dict[str, Any]:
@@ -145,6 +149,24 @@ class TestIndustryCarriesItsCode:
     ) -> None:
         body = client.post("/facets", json={}).json()
         assert all(v["code"] is None for v in _group(body, "year")["values"])
+
+
+class TestCorpusCountsAreVisibleBeforeAnyInteraction:
+    """Demo script 1 beat 1: matters, deal points and industries on landing.
+
+    Without them the partner cannot tell whether an empty-looking rail means a small corpus or
+    a broken ingest.
+    """
+
+    def test_the_response_carries_the_corpus_totals(
+        self, client: TestClient, cube: StubCube
+    ) -> None:
+        body = client.post("/facets", json={}).json()
+        assert body["corpus"]["matters"] == 152
+        assert body["corpus"]["deal_points"] == 12937
+        # 2, not 3: "unclassified" is a bucket rather than an industry, and Educational
+        # Services has n=0 — an industry the corpus holds nothing in is not one it covers
+        assert body["corpus"]["industries"] == 2
 
 
 class TestZeroCounts:

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DealTerms } from './DealTerms'
 import type { DealTermsResponse } from '../types'
@@ -100,6 +100,76 @@ describe('numeric deal points', () => {
     render(<DealTerms selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     expect(within(row).queryByText(/median/)).not.toBeInTheDocument()
+  })
+})
+
+describe('drill-through', () => {
+  const DRILL = {
+    deal_point_name: 'Fiduciary exception to COR covenant',
+    scope_note: ROLLUP.scope_note,
+    matters: [
+      {
+        matter_id: 'contract_1',
+        target_name: 'ACCELERON PHARMA INC.',
+        position: 'Constructive knowledge',
+        source_file: 'maud/data/contracts/contract_1.txt',
+        source_span_start: 255704,
+        source_span_end: 256033,
+        clause_text: '“Knowledge” of Parent or the Company means the actual knowledge…',
+        text_unavailable: null,
+      },
+      {
+        matter_id: 'contract_2',
+        target_name: 'ADAMAS PHARMACEUTICALS, INC.',
+        position: 'Actual knowledge',
+        source_file: 'maud/data/contracts/contract_2.txt',
+        source_span_start: null,
+        source_span_end: null,
+        clause_text: null,
+        text_unavailable: 'MAUD located no character range for this label.',
+      },
+    ],
+  }
+
+  function mockBoth() {
+    return vi.fn(async (url: string) =>
+      ({
+        ok: true,
+        json: async () => (String(url).includes('drill') ? DRILL : ROLLUP),
+      }) as Response,
+    )
+  }
+
+  it('shows the clause language, not just a list of matter ids', async () => {
+    vi.stubGlobal('fetch', mockBoth())
+    render(<DealTerms selection={EIGHT} />)
+    const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
+    fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
+
+    // demo script 2 beat 5: the actual clause language from the deals that have it
+    expect(await within(row).findByText(/“Knowledge” of Parent or the Company/)).toBeInTheDocument()
+  })
+
+  it('shows the source file and character offsets behind each clause', async () => {
+    vi.stubGlobal('fetch', mockBoth())
+    render(<DealTerms selection={EIGHT} />)
+    const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
+    fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
+
+    const hit = await within(row).findByTestId('drill-contract_1')
+    expect(hit).toHaveTextContent('maud/data/contracts/contract_1.txt')
+    expect(hit).toHaveTextContent('255704')
+    expect(hit).toHaveTextContent('256033')
+  })
+
+  it('says why a clause is missing rather than showing an empty quote', async () => {
+    vi.stubGlobal('fetch', mockBoth())
+    render(<DealTerms selection={EIGHT} />)
+    const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
+    fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
+
+    const hit = await within(row).findByTestId('drill-contract_2')
+    expect(hit).toHaveTextContent(/located no character range/)
   })
 })
 

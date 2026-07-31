@@ -29,6 +29,8 @@ CODE_DIMENSION = "comparable_deals.code"
 YEAR_DIMENSION = "comparable_deals.signing_year"
 BAND_DIMENSION = "comparable_deals.deal_size_band"
 COUNT_MEASURE = "comparable_deals.n"
+# Corpus totals for the landing state (demo script 1 beat 1)
+DEAL_POINT_COUNT = "deal_points.n"
 
 
 class FacetRequest(BaseModel):
@@ -78,10 +80,23 @@ REASONS = {
 }
 
 
+class CorpusCounts(BaseModel):
+    """What is loaded, visible before any interaction.
+
+    An empty-looking rail could mean a small corpus or a broken ingest; these three numbers
+    tell the two apart without opening psql.
+    """
+
+    matters: int
+    deal_points: int
+    industries: int
+
+
 class FacetsResponse(BaseModel):
     groups: list[FacetGroup]
     total_n: int
     unfiltered_n: int
+    corpus: CorpusCounts
 
 
 def _filters(request: FacetRequest, exclude: str) -> list[dict[str, Any]]:
@@ -192,10 +207,20 @@ def facets(request: FacetRequest) -> FacetsResponse:
             {"measures": [COUNT_MEASURE], "filters": _filters(request, exclude="")}
         )
         unfiltered = cube_query({"measures": [COUNT_MEASURE]})
+        deal_point_rows = cube_query({"measures": [DEAL_POINT_COUNT]})
     except CubeUnavailable as unavailable:
         raise HTTPException(status_code=503, detail=str(unavailable)) from unavailable
 
+    industry_group = next(g for g in groups if g.key == "industry")
     return FacetsResponse(
+        corpus=CorpusCounts(
+            matters=int(unfiltered[0][COUNT_MEASURE]) if unfiltered else 0,
+            deal_points=(int(deal_point_rows[0][DEAL_POINT_COUNT]) if deal_point_rows else 0),
+            # "unclassified" is a bucket, not an industry — counting it would overstate coverage
+            industries=sum(
+                1 for v in industry_group.values if v.n > 0 and v.value.lower() not in UNINFORMATIVE
+            ),
+        ),
         groups=groups,
         total_n=int(selected[0][COUNT_MEASURE]) if selected else 0,
         unfiltered_n=int(unfiltered[0][COUNT_MEASURE]) if unfiltered else 0,

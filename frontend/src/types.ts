@@ -23,10 +23,17 @@ export interface FacetSelection {
   code: string | null
 }
 
+export interface CorpusCounts {
+  matters: number
+  deal_points: number
+  industries: number
+}
+
 export interface FacetsResponse {
   groups: FacetGroup[]
   total_n: number
   unfiltered_n: number
+  corpus: CorpusCounts
 }
 
 export interface Matter {
@@ -119,4 +126,15 @@ export interface DealTermsResponse {
   answered_deal_point_count: number
   absent_deal_point_count: number
   scope_note: string
+}
+
+export interface DrillMatter {
+  matter_id: string
+  target_name: string | null
+  position: string
+  source_file: string | null
+  source_span_start: number | null
+  source_span_end: number | null
+  clause_text: string | null
+  text_unavailable: string | null
 }

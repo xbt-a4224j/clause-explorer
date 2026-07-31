@@ -157,6 +157,15 @@ export function Explore({ searchRef, onSelectionChange }: Props) {
 
   return (
     <div className="explore">
+      {/* demo script 1 beat 1: what is loaded, before any interaction. An empty-looking rail
+          could be a small corpus or a broken ingest; these tell the two apart. */}
+      {facets?.corpus && (
+        <p className="explore__corpus mono">
+          {facets.corpus.matters} matters · {facets.corpus.deal_points.toLocaleString()} deal
+          points · {facets.corpus.industries} industries
+        </p>
+      )}
+
       <div className="explore__search">
         <input
           ref={searchRef}

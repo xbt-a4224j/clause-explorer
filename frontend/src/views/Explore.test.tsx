@@ -16,6 +16,7 @@ import type { ComparablesResponse, FacetsResponse } from '../types'
 const FACETS: FacetsResponse = {
   unfiltered_n: 152,
   total_n: 152,
+  corpus: { matters: 152, deal_points: 12937, industries: 14 },
   groups: [
     {
       key: 'industry',

@@ -24,7 +24,13 @@ function mockHealth(status = 'ok', cube = 'ok') {
     if (String(url).includes('/facets')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ groups: [], total_n: 0, unfiltered_n: 0 }),
+        json: () =>
+          Promise.resolve({
+            groups: [],
+            total_n: 0,
+            unfiltered_n: 0,
+            corpus: { matters: 0, deal_points: 0, industries: 0 },
+          }),
       })
     }
     return Promise.resolve({

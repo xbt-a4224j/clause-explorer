@@ -290,3 +290,62 @@ class TestAgainstRealCube:
         assert len(drill["matters"]) == row["answered_n"]
         assert all(m["matter_id"] in EIGHT for m in drill["matters"])
         assert all(m["position"] for m in drill["matters"])
+
+    def test_drill_through_reaches_the_clause_language_itself(self, client: TestClient) -> None:
+        """Demo script 2 beat 5: the actual clause language, with source file and offsets.
+
+        Returning the matter id and the position only is a list of pointers, not a
+        drill-through — the associate still has to go and open eight agreements.
+        """
+        from explorer.ingest.maud_corpus import corpus_available
+
+        if not corpus_available():
+            pytest.skip("MAUD corpus not downloaded")
+
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = next(r for r in body["rows"] if r["present_count"] > 0)
+        drill = client.post(
+            "/deal-terms/drill",
+            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+        ).json()
+
+        located = [m for m in drill["matters"] if m["source_span_start"] is not None]
+        assert located, "this deal point should be traceable in at least one agreement"
+        for m in located:
+            assert m["source_file"].endswith(".txt")
+            assert m["source_span_end"] > m["source_span_start"]
+            assert m["clause_text"]
+
+    def test_drill_through_clause_text_is_the_exact_slice_of_the_agreement(
+        self, client: TestClient
+    ) -> None:
+        from explorer.ingest.maud_corpus import CONTRACTS_DIR, corpus_available
+
+        if not corpus_available():
+            pytest.skip("MAUD corpus not downloaded")
+
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = next(r for r in body["rows"] if r["present_count"] > 0)
+        drill = client.post(
+            "/deal-terms/drill",
+            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+        ).json()
+
+        m = next(x for x in drill["matters"] if x["clause_text"])
+        raw = (CONTRACTS_DIR / f"{m['matter_id']}.txt").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert m["clause_text"] == raw[m["source_span_start"] : m["source_span_end"]]
+
+    def test_an_untraceable_answer_says_so_rather_than_going_blank(
+        self, client: TestClient
+    ) -> None:
+        """Same rule as the matter card: no span means a stated reason, never invented text."""
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = next(r for r in body["rows"] if r["present_count"] > 0)
+        drill = client.post(
+            "/deal-terms/drill",
+            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+        ).json()
+        for m in drill["matters"]:
+            assert m["clause_text"] is not None or m["text_unavailable"]

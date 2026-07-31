@@ -1742,3 +1742,69 @@ Tests  44 passed (44)         # was 35
   pre-empted here.
 - Deal-point ordering is by prevalence then alphabetical for absent rows; no salience ranking
   exists in MAUD, same limitation recorded under #20.
+
+## #21 follow-up — the drill-through did not drill through
+
+Checked the built views against `docs/demo-scripts.md`, which CLAUDE.md names as the acceptance
+test for the product. Three gaps; the first was a closed AC that had been redefined rather than
+met.
+
+**Script 2 beat 5 — "the actual clause language from the deals that have it, with source file
+and character offsets".** `/deal-terms/drill` returned `matter_id` and `position` only. That is
+a list of pointers: the associate this view replaces would still have to open eight agreements.
+I had justified it in the #21 commit as "clause text stays with `/matters/{id}`", which is an
+architectural preference standing in for an unmet acceptance criterion.
+
+Now returns the language itself, reading Postgres rather than Cube — record fetch and source
+spans are outside Cube's footprint by design, and routing document text through the aggregate
+layer would be worse:
+
+```
+$ curl -s -X POST localhost:8000/deal-terms/drill \
+    -d '{"matter_ids":[...8...],"deal_point_name":"Knowledge Definition-Answer"}'
+
+contract_1 (ACCELERON PHARMA INC.) -> Constructive knowledge
+maud/data/contracts/contract_1.txt [255704, 256033)
+“Knowledge” of Parent or the Company, as applicable means the actual knowledge of the
+individuals set forth on Schedule 9.3 after making reasonable inquiry of…
+
+contract_3 (AEGION CORPORATION) -> Actual knowledge
+maud/data/contracts/contract_3.txt [20271, 20434)
+“Knowledge of the Company” means the actual knowledge of the individuals identified on
+Section 1.01(a) of the Company Disclosure Schedule…
+```
+
+That pair is the product working: contract_3 says *actual knowledge of the individuals
+identified*; contract_1 says *actual knowledge … after making reasonable inquiry*, which is why
+MAUD labels one Actual and the other Constructive. A partner can now see the distinction rather
+than take the label on trust.
+
+`slice_source` is shared with #20 rather than reimplemented — two implementations would
+eventually disagree about what "no text" means, invisibly.
+
+**Script 1 beat 1 — corpus counts before any interaction.** `/facets` now returns them:
+
+```
+corpus: {'matters': 152, 'deal_points': 12937, 'industries': 14}
+```
+
+14, not 15: `unclassified` is a bucket rather than an industry, and an industry with n=0 is not
+one the corpus covers. A test pins both exclusions.
+
+**A crash of the same class as #20's.** `facets.corpus.matters` threw on a payload without
+`corpus`, taking Explore down. Guarded. That is twice now that an unexpected 200 body has
+blanked a view — worth watching for in the remaining views.
+
+### Not done
+
+- **Script 1 beat 4, headline terms on the collapsed card.** Still needs a salience order that
+  MAUD does not carry, the same limitation recorded under #20. Deal-point frequency across the
+  corpus is derivable and would be defensible; it is not built.
+
+### Gates
+
+```
+ruff + mypy                                     clean
+env -u OPENAI_API_KEY pytest backend/tests -q   239 passed        # was 235
+frontend: tsc + vitest + build                  47 passed         # was 44
+```

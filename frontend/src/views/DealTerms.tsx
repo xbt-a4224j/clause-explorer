@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { DealTermRow, DealTermsResponse } from '../types'
+import type { DealTermRow, DealTermsResponse, DrillMatter } from '../types'
 
 /**
  * Deal Terms — what was negotiated across the selected set (#21).
@@ -103,7 +103,7 @@ const SCOPE_FALLBACK =
   "not this firm's own matter history."
 
 function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) {
-  const [drilled, setDrilled] = useState<{ matter_id: string; position: string }[] | null>(null)
+  const [drilled, setDrilled] = useState<DrillMatter[] | null>(null)
   const [drillError, setDrillError] = useState<string | null>(null)
   const absent = row.answered_n === 0
 
@@ -167,9 +167,22 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
       {drilled && (
         <ul className="term__drill">
           {drilled.map((m) => (
-            <li key={m.matter_id}>
-              <span className="mono">{m.matter_id}</span>
-              <span className="term__poslabel">{m.position}</span>
+            <li key={m.matter_id} className="drill" data-testid={`drill-${m.matter_id}`}>
+              <div className="drill__head">
+                <span className="drill__party">{m.target_name ?? m.matter_id}</span>
+                <span className="term__poslabel">{m.position}</span>
+              </div>
+              {m.clause_text ? (
+                <>
+                  {/* the clause scrolls in its own box; the page never scrolls sideways */}
+                  <blockquote className="dp__clause">{m.clause_text}</blockquote>
+                  <p className="dp__span mono muted">
+                    {m.source_file} [{m.source_span_start}, {m.source_span_end})
+                  </p>
+                </>
+              ) : (
+                <p className="dp__missing">{m.text_unavailable}</p>
+              )}
             </li>
           ))}
         </ul>

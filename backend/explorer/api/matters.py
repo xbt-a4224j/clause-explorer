@@ -107,6 +107,18 @@ def _slice(text: str | None, start: int | None, end: int | None) -> tuple[str | 
     return text[start:end], None
 
 
+def slice_source(
+    source_file: str | None, start: int | None, end: int | None
+) -> tuple[str | None, str | None]:
+    """The clause at a byte range, or None with the reason.
+
+    The single entry point for turning a recorded span into text, shared by the matter card
+    (#20) and the deal-terms drill-through (#21). Two implementations would eventually disagree
+    about what "no text" means, and that disagreement is invisible in the UI.
+    """
+    return _slice(_read_source(source_file), start, end)
+
+
 def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
     """A paragraph a partner pastes into a deck.
 

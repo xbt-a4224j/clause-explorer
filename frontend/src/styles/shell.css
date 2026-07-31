@@ -351,3 +351,14 @@ kbd {
   padding: 0 var(--pad-md) var(--pad-sm); font-size: 11px;
 }
 .term__drill li { display: flex; gap: var(--pad-md); color: var(--ink-secondary); }
+.drill { padding: var(--pad-sm) 0; border-top: 1px solid var(--hairline); min-width: 0; }
+.drill__head { display: flex; justify-content: space-between; gap: var(--pad-md); align-items: baseline; }
+.drill__party { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.explore__corpus { font-size: 11px; color: var(--ink-muted); letter-spacing: 0.02em; }
+.card__terms { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 var(--pad-md) var(--pad-sm); }
+.card__term {
+  display: inline-flex; gap: 5px; align-items: baseline;
+  padding: 1px 6px; border: 1px solid var(--hairline); border-radius: var(--radius);
+  font-size: 10px; color: var(--ink-secondary);
+}
+.card__termname { color: var(--ink-tertiary); }
