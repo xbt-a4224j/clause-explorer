@@ -101,8 +101,9 @@
 }
 .shell__dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .shell__dot--ok { background: var(--success); }
-.shell__dot--warn { background: #d9a441; }
-.shell__dot--bad { background: #d95757; }
+/* Primer attention.fg / danger.fg — the dark-theme values washed out on a light canvas */
+.shell__dot--warn { background: #9a6700; }
+.shell__dot--bad { background: #d1242f; }
 .shell__sep { color: var(--ink-tertiary); }
 .shell__spacer { flex: 1; }
 .shell__helpbtn {
@@ -114,7 +115,7 @@
 /* ---- shortcut overlay ---- */
 .shell__scrim {
   position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--scrim);
   display: grid; place-items: center;
 }
 .shell__dialog {

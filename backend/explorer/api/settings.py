@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # in a pitch. Config rather than a literal so the rendering rule is testable at its edge.
     percentage_threshold: int = 30
 
+    # Below this, a slice is not characterized at all (#22 marks it, #23 refuses on it).
+    # Three jobs: statistical honesty, extraction-confidence gating, and k-anonymity — an
+    # attorney who can filter to n=1 has extracted one client's negotiated term through the
+    # analytics layer without retrieving a document.
+    min_n: int = 5
+
     # Present only so generation and fresh embeddings can work. The app must boot and
     # serve retrieval, facets, coverage and every table view without it.
     openai_api_key: str | None = None
@@ -45,6 +51,7 @@ def load_settings() -> Settings:
         cube_api_url=os.getenv("CUBE_API_URL", "http://localhost:4000/cubejs-api/v1"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         percentage_threshold=int(os.getenv("PERCENTAGE_THRESHOLD", "30")),
+        min_n=int(os.getenv("MIN_N", "5")),
         openai_api_key=os.getenv("OPENAI_API_KEY") or None,
     )
 

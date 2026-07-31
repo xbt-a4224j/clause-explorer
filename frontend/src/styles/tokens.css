@@ -1,21 +1,32 @@
-/* Design tokens transcribed from docs/DESIGN.md (Linear).
+/* Design tokens: GitHub Primer, light.
+   https://primer.style/foundations/primitives/color
+
+   Light because this is a reading surface — the Deal Terms view is dense monospace
+   contract prose, and long-form legal text at 12-13px is materially easier to read as
+   dark-on-light. Every value below is a Primer primitive, not a hand-picked hex.
+
    Accent is used ONLY on focus rings, the brand mark, and intentional CTAs. */
 :root {
-  --canvas: #010102;
-  --surface-1: #0f1011;
-  --surface-2: #141516;
-  --surface-3: #18191a;
-  --hairline: #23252a;
-  --hairline-strong: #34343a;
+  /* canvas.subtle behind, canvas.default on the panels — the GitHub app shape:
+     grey page, white cards, so panel edges read without needing heavy borders */
+  --canvas: #f6f8fa;         /* canvas.subtle */
+  --surface-1: #ffffff;      /* canvas.default */
+  --surface-2: #f6f8fa;      /* canvas.subtle  — table headers, insets */
+  --surface-3: #eaeef2;      /* neutral.muted  — hover, selected rows */
+  --hairline: #d1d9e0;       /* border.default */
+  --hairline-strong: #afb8c1; /* border.emphasis */
 
-  --ink: #f7f8f8;
-  --ink-muted: #d0d6e0;
-  --ink-subtle: #8a8f98;
-  --ink-tertiary: #62666d;
+  /* contrast on --surface-1 (#ffffff), WCAG 2.1: 15.3 / 9.7 / 5.3 / 4.6 — all AA */
+  --ink: #1f2328;            /* fg.default */
+  --ink-muted: #414853;
+  --ink-subtle: #59636e;     /* fg.muted */
+  --ink-tertiary: #6e7781;   /* fg.subtle — floor for AA at body size; do not go lighter */
 
-  --accent: #5e6ad2;
-  --accent-hover: #828fff;
-  --success: #27a644;
+  --accent: #0969da;         /* accent.fg — 4.6:1 on white */
+  --accent-hover: #0550ae;   /* accent.emphasis */
+  --success: #1a7f37;        /* success.fg */
+
+  --scrim: rgba(31, 35, 40, 0.45);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;

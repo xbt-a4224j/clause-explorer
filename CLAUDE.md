@@ -82,10 +82,19 @@ and the coverage grid. It does **not** do retrieval, ranking, individual record 
 
 ## Design system
 
-`docs/DESIGN.md` is the Linear design system, machine-readable. Implement against those tokens:
-canvas `#010102`, surface panels `#0f1011`, hairlines `#23252a`, ink `#f7f8f8`, and the single
-lavender accent `#5e6ad2` used **only** on focus rings, the brand mark, and intentional CTAs —
-never decoratively. Dense, quiet, precise. It should read as an instrument.
+**`frontend/src/styles/tokens.css` is the authority on colour**, and it is **GitHub Primer,
+light** — canvas `#f6f8fa`, panels `#ffffff`, hairlines `#d1d9e0`, ink `#1f2328`, accent
+`#0969da` used **only** on focus rings, the brand mark, and intentional CTAs, never
+decoratively. Dense, quiet, precise. It should read as an instrument.
+
+Light, not dark, because Deal Terms is a *reading* surface: dense monospace contract prose at
+12–13px is materially easier to read dark-on-light. `docs/DESIGN.md` (Linear) still governs
+spacing, density, and component shape — **its colour values are superseded**. Do not restore
+the dark palette.
+
+Every ink token clears WCAG 2.1 AA on `--surface-1`; `--ink-tertiary` (#6e7781, 4.6:1) is the
+floor and carries the sample-size meta lines. Nothing lighter ships. No new hardcoded hex in
+components — the only two in the codebase are the Admin status dots, and they are commented.
 
 UX is a first-class requirement, not polish at the end:
 
