@@ -223,7 +223,9 @@ export function ArchitectureDiagram() {
         <text x="888" y="457">refusal: 1 of 5 ← the gap</text>
       </g>
       <g className="arch__edge" markerEnd="url(#ar)">
-        <path d="M790,330 H376" />
+        {/* routed UNDER the retrieval box, not through it: the direct line from the agent panel
+            to Cube crossed "BM25 keyword + 256-dim float16 embeddings" and struck out the text */}
+        <path d="M790,386 H170 V378" />
         <path d="M888,472 V492 H760" />
       </g>
 
