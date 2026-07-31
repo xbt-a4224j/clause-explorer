@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { LabelQueueItem, LabelQueueResponse } from '../types'
+import { ExplainerPanel } from '../components/ExplainerPanel'
+import { LoopDiagram } from '../components/LoopDiagram'
 
 /**
  * Label — the review queue (#29).
@@ -88,6 +90,32 @@ export function Label() {
 
   return (
     <div className="label">
+      <ExplainerPanel id="label" title="How this queue works" diagram={<LoopDiagram />}>
+        <p>
+          <strong>What this tab is for.</strong> Improving the extractor without paying for a
+          full re-annotation. MAUD — the <em>Merger Agreement Understanding Dataset</em>, 152
+          public merger agreements that lawyers annotated against the ABA&rsquo;s 92 deal
+          points — already tells us the right answer for these contracts. The interesting
+          question is how our extractor does on documents nobody annotated, and the only way
+          to know is to check its work on a sample.
+        </p>
+        <p>
+          <strong>Why these items and not others.</strong> Two extractors read the same
+          contract: a language model, whose predictions were recorded to disk in an earlier
+          run, and a keyword baseline that costs nothing to run. Where they disagree, at
+          least one is wrong. That is the cheapest useful ranking signal available — it needs
+          no calibrated confidence score, which is convenient, because producing a trustworthy
+          confidence score is the very thing we have not done yet.
+        </p>
+        <p>
+          <strong>What your keystroke is worth.</strong> Each decision writes one row to{' '}
+          <code>labels</code>. The next calibration run reads those rows and reports accuracy
+          per deal point. Fifty labels chosen by disagreement move that number more than five
+          hundred chosen at random — which is the difference between an accuracy claim you can
+          defend and one you cannot afford to make.
+        </p>
+      </ExplainerPanel>
+
       <p className="label__progress" data-testid="label-progress">
         <span className="mono">{queue.labelled_count}</span> labelled ·{' '}
         <span className="mono">{cursor}</span> of <span className="mono">{queue.queue_size}</span>{' '}
@@ -103,10 +131,35 @@ export function Label() {
         {item.quoted_text ? (
           <blockquote className="dp__clause">{item.quoted_text}</blockquote>
         ) : (
-          <p className="dp__missing">No candidate span located for this prediction.</p>
+          <p className="dp__missing" data-testid="label-nospan">
+            No candidate span located — <strong>expected</strong>, not a failure. Some deal
+            points are answered from the agreement as a whole rather than one quotable clause.
+            Without a span you are judging the answer, not the quotation; open the matter if
+            you need the surrounding text.
+          </p>
         )}
 
-        <dl className="label__predictions">
+        {/* why THIS item, in the reviewer's terms — the ranking rationale is otherwise
+            visible only in label.py's sort key */}
+        <p className="label__why" data-testid="label-why">
+          {item.disagreement ? (
+            <>
+              The two extractors <strong>disagree</strong> — the model answered{' '}
+              <span className="mono">{item.llm_prediction}</span>, the keyword baseline
+              answered <span className="mono">{item.deterministic_prediction}</span>. One of
+              them is wrong, which is why this is ranked first. Your decision settles it.
+            </>
+          ) : (
+            <>
+              Both extractors <strong>agree</strong> on{' '}
+              <span className="mono">{item.llm_prediction}</span>. You are confirming rather
+              than settling a dispute — agreement is cheap to produce and still wrong
+              sometimes, so a share of these get checked to keep the accuracy estimate honest.
+            </>
+          )}
+        </p>
+
+        <dl className="label__predictions" data-testid="label-predictions">
           <dt>LLM</dt>
           <dd>{item.llm_prediction}</dd>
           <dt>deterministic</dt>

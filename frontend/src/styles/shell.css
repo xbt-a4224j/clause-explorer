@@ -281,7 +281,7 @@ kbd {
 }
 .dp__name { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .dp__position {
-  font-family: var(--font-mono); font-size: 11px; color: var(--ink-secondary);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-subtle);
   white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
 }
 
@@ -291,7 +291,7 @@ kbd {
   max-height: 220px; overflow: auto; overscroll-behavior: contain;
   padding: var(--pad-sm); margin: 4px 0;
   background: var(--surface-2); border-left: 2px solid var(--hairline); border-radius: var(--radius);
-  font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--ink-secondary);
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--ink-subtle);
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .dp__span { font-size: 10px; }
@@ -302,7 +302,7 @@ kbd {
   margin-bottom: var(--pad-sm); font-family: var(--font-mono); font-size: 11px;
 }
 .card__scores dt { color: var(--ink-tertiary); }
-.card__scores dd { margin: 0 0 0 4px; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
+.card__scores dd { margin: 0 0 0 4px; color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
 
 /* ---- Deal Terms (#21) ------------------------------------------------------------------- */
 
@@ -313,7 +313,7 @@ kbd {
   padding: var(--pad-sm) var(--pad-md);
   border-left: 2px solid var(--accent);
   background: var(--surface-1);
-  color: var(--ink-secondary); font-size: 12px; line-height: 1.5;
+  color: var(--ink-subtle); font-size: 12px; line-height: 1.5;
 }
 .terms__caption { font-size: 11px; color: var(--ink-muted); line-height: 1.5; }
 .terms__skeleton { display: flex; flex-direction: column; gap: 6px; }
@@ -345,13 +345,13 @@ kbd {
   padding: 2px 6px; border: 1px solid var(--hairline); border-radius: var(--radius);
   font-size: 11px;
 }
-.term__poslabel { color: var(--ink-secondary); }
+.term__poslabel { color: var(--ink-subtle); }
 .term__absent { padding: 0 var(--pad-md) var(--pad-sm); font-size: 11px; color: var(--ink-tertiary); }
 .term__drill {
   display: flex; flex-direction: column; gap: 2px;
   padding: 0 var(--pad-md) var(--pad-sm); font-size: 11px;
 }
-.term__drill li { display: flex; gap: var(--pad-md); color: var(--ink-secondary); }
+.term__drill li { display: flex; gap: var(--pad-md); color: var(--ink-subtle); }
 .drill { padding: var(--pad-sm) 0; border-top: 1px solid var(--hairline); min-width: 0; }
 .drill__head { display: flex; justify-content: space-between; gap: var(--pad-md); align-items: baseline; }
 .drill__party { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
@@ -360,7 +360,7 @@ kbd {
 .card__term {
   display: inline-flex; gap: 5px; align-items: baseline;
   padding: 1px 6px; border: 1px solid var(--hairline); border-radius: var(--radius);
-  font-size: 10px; color: var(--ink-secondary);
+  font-size: 10px; color: var(--ink-subtle);
 }
 .card__termname { color: var(--ink-tertiary); }
 
@@ -432,7 +432,7 @@ kbd {
   background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: var(--pad-md); display: flex; flex-direction: column; gap: var(--pad-sm);
 }
-.label__meta { font-size: 12px; color: var(--ink-secondary); }
+.label__meta { font-size: 12px; color: var(--ink-subtle); }
 .label__disagree { color: #9a6700; font-weight: 500; }
 .label__predictions {
   display: flex; gap: var(--pad-lg); font-family: var(--font-mono); font-size: 12px;
@@ -455,7 +455,7 @@ kbd {
 .admin__report {
   max-height: 320px; overflow: auto; padding: var(--pad-md);
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--radius);
-  font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; color: var(--ink-secondary);
+  font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; color: var(--ink-subtle);
 }
 .admin__table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .admin__table th, .admin__table td {
@@ -505,4 +505,61 @@ kbd {
 .tables__expanded td { background: var(--surface-2); white-space: normal; }
 .tables__full { display: grid; grid-template-columns: 12rem 1fr; gap: 4px 12px; font-size: 11px; }
 .tables__full dt { color: var(--ink-tertiary); }
-.tables__full dd { margin: 0; color: var(--ink-secondary); word-break: break-word; }
+.tables__full dd { margin: 0; color: var(--ink-subtle); word-break: break-word; }
+
+/* ── Explainer panel + diagrams (#33, #34, #35) ──────────────────────────────────────────
+   Every tab carries one. Quiet by construction: it must not compete with the instrument
+   it explains, and on Label it sits above a loop targeting five seconds per item. */
+
+.explain {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  margin-bottom: var(--pad-lg);
+  max-width: 46rem;
+}
+.explain__toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: var(--pad-sm) var(--pad-md);
+  border: 0; border-radius: var(--radius); background: transparent;
+  color: var(--ink-subtle); font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+}
+.explain__toggle:hover { color: var(--ink); }
+.explain__chevron { font-size: 9px; color: var(--ink-tertiary); }
+.explain__body { padding: 0 var(--pad-md) var(--pad-md); }
+.explain__prose { font-size: 13px; line-height: 1.55; color: var(--ink-muted); max-width: 40rem; }
+.explain__prose p { margin: 0 0 var(--pad-sm); }
+.explain__prose p:last-child { margin-bottom: 0; }
+.explain__prose strong { color: var(--ink); font-weight: 500; }
+.explain__prose code {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-radius: 3px; padding: 0 3px;
+}
+.explain__diagram { margin-bottom: var(--pad-md); overflow-x: auto; }
+
+/* Diagrams are token-only so they cannot drift from the palette, and they scale with the
+   panel rather than pretending to a fixed pixel size. */
+.loop { width: 100%; max-width: 600px; height: auto; display: block; }
+.loop__edges path { fill: none; stroke: var(--hairline-strong); stroke-width: 1; }
+.loop__node rect { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; }
+.loop__label text {
+  fill: var(--ink); font-family: var(--font-sans); font-size: 11px; text-anchor: middle;
+}
+.loop__sub text {
+  fill: var(--ink-subtle); font-family: var(--font-mono); font-size: 9px; text-anchor: middle;
+}
+.loop__note {
+  fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px;
+  font-style: italic; text-anchor: middle;
+}
+
+/* the per-card ranking rationale */
+.label__why {
+  margin: var(--pad-sm) 0 0;
+  padding-left: var(--pad-sm);
+  border-left: 2px solid var(--hairline);
+  font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
+}
+.label__why strong { color: var(--ink); font-weight: 500; }
+.label__why .mono { font-family: var(--font-mono); color: var(--ink); }

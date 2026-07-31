@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Label } from './Label'
 import type { LabelQueueResponse } from '../types'
@@ -57,8 +57,11 @@ describe('the queue', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
     expect(await screen.findByText(/a fee shall accrue/)).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
-    expect(screen.getByText('No')).toBeInTheDocument()
+    // scoped to the predictions list: #33's rationale line repeats both values by design,
+    // so an unscoped getByText would pass or fail for reasons unrelated to this assertion
+    const predictions = within(screen.getByTestId('label-predictions'))
+    expect(predictions.getByText('Yes')).toBeInTheDocument()
+    expect(predictions.getByText('No')).toBeInTheDocument()
   })
 
   it('shows labelled / queue size progress', async () => {
@@ -129,6 +132,85 @@ describe('keyboard flow', () => {
     fireEvent.keyDown(window, { key: '?' })
     const dialog = await screen.findByRole('dialog', { name: /label shortcuts/i })
     expect(dialog).toHaveTextContent(/accept/i)
+  })
+})
+
+/**
+ * #33 — the card stated three facts and explained none of them. What earns a test here is
+ * that the explanation is *state-dependent*: a disagreement and an agreement are different
+ * situations for the reviewer, and rendering the same prose for both would be the failure.
+ */
+describe('explaining the loop (#33)', () => {
+  it('renders the loop diagram with an accessible name', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    expect(await screen.findByRole('img', { name: /improvement loop/i })).toBeInTheDocument()
+  })
+
+  it('collapses, and the choice survives a remount', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    const { unmount } = render(<Label />)
+
+    const toggle = await screen.findByRole('button', { name: /how this queue works/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    unmount()
+
+    render(<Label />)
+    expect(await screen.findByRole('button', { name: /how this queue works/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
+  it('explains a disagreement as the reason this item is ranked first', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const why = await screen.findByTestId('label-why')
+    expect(why).toHaveTextContent(/disagree/i)
+    expect(why).toHaveTextContent(/Yes/)
+    expect(why).toHaveTextContent(/No/)
+  })
+
+  it('explains an agreement differently — confirmation, not adjudication', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await screen.findByText(/a fee shall accrue/)
+
+    fireEvent.keyDown(window, { key: 's' })
+
+    const why = await screen.findByTestId('label-why')
+    await waitFor(() => expect(why).toHaveTextContent(/agree/i))
+    expect(why).not.toHaveTextContent(/ranked first/i)
+  })
+
+  it('gives a reason for an absent span rather than a bare line', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await screen.findByText(/a fee shall accrue/)
+
+    fireEvent.keyDown(window, { key: 's' })
+
+    const missing = await screen.findByTestId('label-nospan')
+    expect(missing).toHaveTextContent(/whole agreement|not a failure|expected/i)
+  })
+
+  it('leaves the keyboard loop alone — the toggle does not capture y/n/e/s', async () => {
+    const { fetchMock, decisions } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+
+    const toggle = await screen.findByRole('button', { name: /how this queue works/i })
+    toggle.focus()
+    fireEvent.keyDown(window, { key: 'y' })
+
+    await waitFor(() => expect(decisions).toHaveLength(1))
   })
 })
 
