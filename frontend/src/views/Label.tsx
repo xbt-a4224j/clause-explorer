@@ -114,11 +114,20 @@ export function Label() {
           confidence score is the very thing we have not done yet.
         </p>
         <p>
-          <strong>What your keystroke is worth.</strong> Each decision writes one row to{' '}
-          <code>labels</code>. The next calibration run reads those rows and reports accuracy
-          per deal point. Fifty labels chosen by disagreement move that number more than five
-          hundred chosen at random — which is the difference between an accuracy claim you can
-          defend and one you cannot afford to make.
+          <strong>What your keystroke does today — and what it does not.</strong> Each decision
+          writes one row to <code>labels</code>. <strong>Nothing reads that table yet.</strong>{' '}
+          Calibration grades the extractor against MAUD&rsquo;s own answers in{' '}
+          <code>deal_points</code>, not against your review, so pressing a key here does not
+          currently move any number in the product.
+        </p>
+        <p>
+          <strong>And on this corpus it could not.</strong> Every item queued here is one of the
+          20 held-out matters — documents MAUD already has a lawyer&rsquo;s answer for. Reviewing
+          a prediction where gold already exists tells you nothing gold did not. This tab is the
+          mechanism you would need on <em>un-annotated</em> firm documents, demonstrated on a
+          corpus that does not need it. Closing the loop means teaching calibration to prefer a
+          human label over a gold one where the two disagree, which is only meaningful once
+          there are documents with no gold at all.
         </p>
       </ExplainerPanel>
 

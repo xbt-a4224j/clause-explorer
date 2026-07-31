@@ -2486,3 +2486,39 @@ label vocabulary and the alias table behind `resolve()`.
 | D61 | CUAD stays loaded but is drawn and described as dormant rather than removed | Its parser holds two decisions worth keeping visible — the `char_end` collision that would have collapsed 244 expert spans, and the prune that makes reload idempotent across a corpus revision. Deleting it would remove evidence of care; leaving it unmarked overstated the product | 13,823 rows and an ingest stage that earn nothing today, and a reviewer may reasonably ask why it is there at all |
 | D62 | The roll-up claim is corrected everywhere rather than the crosswalk being re-pointed at leaf concepts | Re-pointing is the right fix and it is not a fifteen-minute one — it needs a per-SIC judgement against 18,259 concepts and would change every industry figure in the repo. Claiming less is free and honest; claiming more is the failure this project exists to avoid | The ontology is currently doing less work than its 18,259-concept headline suggests, and I now have to say so out loud |
 
+## Audit: the Label loop does not close
+
+Third overstatement found by the same line of questioning — "if I answer yes here, what impact
+is there?" The honest answer is none, twice over.
+
+**Nothing reads the `labels` table.**
+
+```
+rows already in labels: 5
+calibration.actual_positions() (calibration.py:69) reads deal_points ONLY
+grep for any other consumer of `labels`: none
+```
+
+`label.py`'s own docstring claims "#28's next calibration run picks it up" — it does not. The
+Label explainer repeated that claim, and LoopDiagram drew the closing arc as a solid arrow.
+
+**And on this corpus it could not close anyway.**
+
+```
+queue items: 100  = 20 held-out matters x 5 deal points
+every one of those 20 matters HAS a MAUD gold answer
+contract_47 + "Action prohibited..." — gold answer already present
+```
+
+The queue reviews predictions on documents where a lawyer's answer already exists. A human
+review there tells you nothing the gold label did not. The mechanism is right for un-annotated
+firm documents and structurally inert on a fully annotated corpus.
+
+Corrected: the explainer now states plainly that nothing reads the table and that the corpus
+cannot support the loop; the closing arc in LoopDiagram is dashed and captioned "loop not yet
+closed"; the accessible description says the final arrow is the design, not today's behaviour.
+
+| # | Decision | Why | Cost / risk accepted |
+|---|---|---|---|
+| D63 | Say the loop is open rather than closing it | Closing it means teaching calibration to prefer a human label over a gold one where they disagree — which on this corpus means overriding a lawyer with a reviewer, on documents where the lawyer is the ground truth the whole product rests on. That is a worse design, not a smaller one | The Label tab now visibly does nothing to the numbers, which is a weaker demo and an honest one |
+
