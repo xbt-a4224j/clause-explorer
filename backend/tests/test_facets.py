@@ -291,13 +291,13 @@ class TestTheRailExplainsItsOwnCounts:
     ambiguous about which denominator it meant.
     """
 
-    def test_a_group_says_what_its_total_counts(self, client) -> None:
+    def test_a_group_says_what_its_total_counts(self, client, cube) -> None:
         body = client.post("/facets", json={}).json()
         group = body["groups"][0]
         assert group["total_basis"]
         assert "matter" in group["total_basis"].lower()
 
-    def test_an_unclassified_bucket_carries_a_reason(self, client) -> None:
+    def test_an_unclassified_bucket_carries_a_reason(self, client, cube) -> None:
         """Three matters with no signing year read as a bug. They are a provenance fact:
         EDGAR did not resolve a date. The rail must say so rather than leave a bare count."""
         body = client.post("/facets", json={}).json()
@@ -310,7 +310,7 @@ class TestTheRailExplainsItsOwnCounts:
         assert buckets, "expected at least one unclassified bucket in this corpus"
         assert all(v["reason"] for v in buckets)
 
-    def test_an_unavailable_group_does_not_advertise_a_filterable_total(self, client) -> None:
+    def test_an_unavailable_group_does_not_advertise_a_filterable_total(self, client, cube) -> None:
         """`DEAL SIZE  n=152` directly above "not filterable" is the header contradicting its
         own note. A group that cannot narrow anything reports no total."""
         body = client.post("/facets", json={}).json()
@@ -318,7 +318,7 @@ class TestTheRailExplainsItsOwnCounts:
             if group["unavailable"]:
                 assert group["total_n"] is None
 
-    def test_an_inferred_dimension_is_marked_inferred(self, client) -> None:
+    def test_an_inferred_dimension_is_marked_inferred(self, client, cube) -> None:
         """Industry is classifier output over a self-assigned SIC code. The facet rail is
         exactly where someone filters on it, and it was the one place that did not say so."""
         industry = next(
@@ -326,7 +326,7 @@ class TestTheRailExplainsItsOwnCounts:
         )
         assert industry["inferred"] is True
 
-    def test_a_gold_dimension_is_not_marked_inferred(self, client) -> None:
+    def test_a_gold_dimension_is_not_marked_inferred(self, client, cube) -> None:
         year = next(
             g for g in client.post("/facets", json={}).json()["groups"] if g["key"] == "year"
         )
@@ -338,11 +338,11 @@ class TestConsiderationIsALiveAxis:
     stays empty. Consideration type is the honest substitute: a MAUD *expert label* rather than
     inference, populated for every matter, and the axis a partner reaches for after industry."""
 
-    def test_the_rail_offers_consideration(self, client) -> None:
+    def test_the_rail_offers_consideration(self, client, cube) -> None:
         keys = [g["key"] for g in client.post("/facets", json={}).json()["groups"]]
         assert "consideration" in keys
 
-    def test_it_is_not_marked_inferred(self, client) -> None:
+    def test_it_is_not_marked_inferred(self, client, cube) -> None:
         """Unlike industry. This one is read straight from a lawyer's annotation."""
         group = next(
             g
@@ -351,7 +351,7 @@ class TestConsiderationIsALiveAxis:
         )
         assert group["inferred"] is False
 
-    def test_it_appears_before_the_empty_deal_size_group(self, client) -> None:
+    def test_it_appears_before_the_empty_deal_size_group(self, client, cube) -> None:
         keys = [g["key"] for g in client.post("/facets", json={}).json()["groups"]]
         assert keys.index("consideration") < keys.index("band")
 

@@ -3,7 +3,26 @@
 A comparable-deals workbench for transactional contract work. Find deals like the one in front of
 you, see what was negotiated across them, and know where your experience is thin.
 
-> Status: under construction. No figure appears in this README until a command has produced it.
+![Explore — faceted comparable-deal search over 152 real merger agreements](docs/img/explore.png)
+
+*Explore. A plain-English description plus one facet narrows 152 agreements to 25, ranked by hybrid
+retrieval. Note the header: **134 filterable**, not 152 — eighteen matters have no industry at all,
+and the count says what the dimension can actually narrow. Every row is badged **INFERRED**, because
+industry is derived from the SEC's coarse self-assigned code rather than a lawyer's label.*
+
+![Deal Terms — the rollup, in counts rather than percentages](docs/img/deal-terms.png)
+
+*Deal Terms. The comparison an associate builds by hand from a stack of agreements: 91 deal points
+across n=25. Nothing renders as a percentage below n=30, because a percentage implies a precision
+the sample cannot support. Each row carries its full answer distribution — "4 business days n=14,
+3 business days n=5" — since "25 of 25 present" would hide the disagreement that matters.*
+
+![Semantic Layer — the query builder refusing a slice of one](docs/img/refusal.png)
+
+*Semantic Layer. The agent selects from these 56 named measures and dimensions and nothing else —
+there is no free-text box in the builder, which is the point. Here a query has been narrowed to a
+single company, and the server **refuses**: `n=1, threshold 5`. That gate is server-side, so a raw
+`curl` gets the same answer.*
 
 ## The problem
 
@@ -20,11 +39,12 @@ are described consistently.
 
 | | |
 |---|---|
-| **Explore** | Faceted comparable-deal search. Filter by industry, deal size, date, transaction type — facet counts update live. Ranked by similarity to your deal. |
-| **Deal Terms** | Rollup across the selected set: *fiduciary out in 6 of 8, ticking fee in 2, median reverse termination fee 4.2%*. Every row drills through to the actual clause language. |
+| **Explore** | Faceted comparable-deal search. Filter by industry, signing year and consideration type — facet counts recompute live against whatever is left. Ranked by hybrid retrieval. |
+| **Deal Terms** | Rollup across the selected set — *initial matching rights: median 4 business days, n=25* — with the full answer distribution per row, drilling through to clause text at a byte range in the source filing. |
 | **Coverage** | Where experience is thick or thin, by practice area and deal size. Thin cells are the signal — a gap is more actionable than a strength you already know about. |
 | **Semantic Layer** | The vocabulary the agent may select from, read live from Cube, with a query builder that has no free-text box and an offline grade of the selections. |
-| **Tables / Admin / Label** | Browsable raw data, ingest and calibration status, live logs, and keyboard-driven labeling. |
+| **Tables / Admin** | Browsable raw data, ingest status, the calibration table, an architecture diagram, and live structured logs. |
+| **Label** | A review queue ranked by disagreement between two extractors. Honest caveat: nothing reads its output yet — see Limitations. |
 
 ## Why it refuses to answer sometimes
 
@@ -69,8 +89,9 @@ compare against the labels, publish the accuracy per deal point. That's what mak
 
 ## Limitations
 
-Stated here because the numbers in this repo are meant to be checkable, and every one of these
-is measured rather than estimated (see `docs/worklog.md` for the commands).
+Every figure in this README came from a command that ran; `docs/worklog.md` has the commands and
+their raw output. These are the things the product does **not** do, stated here rather than
+discovered later.
 
 - **FOLIO industry codes on CUAD are inferred.** CUAD ships no industry metadata, so anything
   there is classifier output, flagged `is_inferred_industry` in the schema and labeled inferred
@@ -91,7 +112,22 @@ is measured rather than estimated (see `docs/worklog.md` for the commands).
   Health Care at 3 and Manufacturing at 42. After the revision Manufacturing is 22. The UI
   says the grouping is ours wherever it appears.
 - **3.8% of deal points have no source span** (495 of 12,937) and cannot drill through; MAUD's
-  excerpts could not be anchored back into the contract text for those.
+  excerpts could not be anchored back into the contract text for those. They store NULL rather
+  than a nearest guess — a wrong offset opens the wrong clause and looks completely right.
+- **FOLIO's hierarchy roll-up is loaded but inert on this corpus.** Every matter sits at the same
+  level, so the recursive descendant walk returns exactly what an equality match would. The
+  pharma-and-devices grouping is the checked-in SIC crosswalk's doing, not the ontology's. What
+  FOLIO genuinely earns is a stable *code* to join on instead of a display label.
+- **CUAD is loaded and queried by nothing.** 13,823 clauses with full provenance, 0 attached to a
+  matter (deliberate — 510 commercial contracts inside "comparable deals" would inflate every
+  facet count), and visible only in the raw Tables view.
+- **The Label queue's loop does not close.** Decisions write to `labels`; nothing reads that table
+  yet. And on this corpus it could not — every queued item is a held-out matter that already has a
+  lawyer's answer. It is the mechanism you would need on un-annotated documents, demonstrated on a
+  corpus that does not need it.
+- **The extractor is mostly below its own reporting gate.** Of the 5 deal points calibrated so far,
+  4 fall under 0.7 accuracy (0.50, 0.30, 0.30, 0.20 against one at 0.95). Published rather than
+  buried: it says precisely which questions the system must decline on un-annotated documents.
 
 ## Stack
 
@@ -101,8 +137,9 @@ key**; the key is needed only for generation and fresh embeddings.
 
 ## Walkthrough
 
-Three worked examples — find comparables, roll up what was negotiated, and the refusal state —
-each with real observed output from the running stack: [`docs/walkthrough.md`](docs/walkthrough.md).
+Worked examples with real observed output from the running stack:
+[`docs/walkthrough.md`](docs/walkthrough.md). Two narrated end-to-end walkthroughs, every figure
+verified against a live instance: [`docs/demo-scripts.md`](docs/demo-scripts.md).
 
 ## Quickstart
 

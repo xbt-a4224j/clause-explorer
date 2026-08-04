@@ -44,6 +44,10 @@ class TestTableWhitelist:
         response = client.get("/tables/matters%3B%20DROP%20TABLE%20matters/rows")
         assert response.status_code in (404, 422)
 
+    # Needs the corpus, unlike its two siblings: rejecting an unknown *column* means knowing
+    # which columns exist, which is a schema read. The table-name injection above is the
+    # assertion that runs without a database, and it is the one that matters for the whitelist.
+    @needs_corpus
     def test_sorting_by_an_unknown_column_is_rejected(self, client: TestClient) -> None:
         response = client.get("/tables/matters/rows", params={"sort": "id; DROP TABLE matters"})
         assert response.status_code == 422
