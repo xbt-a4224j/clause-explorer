@@ -94,8 +94,14 @@ describe('shell', () => {
     expect(screen.getAllByRole('tab', { selected: true })).toHaveLength(1)
   })
 
-  it('opens Explore first — the entry point for demo script 1', () => {
+  it('opens Overview first — the frame before any view demonstrates it (#39)', () => {
     render(<App />)
+    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/overview/i)
+  })
+
+  it('keeps Explore one key away — it is still the entry point for demo script 1', async () => {
+    render(<App />)
+    await userEvent.keyboard('2')
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/explore/i)
   })
 })
@@ -130,7 +136,7 @@ describe('keyboard navigation', () => {
     const box = screen.getByRole('searchbox')
     await userEvent.type(box, '3')
     expect(box).toHaveValue('3')
-    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/explore/i)
+    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/overview/i)
   })
 
   it('focuses search with /', async () => {

@@ -3,6 +3,7 @@ import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
 import { Label } from './views/Label'
+import { Overview } from './views/Overview'
 import { SemanticLayer } from './views/SemanticLayer'
 import { Tables } from './views/Tables'
 import { DealTerms } from './views/DealTerms'
@@ -13,11 +14,11 @@ import './styles/shell.css'
 type Health = { status: string; db: string; cube: string; version: string }
 
 /**
- * Shell for the six views. Panels are placeholders until their own issues land (#19–#22,
- * #29–#31); what ships here is the navigation, the keyboard contract and the health strip.
+ * Shell for the views. Landing tab is Overview (#39) — it states what the system is before
+ * any view demonstrates it; Explore, the demo entry point, is one key away.
  */
 export function App() {
-  const [active, setActive] = useState<TabId>('explore')
+  const [active, setActive] = useState<TabId>('overview')
   const [showHelp, setShowHelp] = useState(false)
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
   const [selection, setSelection] = useState<string[]>([])
@@ -96,7 +97,9 @@ export function App() {
       >
         <h1 className="shell__title">{activeTab.label}</h1>
         <p className="shell__hint">{activeTab.hint}</p>
-        {active === 'explore' ? (
+        {active === 'overview' ? (
+          <Overview />
+        ) : active === 'explore' ? (
           // The selection lives here, not inside Explore: switching tabs unmounts the view, and
           // Deal Terms must roll up the set the partner actually chose rather than defaulting
           // to the whole corpus.
