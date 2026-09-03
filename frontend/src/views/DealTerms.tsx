@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type React from 'react'
 import type { DealTermRow, DealTermsResponse, DrillMatter } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { DealTermsDiagram } from '../components/diagrams'
@@ -47,7 +48,7 @@ export function DealTerms({ selection }: { selection: string[] }) {
   if (selection.length === 0) {
     return (
       <div className="state state--empty">
-      <ExplainerPanel id="deal-terms" title="What this tab is for: what was negotiated" diagram={<DealTermsDiagram />}>
+      <ExplainerPanel id="deal-terms" title="What this tab is for: what was negotiated" diagram={<DealTermsDiagram />} defaultOpen={false}>
         <DealTermsExplainer />
       </ExplainerPanel>
         <h3 className="state__title">No deals selected</h3>
@@ -157,6 +158,14 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
         <span className="term__name">{row.deal_point_name}</span>
 
         <span className="term__figures">
+          {/* neutral prevalence bar — a width, not a figure; the proportion is computed in CSS */}
+          {!gated && (
+            <span
+              className="term__bar"
+              aria-hidden="true"
+              style={{ '--n': row.answered_n, '--of': selection.length } as React.CSSProperties}
+            />
+          )}
           {/* pre-rendered server-side; this view never divides two numbers */}
           <span className={`term__display term__display--${row.display_kind}`}>{row.display}</span>
           {row.numeric && (

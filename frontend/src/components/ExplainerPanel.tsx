@@ -8,7 +8,9 @@ import type { ReactNode } from 'react'
  * standing frame: what this tab is for, what you can do here, and why the answer is worth
  * more than the obvious alternative.
  *
- * Expanded by default — the first visit is the one that needs it. The choice is persisted
+ * Expanded by default — the first visit is the one that needs it — except where a tab's
+ * primary surface is the data itself (Deal Terms), which starts collapsed so the empty-state
+ * CTA or the table is the first thing on screen. The choice is persisted
  * per panel so a reviewer who has internalised a tab is not re-taught it on every load,
  * which matters most on Label, where the loop targets under five seconds per item.
  *
@@ -19,13 +21,15 @@ import type { ReactNode } from 'react'
 
 const PREFIX = 'clause-explorer.explainer.'
 
-function readStored(id: string): boolean {
+function readStored(id: string, defaultOpen: boolean): boolean {
   try {
-    return window.localStorage.getItem(PREFIX + id) !== 'collapsed'
+    const stored = window.localStorage.getItem(PREFIX + id)
+    if (stored === null) return defaultOpen
+    return stored !== 'collapsed'
   } catch {
     // Safari private mode throws on localStorage access. An explainer that cannot remember
     // a preference is a small loss; one that crashes the tab is not.
-    return true
+    return defaultOpen
   }
 }
 
@@ -34,6 +38,7 @@ export function ExplainerPanel({
   title,
   children,
   diagram,
+  defaultOpen = true,
 }: {
   /** stable key for the persisted choice; must not change between releases */
   id: string
@@ -41,8 +46,10 @@ export function ExplainerPanel({
   title: string
   children: ReactNode
   diagram?: ReactNode
+  /** first-visit state; dense tabs whose primary surface is the data start collapsed */
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(() => readStored(id))
+  const [open, setOpen] = useState(() => readStored(id, defaultOpen))
 
   useEffect(() => {
     try {

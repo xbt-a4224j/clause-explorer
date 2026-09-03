@@ -210,7 +210,7 @@ kbd {
 .explore__count { font-size: 11px; color: var(--ink-muted); margin-bottom: var(--pad-md); }
 .explore__list { display: flex; flex-direction: column; gap: 1px; }
 
-.card { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius); }
+.card { background: var(--surface-1); border: 1px solid var(--hairline-strong); border-radius: var(--radius); }
 .card.is-focused { box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
 .card__hit {
   display: flex; justify-content: space-between; align-items: center; gap: var(--pad-md);
@@ -322,7 +322,7 @@ kbd {
 .terms__skeleton { display: flex; flex-direction: column; gap: 6px; }
 .terms__list { display: flex; flex-direction: column; gap: 1px; }
 
-.term { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius); }
+.term { background: var(--surface-1); border: 1px solid var(--hairline-strong); border-radius: var(--radius); }
 /* absent is dimmed but never hidden — "we checked and it is not there" is a finding */
 .term--absent { opacity: 0.72; }
 .term__hit {
@@ -333,6 +333,17 @@ kbd {
 .term__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .term__name { font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
 .term__figures { display: flex; align-items: baseline; gap: var(--pad-md); white-space: nowrap; }
+/* prevalence bar: a neutral second channel for the count. The WIDTH is a proportion; no figure is
+   ever derived from it and the division lives in CSS, not in the view (see the DealTerms rule). */
+.term__bar {
+  position: relative; width: 64px; height: 6px; flex: none;
+  background: var(--surface-3); border-radius: 3px; overflow: hidden;
+}
+.term__bar::after {
+  content: ''; position: absolute; inset: 0;
+  width: calc(var(--n, 0) / var(--of, 1) * 100%);
+  background: var(--ink-tertiary); border-radius: 3px;
+}
 .term__display {
   font-family: var(--font-mono); font-size: 13px; color: var(--ink);
   font-variant-numeric: tabular-nums;
