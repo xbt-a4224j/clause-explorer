@@ -2549,3 +2549,74 @@ worse than no tests: they report green for a feature that cannot fail because it
 was always in the narrative layer — explainers, diagrams, docstrings, demo scripts. Intended
 architecture described in the present tense.
 
+
+---
+
+## Journeys, the tab split, and two silent-wrong-answer bugs (2026-09-03)
+
+Prompted by an audit question: how does this land with someone who runs a knowledge-management
+data pipeline? The answer was that the features were sound and the product was illegible. Every
+tab opened with roughly three hundred words and a diagram before the tool appeared; on Explore
+the first result sat two screens down. Eight equal tabs read as a feature list.
+
+**Shipped**
+
+- `ExplainerPanel` now defaults to collapsed. The title states the question a tab answers; the
+  argument is one click away. The persisted per-panel choice is unchanged.
+- `tabs.ts` gained a `group` field and the bar splits after Coverage: four tabs are the product,
+  four are the evidence, behind an "under the hood" label.
+- `journeys.ts` holds the three demo scripts as data. Overview renders them as cards — who asks,
+  what it costs today, the clicks, what they leave with — and **Run this** hands the journey to
+  the shell, which seeds filters and switches tab. It reuses the channel a Coverage cell click
+  already used; the seed grew a `consideration_type` field.
+- `frontend/scripts/shots.mjs` generates the annotated screenshots in `docs/img/`, locating each
+  callout by CSS selector against a running app, so the README cannot drift from the UI silently.
+
+**Bug 1 — the drill-through was showing a table of contents.**
+
+The promise was clause text at a character range. Measured over the corpus:
+
+```
+$ docker compose exec -T db psql -U explorer -d explorer -tAc "SELECT count(*), \
+    percentile_disc(0.5) WITHIN GROUP (ORDER BY source_span_end-source_span_start), \
+    percentile_disc(0.9) WITHIN GROUP (ORDER BY source_span_end-source_span_start), \
+    max(source_span_end-source_span_start) FROM deal_points WHERE source_span_start IS NOT NULL;"
+12442|4658|238949|739709
+```
+
+MAUD records *where in the agreement an answer was found*, and for a holistic deal point that is
+most of the document. `_slice` now returns a `SourceSlice` carrying the true width and an
+`is_excerpt` flag; anything wider than `max_clause_chars` (6,000, just above the median) renders
+as a bounded 1,200-character excerpt under a note naming it a document-scale span.
+
+*Decision, with its cost:* excerpt rather than suppress. Suppressing these rows would have been
+tidier and would have hidden how much of MAUD's span data is document-scale — which is exactly
+what someone needs to know before pointing an extractor at un-annotated documents. The cost is
+that the drill is less impressive than it looked.
+
+**Bug 2 — the consideration facet narrowed the rail and not the results.**
+
+Found while verifying the Run this button end to end. Explore showed All Cash selected, the rail
+recomputed to 21, and the list returned all 25 health-care matters. `ComparablesRequest` had no
+`consideration_type` field, so Pydantic dropped it silently. The frontend had been sending it
+correctly all along.
+
+```
+$ curl -s -X POST localhost:8000/comparables -d '{"folio_industry_code":"RCSG...","consideration_type":"All Cash"}'
+before: candidate_count 25          # the filter was ignored
+after:  candidate_count 21          # matches the facet rail
+```
+
+This is the failure mode CLAUDE.md names as the nastiest in the design, arriving through the one
+door nobody was watching: not a wrong number, but a real number for a slice the UI mislabelled.
+Two tests hold it, one asserting that the rail's count and the endpoint's count agree — the check
+that would have caught it, because it compares the two definitions rather than testing either
+alone.
+
+It also invalidated figures I had already written into the README from a curl using that same
+ignored field. Corrected: the healthcare all-cash slice is n=21, ordinary-course efforts standard
+splits flat 10 / commercially reasonable 8 / reasonable best 3, and 90 deal points are answered
+with 2 answered by none.
+
+*The pattern, again:* the product behaviour was sound in the layer people inspect, and wrong at
+the seam between two components that each looked correct alone.
