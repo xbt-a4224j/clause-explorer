@@ -140,10 +140,23 @@ class DrillMatter(BaseModel):
     source_span_end: int | None
     clause_text: str | None = Field(
         default=None,
-        description="The exact characters at [start, end) in the source agreement.",
+        description=(
+            "The characters at [start, end) in the source agreement, bounded to an excerpt "
+            "when the recorded span is document-scale."
+        ),
     )
     text_unavailable: str | None = Field(
         default=None, description="Why there is no clause text. Set whenever clause_text is null."
+    )
+    span_chars: int | None = Field(
+        default=None, description="Width of the recorded span, in characters."
+    )
+    is_excerpt: bool = Field(
+        default=False,
+        description=(
+            "True when the span is wider than a clause and `clause_text` is the opening "
+            "excerpt of it rather than the operative language."
+        ),
     )
 
 
@@ -403,7 +416,7 @@ def drill(request: DrillRequest) -> DrillResponse:
     for matter_id, target_name, position, source_file, start, end in _run_drill_query(
         request.deal_point_name, request.matter_ids
     ):
-        clause_text, unavailable = slice_source(source_file, start, end)
+        sliced = slice_source(source_file, start, end)
         matters.append(
             DrillMatter(
                 matter_id=matter_id,
@@ -412,8 +425,10 @@ def drill(request: DrillRequest) -> DrillResponse:
                 source_file=source_file,
                 source_span_start=start,
                 source_span_end=end,
-                clause_text=clause_text,
-                text_unavailable=unavailable,
+                clause_text=sliced.text,
+                text_unavailable=sliced.unavailable,
+                span_chars=sliced.span_chars,
+                is_excerpt=sliced.is_excerpt,
             )
         )
 

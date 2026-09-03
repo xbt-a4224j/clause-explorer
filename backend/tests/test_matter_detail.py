@@ -143,3 +143,53 @@ class TestCopyableSummary:
     def test_the_summary_carries_a_denominator(self, client: TestClient) -> None:
         body = client.get("/matters/contract_1").json()
         assert f"n={body['deal_point_count']}" in body["summary"]
+
+
+# --- document-scale spans (the drill-through honesty fix) ---------------------------------
+#
+# MAUD's recorded spans are mostly NOT clause-scale: measured over this corpus, the median
+# span is 4,658 characters and the 90th percentile is 238,949. Rendering the raw slice
+# labelled "the clause" therefore showed the agreement's table of contents for most rows,
+# which is a wrong answer that looks like a finding — the failure mode this product exists
+# to avoid. A span wider than `max_clause_chars` is now reported as an excerpt of a
+# document-scale span rather than presented as the clause.
+
+
+def test_clause_scale_span_is_returned_whole() -> None:
+    from explorer.api.matters import _slice
+
+    text = "x" * 100 + "the operative clause" + "y" * 100
+    result = _slice(text, 100, 120)
+
+    assert result.text == "the operative clause"
+    assert result.is_excerpt is False
+    assert result.span_chars == 20
+    assert result.unavailable is None
+
+
+def test_document_scale_span_is_truncated_and_flagged() -> None:
+    from explorer.api.matters import _slice
+    from explorer.api.settings import settings
+
+    text = "z" * 300_000
+    span = settings.max_clause_chars + 50_000
+    result = _slice(text, 0, span)
+
+    assert result.is_excerpt is True
+    assert result.span_chars == span
+    assert result.text is not None
+    assert len(result.text) == settings.excerpt_chars
+    # still text, not an error: the span is real, it is just not a clause
+    assert result.unavailable is None
+
+
+def test_excerpt_boundary_is_inclusive_of_the_limit() -> None:
+    from explorer.api.matters import _slice
+    from explorer.api.settings import settings
+
+    text = "q" * (settings.max_clause_chars + 10)
+    exactly_at_limit = _slice(text, 0, settings.max_clause_chars)
+
+    assert exactly_at_limit.is_excerpt is False
+    assert exactly_at_limit.text is not None
+    assert len(exactly_at_limit.text) == settings.max_clause_chars

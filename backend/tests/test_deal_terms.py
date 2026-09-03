@@ -457,11 +457,21 @@ class TestAgainstRealCube:
             json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
         ).json()
 
-        m = next(x for x in drill["matters"] if x["clause_text"])
-        raw = (CONTRACTS_DIR / f"{m['matter_id']}.txt").read_text(
-            encoding="utf-8", errors="replace"
-        )
-        assert m["clause_text"] == raw[m["source_span_start"] : m["source_span_end"]]
+        # Two shapes now, and the response says which: a clause-scale span comes back whole,
+        # a document-scale one comes back as the opening excerpt of that same slice. Both must
+        # be characters actually taken from the agreement at the recorded offset — the point of
+        # the assertion is that no text is ever synthesised.
+        for m in (x for x in drill["matters"] if x["clause_text"]):
+            raw = (CONTRACTS_DIR / f"{m['matter_id']}.txt").read_text(
+                encoding="utf-8", errors="replace"
+            )
+            span = raw[m["source_span_start"] : m["source_span_end"]]
+            assert m["span_chars"] == m["source_span_end"] - m["source_span_start"]
+            if m["is_excerpt"]:
+                assert span.startswith(m["clause_text"])
+                assert len(m["clause_text"]) < len(span)
+            else:
+                assert m["clause_text"] == span
 
     def test_an_untraceable_answer_says_so_rather_than_going_blank(
         self, client: TestClient

@@ -17,6 +17,7 @@ individual record fetch is explicitly outside it.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
 
 import psycopg
 from fastapi import APIRouter, HTTPException
@@ -96,20 +97,39 @@ def _read_source(source_file: str | None) -> str | None:
     return text
 
 
-def _slice(text: str | None, start: int | None, end: int | None) -> tuple[str | None, str | None]:
-    """(clause_text, reason_it_is_missing). Exactly one of the two is ever set."""
+class SourceSlice(NamedTuple):
+    """What a recorded span actually yields.
+
+    `text` and `unavailable` remain mutually exclusive. `span_chars` and `is_excerpt` carry the
+    thing the old two-tuple could not say: the span exists and was read, but it is too wide to
+    be the operative language, so what is shown is a bounded excerpt of it.
+    """
+
+    text: str | None
+    unavailable: str | None
+    span_chars: int | None = None
+    is_excerpt: bool = False
+
+
+def _slice(text: str | None, start: int | None, end: int | None) -> SourceSlice:
+    """The characters at a recorded span, bounded when the span is document-scale."""
     if start is None or end is None:
-        return None, NO_SPAN
+        return SourceSlice(None, NO_SPAN)
     if text is None:
-        return None, NO_FILE
+        return SourceSlice(None, NO_FILE)
     if start < 0 or end > len(text) or end <= start:
-        return None, BAD_SPAN
-    return text[start:end], None
+        return SourceSlice(None, BAD_SPAN)
+
+    span_chars = end - start
+    if span_chars > settings.max_clause_chars:
+        # A span this wide is where the answer was found, not the language that carries it.
+        return SourceSlice(
+            text[start : start + settings.excerpt_chars], None, span_chars, is_excerpt=True
+        )
+    return SourceSlice(text[start:end], None, span_chars, is_excerpt=False)
 
 
-def slice_source(
-    source_file: str | None, start: int | None, end: int | None
-) -> tuple[str | None, str | None]:
+def slice_source(source_file: str | None, start: int | None, end: int | None) -> SourceSlice:
     """The clause at a byte range, or None with the reason.
 
     The single entry point for turning a recorded span into text, shared by the matter card
@@ -196,7 +216,8 @@ def matter_detail(matter_id: str) -> MatterDetail:
 
     deal_points: list[DealPointDetail] = []
     for name, position, is_inferred, numeric_value, start, end in dp_rows:
-        clause_text, unavailable = _slice(text, start, end)
+        sliced = _slice(text, start, end)
+        clause_text, unavailable = sliced.text, sliced.unavailable
         deal_points.append(
             DealPointDetail(
                 deal_point_name=name,

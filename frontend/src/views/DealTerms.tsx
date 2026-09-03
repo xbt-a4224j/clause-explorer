@@ -213,11 +213,28 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
               </div>
               {m.clause_text ? (
                 <>
-                  {/* the clause scrolls in its own box; the page never scrolls sideways */}
-                  <blockquote className="dp__clause">{m.clause_text}</blockquote>
+                  {/* MAUD's spans mark where in the agreement an answer was found, which for
+                      holistic deal points is most of the document — median 4,658 characters,
+                      90th percentile 238,949. A span that wide is not the operative language,
+                      and showing it under the word "clause" was showing a table of contents.
+                      The excerpt says what it is instead. */}
+                  {/* the row is head | text; note, clause and provenance stack inside the
+                      text column so a full-width note cannot squeeze the clause into a strip */}
+                  <div className="drill__text">
+                  {m.is_excerpt && (
+                    <p className="dp__excerptnote" data-testid="excerpt-note">
+                      Document-scale span — {m.span_chars?.toLocaleString()} characters. MAUD
+                      recorded where this answer was found rather than the clause that carries it.
+                      Opening excerpt only; open the filing for the operative language.
+                    </p>
+                  )}
+                  <blockquote className={`dp__clause${m.is_excerpt ? ' dp__clause--excerpt' : ''}`}>
+                    {m.clause_text}
+                  </blockquote>
                   <p className="dp__span mono muted">
                     {m.source_file} [{m.source_span_start}, {m.source_span_end})
                   </p>
+                  </div>
                 </>
               ) : (
                 <p className="dp__missing">{m.text_unavailable}</p>

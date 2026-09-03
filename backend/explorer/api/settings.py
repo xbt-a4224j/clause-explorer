@@ -40,6 +40,19 @@ class Settings(BaseSettings):
     # this threshold; it exists for extractor output only.
     min_extraction_confidence: float = 0.7
 
+    # Above this, a recorded span is document-scale rather than clause-scale and is shown as a
+    # bounded excerpt, labelled as one. Measured over this corpus, MAUD's span lengths have a
+    # median of 4,658 characters and a 90th percentile of 238,949 — the annotations mark where
+    # in the agreement an answer was found, and for holistic deal points that is most of the
+    # document. Rendering the raw slice as "the clause" showed a table of contents, which is the
+    # exact failure this product exists to avoid: a wrong answer that looks like a finding.
+    # 6,000 sits just above the median so genuinely clause-scale spans pass through whole.
+    max_clause_chars: int = 6000
+
+    # How much of a document-scale span is shown. Enough to see what kind of text the span
+    # covers; short enough that nobody mistakes it for the operative language.
+    excerpt_chars: int = 1200
+
     # Present only so generation and fresh embeddings can work. The app must boot and
     # serve retrieval, facets, coverage and every table view without it.
     openai_api_key: str | None = None

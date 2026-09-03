@@ -146,6 +146,10 @@ export interface DrillMatter {
   source_span_end: number | null
   clause_text: string | null
   text_unavailable: string | null
+  /** Width of the recorded span in characters. */
+  span_chars: number | null
+  /** True when `clause_text` is the opening excerpt of a document-scale span. */
+  is_excerpt: boolean
 }
 
 export interface CoverageCell {
