@@ -5,6 +5,7 @@ import {
   ProvenanceDiagram,
   SystemDiagram,
 } from '../components/overviewDiagrams'
+import { JOURNEYS, type Journey } from '../journeys'
 
 /**
  * Overview (#39).
@@ -91,9 +92,56 @@ function CorpusStrip() {
   )
 }
 
-export function Overview() {
+function JourneyCard({ journey, onRun }: { journey: Journey; onRun: () => void }) {
+  return (
+    <li className="jrn" data-testid={`journey-${journey.id}`}>
+      <p className="jrn__who">{journey.who}</p>
+      <p className="jrn__q">{journey.question}</p>
+      <p className="jrn__today">
+        <span className="jrn__todaylabel">Today</span> {journey.today}
+      </p>
+
+      {/* the clicks, in order — the journey is the diagram */}
+      <ol className="jrn__steps" aria-label="the path through the app">
+        {journey.steps.map((step) => (
+          <li className="jrn__step" key={step}>
+            {step}
+          </li>
+        ))}
+      </ol>
+
+      <p className="jrn__outcome">
+        <span className="jrn__outlabel">Leaves with</span> {journey.outcome}
+      </p>
+      {journey.limit && <p className="jrn__limit">{journey.limit}</p>}
+
+      <button type="button" className="jrn__run" onClick={onRun}>
+        {journey.cta}
+      </button>
+    </li>
+  )
+}
+
+export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey) => void }) {
   return (
     <div className="ov">
+      <section className="sem__pane">
+        <h3 className="sem__h">What someone would actually do here</h3>
+        <p className="sem__sub">
+          Three questions, three people who ask them, and the path each one takes. Every journey
+          below runs against the corpus that is loaded right now, and each says where it stops.
+        </p>
+        <ul className="jrn__list" data-testid="journeys">
+          {JOURNEYS.map((journey) => (
+            <JourneyCard
+              key={journey.id}
+              journey={journey}
+              onRun={() => onStartJourney(journey)}
+            />
+          ))}
+        </ul>
+      </section>
+
       <section className="sem__pane">
         <h3 className="sem__h">What this is</h3>
         <p className="sem__sub">
@@ -193,14 +241,13 @@ export function Overview() {
       </section>
 
       <section className="sem__pane">
-        <h3 className="sem__h">Where to go next</h3>
+        <h3 className="sem__h">The other four tabs</h3>
         <p className="sem__sub">
-          <strong>Explore</strong> to find comparable deals — the entry point, and the only tab a
-          partner would open unprompted. <strong>Deal Terms</strong> to roll a set up into what was
-          negotiated across it. <strong>Coverage</strong> to see where the corpus is thick or thin.{' '}
-          <strong>Semantic Layer</strong> for the engineering argument and the live catalog.{' '}
-          <strong>Tables</strong> for the raw rows, <strong>Admin</strong> for ingest status and
-          eval results, <strong>Label</strong> for the uncertainty queue.
+          The tabs after the divider are the evidence rather than the product.{' '}
+          <strong>Semantic Layer</strong> is where a question becomes a number, with the live
+          catalog the model selects from. <strong>Tables</strong> is the raw rows, so nobody has to
+          open a database client. <strong>Admin</strong> carries ingest provenance, the calibration
+          table and the logs. <strong>Label</strong> is the review queue from the third journey.
         </p>
       </section>
     </div>

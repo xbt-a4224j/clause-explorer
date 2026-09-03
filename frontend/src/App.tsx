@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
+import type { Journey, JourneySeed } from './journeys'
 import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
 import { Label } from './views/Label'
@@ -22,8 +23,10 @@ export function App() {
   const [showHelp, setShowHelp] = useState(false)
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
   const [selection, setSelection] = useState<string[]>([])
-  // a Coverage cell click pre-filters Explore; Explore consumes and clears it
-  const [coverageSeed, setCoverageSeed] = useState<{ folio_industry_code: string; folio_industry_label: string; signing_year: string } | null>(null)
+  // A Coverage cell click or an Overview journey pre-filters Explore; Explore consumes and
+  // clears it. One channel for both, because they are the same act: arrive somewhere already
+  // narrowed rather than at an empty search box.
+  const [seed, setSeed] = useState<JourneySeed | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [healthError, setHealthError] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -61,20 +64,27 @@ export function App() {
 
         <nav className="shell__tabs" role="tablist" aria-label="views">
           {TABS.map((tab, i) => (
-            <button
-              key={tab.id}
-              role="tab"
-              type="button"
-              aria-selected={tab.id === active}
-              aria-controls={`panel-${tab.id}`}
-              className={`shell__tab${tab.id === active ? ' is-active' : ''}`}
-              onClick={() => setActive(tab.id)}
-            >
-              {tab.label}
-              <span className="shell__tabkey" aria-hidden="true">
-                {i + 1}
-              </span>
-            </button>
+            <span key={tab.id} className="shell__tabslot">
+              {/* the divider marks where the product ends and its evidence begins */}
+              {tab.group === 'under-the-hood' && TABS[i - 1]?.group === 'work' && (
+                <span className="shell__tabgroup" aria-hidden="true">
+                  under the hood
+                </span>
+              )}
+              <button
+                role="tab"
+                type="button"
+                aria-selected={tab.id === active}
+                aria-controls={`panel-${tab.id}`}
+                className={`shell__tab shell__tab--${tab.group}${tab.id === active ? ' is-active' : ''}`}
+                onClick={() => setActive(tab.id)}
+              >
+                {tab.label}
+                <span className="shell__tabkey" aria-hidden="true">
+                  {i + 1}
+                </span>
+              </button>
+            </span>
           ))}
         </nav>
 
@@ -98,7 +108,12 @@ export function App() {
         <h1 className="shell__title">{activeTab.label}</h1>
         <p className="shell__hint">{activeTab.hint}</p>
         {active === 'overview' ? (
-          <Overview />
+          <Overview
+            onStartJourney={(journey: Journey) => {
+              if (journey.seed) setSeed(journey.seed)
+              setActive(journey.tab)
+            }}
+          />
         ) : active === 'explore' ? (
           // The selection lives here, not inside Explore: switching tabs unmounts the view, and
           // Deal Terms must roll up the set the partner actually chose rather than defaulting
@@ -106,15 +121,15 @@ export function App() {
           <Explore
             searchRef={searchRef}
             onSelectionChange={setSelection}
-            seedFilters={coverageSeed}
-            onSeedConsumed={() => setCoverageSeed(null)}
+            seedFilters={seed}
+            onSeedConsumed={() => setSeed(null)}
           />
         ) : active === 'deal-terms' ? (
           <DealTerms selection={selection} />
         ) : active === 'coverage' ? (
           <Coverage
             onNavigateToExplore={(filters) => {
-              setCoverageSeed(filters)
+              setSeed({ ...filters, consideration_type: null })
               setActive('explore')
             }}
           />

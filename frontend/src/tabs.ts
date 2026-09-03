@@ -25,6 +25,13 @@ export interface Tab {
   label: string
   hint: string
   audience: 'partner' | 'km' | 'operator' | 'engineer'
+  /**
+   * Which half of the tab bar this sits in. `work` is the product an analyst uses to answer a
+   * question; `under-the-hood` is the evidence that the answers are trustworthy. Eight
+   * undifferentiated tabs read as a feature list and hide which three someone would actually
+   * open, so the bar is split and the second group is styled quieter.
+   */
+  group: 'work' | 'under-the-hood'
 }
 
 export const TABS: readonly Tab[] = [
@@ -33,48 +40,56 @@ export const TABS: readonly Tab[] = [
     label: 'Overview',
     hint: 'what this is and how it works',
     audience: 'partner',
+    group: 'work',
   },
   {
     id: 'explore',
     label: 'Explore',
     hint: 'find comparable deals',
     audience: 'partner',
+    group: 'work',
   },
   {
     id: 'deal-terms',
     label: 'Deal Terms',
     hint: 'what was negotiated across a set',
     audience: 'partner',
+    group: 'work',
   },
   {
     id: 'coverage',
     label: 'Coverage',
     hint: 'where experience is thick or thin',
     audience: 'km',
+    group: 'work',
   },
   {
     id: 'semantic-layer',
     label: 'Semantic Layer',
     hint: 'how a question becomes a number',
     audience: 'engineer',
+    group: 'under-the-hood',
   },
   {
     id: 'tables',
     label: 'Tables',
     hint: 'browse the raw data',
     audience: 'operator',
+    group: 'under-the-hood',
   },
   {
     id: 'admin',
     label: 'Admin',
     hint: 'ingest, calibration, evals, logs',
     audience: 'operator',
+    group: 'under-the-hood',
   },
   {
     id: 'label',
     label: 'Label',
     hint: 'review the uncertainty queue',
     audience: 'km',
+    group: 'under-the-hood',
   },
 ] as const
 

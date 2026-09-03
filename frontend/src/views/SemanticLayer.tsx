@@ -74,6 +74,11 @@ export function SemanticLayer() {
 
   return (
     <div className="sem">
+      <p className="sem__pointer">
+        This tab is the argument for why the figures on <strong>Deal Terms</strong> are
+        defensible. If you came to find comparable deals, that is <strong>Explore</strong>.
+      </p>
+
       <ExplainerPanel
         id="semantic-layer"
         title="What the semantic layer is for"

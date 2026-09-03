@@ -144,28 +144,37 @@ describe('keyboard flow', () => {
  * situations for the reviewer, and rendering the same prose for both would be the failure.
  */
 describe('explaining the loop (#33)', () => {
+  // The panel persists its open/closed choice in localStorage, which outlives a render. Without
+  // this, one test's click sets the next test's starting state and the default is untestable.
+  beforeEach(() => window.localStorage.clear())
+
   it('renders the loop diagram with an accessible name', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
+    // The panel is collapsed on a first visit, so the diagram is behind the toggle rather than
+    // ahead of the queue. Opening it is the assertion: the diagram exists and is reachable.
+    fireEvent.click(await screen.findByRole('button', { name: /how this queue works/i }))
     expect(await screen.findByRole('img', { name: /improvement loop/i })).toBeInTheDocument()
   })
 
-  it('collapses, and the choice survives a remount', async () => {
+  it('starts collapsed, and an opened panel survives a remount', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     const { unmount } = render(<Label />)
 
+    // Collapsed first: the queue targets under five seconds per item, and prose above it is
+    // in the way. A reader who opens the explainer keeps it open across loads.
     const toggle = await screen.findByRole('button', { name: /how this queue works/i })
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
     unmount()
 
     render(<Label />)
     expect(await screen.findByRole('button', { name: /how this queue works/i })).toHaveAttribute(
       'aria-expanded',
-      'false',
+      'true',
     )
   })
 

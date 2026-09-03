@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Overview } from './Overview'
+import { JOURNEYS } from '../journeys'
 
 /**
  * Overview (#39).
@@ -28,7 +29,7 @@ afterEach(() => vi.restoreAllMocks())
 describe('Overview', () => {
   it('renders corpus counts from the API rather than hardcoded values', async () => {
     vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937, clauses: 13823 }))
-    render(<Overview />)
+    render(<Overview onStartJourney={() => {}} />)
 
     const strip = await screen.findByTestId('corpus-strip')
     // Thousands separators matter here: these are read as evidence, not decoration.
@@ -42,7 +43,7 @@ describe('Overview', () => {
       'fetch',
       vi.fn(() => Promise.reject(new Error('network'))),
     )
-    render(<Overview />)
+    render(<Overview onStartJourney={() => {}} />)
 
     await waitFor(() => expect(screen.getByTestId('corpus-failed')).toBeInTheDocument())
     expect(screen.queryByTestId('corpus-strip')).not.toBeInTheDocument()
@@ -52,7 +53,7 @@ describe('Overview', () => {
 
   it('exposes every diagram to assistive technology with a described mechanism', () => {
     vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
-    render(<Overview />)
+    render(<Overview onStartJourney={() => {}} />)
 
     const figures = screen.getAllByRole('img')
     expect(figures).toHaveLength(3)
@@ -67,7 +68,7 @@ describe('Overview', () => {
   // construction, not by accident. See the note in CLAUDE.md — three tests have broken this way.
   it('states the boundary — that this is not a document Q&A tool', () => {
     vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
-    render(<Overview />)
+    render(<Overview onStartJourney={() => {}} />)
 
     const boundaries = screen.getByTestId('boundaries')
     expect(boundaries).toHaveTextContent(/not a document Q&A tool/i)
@@ -76,7 +77,7 @@ describe('Overview', () => {
 
   it('explains min_n as a confidentiality control, not only a statistical one', () => {
     vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
-    render(<Overview />)
+    render(<Overview onStartJourney={() => {}} />)
 
     // All three jobs, because naming only the statistical one is the misreading this
     // paragraph exists to prevent.
@@ -84,5 +85,40 @@ describe('Overview', () => {
     expect(prose).toHaveTextContent(/statistical honesty/i)
     expect(prose).toHaveTextContent(/extraction-confidence gating/i)
     expect(prose).toHaveTextContent(/k-anonymity/i)
+  })
+})
+
+describe('the three journeys (#40)', () => {
+  it('renders one card per journey, each naming who asks and what they leave with', async () => {
+    render(<Overview onStartJourney={() => {}} />)
+    expect(screen.getByTestId('journeys')).toBeInTheDocument()
+    for (const journey of JOURNEYS) {
+      const card = screen.getByTestId(`journey-${journey.id}`)
+      expect(within(card).getByText(journey.who)).toBeInTheDocument()
+      expect(within(card).getByText(new RegExp(journey.cta))).toBeInTheDocument()
+    }
+  })
+
+  it('hands the whole journey back so the shell can seed filters and switch tab', async () => {
+    const onStart = vi.fn()
+    render(<Overview onStartJourney={onStart} />)
+
+    const comparables = screen.getByTestId('journey-comparables')
+    fireEvent.click(within(comparables).getByRole('button', { name: /run this/i }))
+
+    expect(onStart).toHaveBeenCalledTimes(1)
+    const journey = onStart.mock.calls[0][0]
+    expect(journey.tab).toBe('explore')
+    // the point of the button: arrive already narrowed, not at an empty search box
+    expect(journey.seed).toMatchObject({
+      folio_industry_label: 'Health Care Industry',
+      consideration_type: 'All Cash',
+    })
+  })
+
+  it('states the half-built journey’s limit on its own card rather than in a footnote', () => {
+    render(<Overview onStartJourney={() => {}} />)
+    const card = screen.getByTestId('journey-trust-the-extractor')
+    expect(within(card).getByText(/calibration does not read them back yet/i)).toBeInTheDocument()
   })
 })

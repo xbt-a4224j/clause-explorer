@@ -846,3 +846,124 @@ kbd {
 .ov__nots li { font-size: 12px; line-height: 1.55; color: var(--ink-subtle); max-width: 46rem; }
 .ov__nots strong { color: var(--ink); font-weight: 500; }
 .ov__nots em { font-style: normal; color: var(--ink); }
+
+/* ── tab groups ──────────────────────────────────────────────────────────────────────
+   Eight equal tabs read as a feature list and hide which ones an analyst would open.
+   The first four are the product; the rest are the evidence, set quieter behind a label. */
+.shell__tabslot { display: inline-flex; align-items: center; }
+.shell__tabgroup {
+  margin: 0 10px 0 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--hairline);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  white-space: nowrap;
+}
+.shell__tab--under-the-hood { color: var(--ink-tertiary); }
+.shell__tab--under-the-hood:hover { color: var(--ink-subtle); }
+.shell__tab--under-the-hood.is-active { color: var(--ink); }
+
+/* ── journeys on Overview ────────────────────────────────────────────────────────────
+   Three cards, one per demo script: who asks, what it costs them today, the clicks, and
+   what they leave with. The run button lands on the first step already filtered. */
+.jrn__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--pad-md);
+  margin: var(--pad-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.jrn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--pad-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+.jrn__who {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+.jrn__q { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink); }
+.jrn__today, .jrn__outcome { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-subtle); }
+.jrn__todaylabel, .jrn__outlabel {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+/* the clicks, in order: the journey is the diagram */
+.jrn__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  margin: 2px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.jrn__step {
+  padding: 3px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.jrn__step:not(:last-child)::after {
+  content: '→';
+  margin: 0 -4px 0 8px;
+  color: var(--ink-tertiary);
+}
+.jrn__limit {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--hairline-strong);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-tertiary);
+}
+.jrn__run {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.jrn__run:hover { background: var(--surface-3); border-color: var(--ink-tertiary); }
+
+/* Semantic Layer is the argument, not the product — say so before the argument starts. */
+.sem__pointer {
+  margin: 0 0 var(--pad-md);
+  font-size: 13px;
+  color: var(--ink-subtle);
+}
+
+/* A MAUD span wider than a clause is where the answer was found, not the language. */
+.dp__excerptnote {
+  margin: 0 0 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--hairline-strong);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-tertiary);
+}
+.dp__clause--excerpt { max-height: 12em; overflow: auto; }
+.drill__text { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }

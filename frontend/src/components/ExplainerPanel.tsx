@@ -8,11 +8,12 @@ import type { ReactNode } from 'react'
  * standing frame: what this tab is for, what you can do here, and why the answer is worth
  * more than the obvious alternative.
  *
- * Expanded by default — the first visit is the one that needs it — except where a tab's
- * primary surface is the data itself (Deal Terms), which starts collapsed so the empty-state
- * CTA or the table is the first thing on screen. The choice is persisted
- * per panel so a reviewer who has internalised a tab is not re-taught it on every load,
- * which matters most on Label, where the loop targets under five seconds per item.
+ * Collapsed by default. It was expanded, and the result was that every tab opened with roughly
+ * three hundred words and a diagram before the tool appeared — on Explore the first result sat
+ * two screens down. Documentation ahead of the instrument reads as a defence of the instrument.
+ * The title states the question the tab answers, which is the part worth showing unprompted; the
+ * argument is one click away. The choice is persisted per panel, so a reader who opens it keeps
+ * it open.
  *
  * `<button aria-expanded>` rather than `<details>`: the tabs bind bare letter keys
  * (y/n/e/s, j/k, /) at the window, and a focused `<summary>` swallows Enter and Space in
@@ -38,7 +39,7 @@ export function ExplainerPanel({
   title,
   children,
   diagram,
-  defaultOpen = true,
+  defaultOpen = false,
 }: {
   /** stable key for the persisted choice; must not change between releases */
   id: string
@@ -46,7 +47,7 @@ export function ExplainerPanel({
   title: string
   children: ReactNode
   diagram?: ReactNode
-  /** first-visit state; dense tabs whose primary surface is the data start collapsed */
+  /** first-visit state; collapsed unless a tab has a specific reason to argue first */
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(() => readStored(id, defaultOpen))

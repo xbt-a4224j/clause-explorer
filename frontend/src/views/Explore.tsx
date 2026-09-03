@@ -7,6 +7,7 @@ import { ExplainerPanel } from '../components/ExplainerPanel'
 import { ExploreDiagram } from '../components/diagrams'
 import { ExploreExplainer } from '../components/explainers'
 import { Term } from '../components/Term'
+import type { JourneySeed } from '../journeys'
 
 /**
  * Explore — faceted comparable-deal search (#19).
@@ -26,8 +27,12 @@ interface Props {
   searchRef: React.MutableRefObject<HTMLInputElement | null>
   /** Reports the matters currently on screen — the set Deal Terms rolls up (#21). */
   onSelectionChange?: (matterIds: string[]) => void
-  /** A Coverage cell click pre-filters Explore to that industry/year (#22). */
-  seedFilters?: { folio_industry_code: string; folio_industry_label: string; signing_year: string } | null
+  /**
+   * Arrive already narrowed: a Coverage cell click (#22) or an Overview journey. Every field is
+   * nullable because the two callers narrow on different axes — Coverage on industry and year,
+   * a journey on industry and consideration.
+   */
+  seedFilters?: JourneySeed | null
   onSeedConsumed?: () => void
 }
 
@@ -70,7 +75,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       folio_industry_code: seedFilters.folio_industry_code,
       signing_year: seedFilters.signing_year,
       deal_size_band: null,
-      consideration_type: null,
+      consideration_type: seedFilters.consideration_type,
     })
     onSeedConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps

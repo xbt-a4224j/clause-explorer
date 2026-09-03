@@ -256,6 +256,7 @@ describe('coverage pre-filter', () => {
           folio_industry_code: 'RCSG4k3ah1Pu5YgPexPgOmL',
           folio_industry_label: 'Health Care Industry',
           signing_year: '2020',
+          consideration_type: null,
         }}
         onSeedConsumed={onConsumed}
       />,
