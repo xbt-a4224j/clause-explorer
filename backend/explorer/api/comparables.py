@@ -52,6 +52,13 @@ class ComparablesRequest(BaseModel):
         default=None,
         description="Band label as defined in the Cube model. Every matter is 'unknown' today.",
     )
+    consideration_type: str | None = Field(
+        default=None,
+        description=(
+            "All Cash / All Stock / Mixed — MAUD's expert label, and the substitute axis for "
+            "deal size (#9). The facet rail offers it, so this endpoint must apply it."
+        ),
+    )
     signed_from: str | None = Field(default=None, description="ISO date, inclusive.")
     signed_to: str | None = Field(default=None, description="ISO date, inclusive.")
     limit: int = Field(default=10, ge=1, le=100)
@@ -79,6 +86,7 @@ class AppliedFilters(BaseModel):
     folio_industry_label: str | None
     rolled_up_to_descendants: int
     deal_size_band: str | None
+    consideration_type: str | None
     signed_from: str | None
     signed_to: str | None
     ranked_by: str
@@ -112,6 +120,15 @@ WHERE (%(industry)s::text IS NULL OR m.folio_industry_code = ANY(%(industry_code
   AND (%(signed_from)s::date IS NULL OR m.signing_date >= %(signed_from)s::date)
   AND (%(signed_to)s::date IS NULL OR m.signing_date <= %(signed_to)s::date)
   AND (%(band)s::text IS NULL OR %(band)s::text = 'unknown')
+  -- Consideration is MAUD's expert answer to a deal point rather than a column on the matter,
+  -- so it filters by existence of that labelled row. Same definition as the Cube dimension the
+  -- facet rail counts with; two definitions would let the rail and the list disagree, which is
+  -- exactly what happened while this clause was missing.
+  AND (%(consideration)s::text IS NULL OR EXISTS (
+        SELECT 1 FROM public.deal_points dp
+         WHERE dp.matter_id = m.id
+           AND dp.deal_point_name = 'Type of Consideration-Answer'
+           AND dp.position = %(consideration)s::text))
 ORDER BY m.id
 """
 
@@ -163,6 +180,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
                 "signed_from": request.signed_from,
                 "signed_to": request.signed_to,
                 "band": request.deal_size_band,
+                "consideration": request.consideration_type,
             },
         ).fetchall()
         industry_label = _label_for(conn, request.folio_industry_code)
@@ -172,6 +190,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
         folio_industry_label=industry_label,
         rolled_up_to_descendants=max(0, len(codes) - 1),
         deal_size_band=request.deal_size_band,
+        consideration_type=request.consideration_type,
         signed_from=request.signed_from,
         signed_to=request.signed_to,
         ranked_by=(
@@ -215,6 +234,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
         folio_industry_code=request.folio_industry_code,
         rolled_up_to=len(codes),
         deal_size_band=request.deal_size_band,
+        consideration_type=request.consideration_type,
         signed_from=request.signed_from,
         signed_to=request.signed_to,
         has_description=bool(request.description),

@@ -85,6 +85,42 @@ class TestFiltering:
         ).json()
         assert 0 < body["candidate_count"] < 152
 
+    def test_consideration_type_actually_narrows_the_results(self, client: TestClient) -> None:
+        """The facet rail offered this filter and the result list ignored it.
+
+        Explore showed "All Cash" selected, the facet counts dropped from 25 to 21, and the
+        list still returned all 25 health-care matters. That is the failure mode this product
+        exists to prevent: the UI asserts a constraint the data does not carry, and every
+        figure downstream is labelled with a slice it was not computed over.
+        """
+        healthcare = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE}).json()
+        cash = client.post(
+            "/comparables",
+            json={"folio_industry_code": HEALTH_CARE, "consideration_type": "All Cash"},
+        ).json()
+
+        assert cash["candidate_count"] < healthcare["candidate_count"]
+        assert cash["applied_filters"]["consideration_type"] == "All Cash"
+
+    def test_consideration_type_agrees_with_the_facet_count(self, client: TestClient) -> None:
+        """The rail's count and the result count answer the same question, so they must match —
+        a rail that promises 21 and a list that returns 25 is two answers to one filter."""
+        facets = client.post(
+            "/facets", json={"folio_industry_label": "Health Care Industry"}
+        ).json()
+        cash_facet = next(
+            v
+            for group in facets["groups"]
+            if group["key"] == "consideration"
+            for v in group["values"]
+            if v["value"] == "All Cash"
+        )
+        body = client.post(
+            "/comparables",
+            json={"folio_industry_code": HEALTH_CARE, "consideration_type": "All Cash"},
+        ).json()
+        assert body["candidate_count"] == cash_facet["n"]
+
     def test_unknown_folio_code_is_a_loud_error_not_an_empty_list(self, client: TestClient) -> None:
         """Zero results and a bad code look identical to a reader — the nastiest failure mode
         in the design (CLAUDE.md)."""
