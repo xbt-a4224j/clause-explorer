@@ -23,9 +23,9 @@ export function LoopDiagram() {
         Two extractors run over the same contract: a language model, whose predictions are
         recorded to disk, and a keyword baseline that costs nothing. Their answers are
         compared. Items where they disagree are ranked to the top of the review queue. Your
-        keystroke writes one row to the labels table. Nothing reads that table yet: calibration
-        grades against MAUD's own answers, so the final arrow is the design, not today's
-        behaviour.
+        keystroke writes one row to the labels table. The next calibration run reads that table
+        and grades your answer in place of the model's, which moves the accuracy figure for that
+        deal point — up if you were right, down if you were not.
       </desc>
 
       <defs>
@@ -50,7 +50,7 @@ export function LoopDiagram() {
         <path d="M504,94 V142" />
         <path d="M440,164 H418" />
         <path d="M286,164 H262" />
-        <path d="M116,164 H60 Q46,164 46,150 V122" strokeDasharray="4 3" />
+        <path d="M116,164 H60 Q46,164 46,150 V122" />
       </g>
 
       <g className="loop__node">
@@ -82,13 +82,13 @@ export function LoopDiagram() {
         <text x="352" y="82">disagreements first</text>
         <text x="504" y="82">y · n · e · s</text>
         <text x="504" y="176">one row each</text>
-        <text x="353" y="176">does NOT read them yet</text>
+        <text x="353" y="176">reads them, prefers them</text>
         <text x="189" y="176">where it is weak</text>
       </g>
 
       {/* the arc closing the loop is the whole point: labels change the next measurement */}
       <text className="loop__note" x="46" y="112">
-        loop not yet closed
+        loop closed (#41)
       </text>
     </svg>
   )

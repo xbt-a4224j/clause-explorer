@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-09-04T02:34:54+00:00",
+  "command": "PYTHONPATH=backend python -m explorer.evals.calibration",
+  "prediction_count": 100,
+  "labels_applied": 6,
+  "labels_differing": 2,
+  "correct_before": 45,
+  "correct_after": 44,
+  "accuracy_before": 0.45,
+  "accuracy_after": 0.44,
+  "min_extraction_confidence": 0.7,
+  "results": [
+    {
+      "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+      "n": 20,
+      "correct": 5,
+      "accuracy": 0.25,
+      "ci_low": 0.112,
+      "ci_high": 0.469,
+      "reportable": false,
+      "correct_before": 6,
+      "accuracy_before": 0.3,
+      "labels_applied": 1
+    },
+    {
+      "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+      "n": 20,
+      "correct": 10,
+      "accuracy": 0.5,
+      "ci_low": 0.299,
+      "ci_high": 0.701,
+      "reportable": false,
+      "correct_before": 10,
+      "accuracy_before": 0.5,
+      "labels_applied": 4
+    },
+    {
+      "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "correct_before": 6,
+      "accuracy_before": 0.3,
+      "labels_applied": 1
+    },
+    {
+      "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "correct_before": 4,
+      "accuracy_before": 0.2,
+      "labels_applied": 0
+    },
+    {
+      "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "correct_before": 19,
+      "accuracy_before": 0.95,
+      "labels_applied": 0
+    }
+  ]
+}

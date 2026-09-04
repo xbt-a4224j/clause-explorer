@@ -28,14 +28,15 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('Overview', () => {
   it('renders corpus counts from the API rather than hardcoded values', async () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937, clauses: 13823 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const strip = await screen.findByTestId('corpus-strip')
     // Thousands separators matter here: these are read as evidence, not decoration.
     expect(strip).toHaveTextContent('152')
     expect(strip).toHaveTextContent('12,937')
-    expect(strip).toHaveTextContent('13,823')
+    // #40 removed CUAD; the strip must not still be counting its 13,823 clauses.
+    expect(strip).not.toHaveTextContent('13,823')
   })
 
   it('says the counts are unavailable instead of showing zeros when the API fails', async () => {
@@ -52,7 +53,7 @@ describe('Overview', () => {
   })
 
   it('exposes every diagram to assistive technology with a described mechanism', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const figures = screen.getAllByRole('img')
@@ -67,7 +68,7 @@ describe('Overview', () => {
   // same claims for screen readers, so document-wide text queries here are ambiguous by
   // construction, not by accident. See the note in CLAUDE.md — three tests have broken this way.
   it('states the boundary — that this is not a document Q&A tool', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const boundaries = screen.getByTestId('boundaries')
@@ -76,7 +77,7 @@ describe('Overview', () => {
   })
 
   it('explains min_n as a confidentiality control, not only a statistical one', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     // All three jobs, because naming only the statistical one is the misreading this
@@ -116,9 +117,20 @@ describe('the three journeys (#40)', () => {
     })
   })
 
-  it('states the half-built journey’s limit on its own card rather than in a footnote', () => {
+  it('a journey’s stated limit renders on its own card rather than in a footnote', () => {
+    render(<Overview onStartJourney={() => {}} />)
+    for (const journey of JOURNEYS) {
+      if (!journey.limit) continue
+      const card = screen.getByTestId(`journey-${journey.id}`)
+      expect(within(card).getByText(journey.limit)).toBeInTheDocument()
+    }
+  })
+
+  it('no longer says the extractor journey is half built — the loop closed (#41)', () => {
     render(<Overview onStartJourney={() => {}} />)
     const card = screen.getByTestId('journey-trust-the-extractor')
-    expect(within(card).getByText(/calibration does not read them back yet/i)).toBeInTheDocument()
+    expect(card.textContent ?? '').not.toMatch(/half built|does not read them back/i)
+    // the card must name the payoff step, or "closed" is an assertion with nothing behind it
+    expect(within(card).getByText(/the number moves/i)).toBeInTheDocument()
   })
 })

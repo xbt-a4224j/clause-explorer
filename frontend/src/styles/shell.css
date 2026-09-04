@@ -466,6 +466,9 @@ kbd {
 .admin__section { display: flex; flex-direction: column; gap: var(--pad-sm); }
 .admin__heading { font-size: 13px; font-weight: 500; color: var(--ink); margin: 0; }
 .admin__missing { font-size: 12px; color: var(--ink-tertiary); }
+/* the caveat and provenance lines under a table: readable prose, not a meta footnote (#41) */
+.admin__note { font-size: 12px; line-height: 1.55; color: var(--ink-muted); margin: 0; max-width: 76ch; }
+.admin__note code { font-size: 11px; }
 .admin__report {
   max-height: 320px; overflow: auto; padding: var(--pad-md);
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--radius);
@@ -810,10 +813,6 @@ kbd {
 .arch__sub  { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9.5px; text-anchor: middle; }
 .arch__note { fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px; font-style: italic; text-anchor: middle; }
 .arch__legend { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9px; text-anchor: start; }
-/* ingested with full provenance, but no endpoint queries it — CUAD today. Faded plus an
-   explicit label, because fading alone reads as a rendering accident. */
-.arch__dormant rect { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; opacity: 0.55; }
-
 /* ── Overview (#39) ──────────────────────────────────────────────────────────────────────
    The only tab that argues rather than demonstrates, so it reuses the Semantic Layer pane
    and prose rules rather than inventing a second document style. What is local to it is

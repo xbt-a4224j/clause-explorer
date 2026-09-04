@@ -58,6 +58,47 @@ bound outside [0, 1] exactly where these numbers sit). 4 of 5 deal points' lower
 below the #23 threshold and are **not reportable** — the honest outcome the AC asks this table
 to make explicit, not a target to hit.
 
+## Human labels are read back into this score (#41)
+
+The Label tab writes a row to `labels` for every decision. Since #41 the grader prefers that row
+over the model's answer for the same `(matter_id, deal_point_name)` and then grades it against
+MAUD exactly as it graded the model — a *substitution*, not a correction, so a bad label lowers
+the number. The machine-readable artefact is `docs/results/calibration-labels.json`.
+
+```
+$ CLAUSE_EXPLORER_DB=postgresql://explorer:explorer@localhost:5432/explorer_41 \
+    PYTHONPATH=backend python -m explorer.evals.calibration
+```
+
+Recorded 2026-09-04 against 6 decisions already sitting in `labels` — real keystrokes from the
+Label tab, not seeded:
+
+| deal point | n | correct before | correct after | labels applied |
+|---|---|---|---|---|
+| "Ability to consummate" concept is subject to MAE carveouts | 20 | 6 | 5 | 1 |
+| Acquisition Proposal required to be publicly disclosed-Answer (Y/N) | 20 | 10 | 10 | 4 |
+| Action prohibited/omission required by the agreement-Answer | 20 | 6 | 6 | 1 |
+| Actions taken by Buyer-Answer (Y/N) | 20 | 4 | 4 | 0 |
+| Announcement, pendency or consummation of deal (Y/N) | 20 | 19 | 19 | 0 |
+| **all** | **100** | **45** | **44** | **6** |
+
+`correct before` reproduces the table above exactly, which is the check that the change did not
+quietly move the baseline.
+
+**The number went down, and that is the mechanism working.** 6 labels were applied; 2 differed
+from the model's answer. One of those two is `contract_25` / MAE carveouts, where gold is `No`,
+the model said `No`, and the recorded label is `s` — a stray keystroke that turned a right answer
+into a wrong one, costing exactly 1/20 on that deal point and 1/100 overall. The other,
+`contract_143`, replaced a wrong `No` with an equally wrong `N` against a gold of `Yes`, and
+moved nothing. A loop that could only report improvement would be a loop worth distrusting.
+
+**What this does not show.** All 20 holdout matters already have a lawyer's answer in
+`deal_points`, so a reviewer at the Label tab can at best reproduce gold and at worst, as here,
+mistype it. Nothing was learned from this review that MAUD did not already contain. What the
+closed loop buys is the mechanism for documents with *no* gold — firm precedents, where the
+reviewer's decision is the only answer there is. The measurement above demonstrates the wiring,
+not a benefit to this corpus.
+
 ## The finding: one deal point generalizes, four do not
 
 `Announcement, pendency or consummation of deal (Y/N)` is a genuinely easy classification — its
@@ -94,7 +135,7 @@ context window and this exact prompt. They say nothing about:
 
 - the other 87 deal points, several of which require judgment MAUD's own annotators needed
   training to apply consistently
-- non-merger commercial contracts (CUAD's domain), a different document type entirely
+- non-merger commercial contracts, a different document type entirely
 - a different model, a longer context window, or a different prompt
 
 Any of those is a new calibration run, not an extrapolation from this one.
