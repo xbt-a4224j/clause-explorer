@@ -22,7 +22,7 @@ const SHOTS = [
     collapse: false,
     callouts: [
       { sel: '.shell__tabgroup', text: 'the bar splits: the product, then the evidence' },
-      { sel: '[data-testid="journey-comparables"]', text: 'each journey names who asks and what they leave with' },
+      { sel: '.jrn__who', text: 'each journey names who is asking' },
       { sel: '.jrn__run', text: 'lands on the first step, already filtered' },
     ],
   },
@@ -105,11 +105,17 @@ const SHOTS = [
   {
     name: 'label',
     tab: 'Label',
+    before: async (page) => {
+      // the queue grew from 100 items to 1,701 when #44 calibrated the full vocabulary, so the
+      // tab now takes ~2.6s to paint and a fixed wait screenshots an empty state
+      await page.waitForSelector('.label__item', { timeout: 30000 })
+      await page.waitForTimeout(300)
+    },
     callouts: [
       { sel: '.label__disagree', text: 'two extractors disagree, so one is wrong: ranked first' },
       { sel: '.label__predictions', text: 'model vs keyword baseline, side by side' },
       { sel: '.label__hint', text: 'keyboard only: y accept · n correct · e edit · s skip' },
-      { sel: '.label__progress', text: 'each decision writes to labels; nothing reads it yet' },
+      { sel: '.label__progress', text: 'decisions are graded into the next calibration run' },
     ],
   },
   {
