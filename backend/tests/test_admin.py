@@ -75,6 +75,52 @@ class TestCalibrationReport:
         assert response.status_code == 404
 
 
+class TestCalibrationLabels:
+    """#41 — the before/after artefact. Served, not recomputed, so the endpoint's job is to
+    hand over the committed file unchanged or say plainly that there isn't one."""
+
+    def test_serves_the_committed_before_and_after_numbers(
+        self, client: TestClient, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        artefact = tmp_path / "calibration-labels.json"
+        artefact.write_text(
+            json.dumps(
+                {
+                    "labels_applied": 6,
+                    "accuracy_before": 0.45,
+                    "accuracy_after": 0.44,
+                    "results": [{"deal_point_name": "x", "n": 20, "labels_applied": 1}],
+                }
+            )
+        )
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_LABELS", artefact)
+        body = client.get("/admin/calibration-labels").json()
+        assert body["labels_applied"] == 6
+        assert body["accuracy_before"] == 0.45
+        assert body["accuracy_after"] == 0.44
+        assert body["results"][0]["n"] == 20
+
+    def test_a_missing_artefact_says_so_rather_than_500ing(
+        self, client: TestClient, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_LABELS", tmp_path / "missing.json")
+        assert client.get("/admin/calibration-labels").status_code == 404
+
+    def test_the_committed_artefact_in_the_repo_is_internally_consistent(self) -> None:
+        """Guards the one thing a committed number can silently become: wrong. The per-deal-
+        point corrects must add up to the summary, or the Admin table and its own totals
+        disagree in public."""
+        from explorer.api.admin import CALIBRATION_LABELS
+
+        payload = json.loads(CALIBRATION_LABELS.read_text())
+        assert payload["correct_before"] == sum(r["correct_before"] for r in payload["results"])
+        assert payload["correct_after"] == sum(r["correct"] for r in payload["results"])
+        assert payload["labels_applied"] == sum(r["labels_applied"] for r in payload["results"])
+        n = sum(r["n"] for r in payload["results"])
+        assert payload["prediction_count"] == n
+        assert payload["accuracy_after"] == round(payload["correct_after"] / n, 3)
+
+
 class TestEvalResults:
     def test_reports_the_measure_selection_summary_with_a_git_sha(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

@@ -96,11 +96,11 @@ export const JOURNEYS: readonly Journey[] = [
       'Admin · accuracy per deal point',
       'Label · disagreements first',
       'decide, by keyboard',
-      'a per-deal-point go or no-go',
+      'Admin · the number moves',
     ],
-    outcome: 'Which questions the extractor may answer on un-annotated documents, and which it must decline.',
-    limit:
-      'Half built. Decisions are recorded; calibration does not read them back yet, so the accuracy table does not move.',
+    outcome:
+      'Which questions the extractor may answer on un-annotated documents, and which it must decline — with the reviewer’s decisions graded into that number rather than filed away.',
+    limit: null,
     tab: 'admin',
     seed: null,
     cta: 'Open Admin',

@@ -7,8 +7,12 @@ call to serve this) scored against a keyword-count baseline that costs nothing p
 by *disagreement between the two* needs no calibrated confidence — the cheapest useful signal
 available before #28 has measured one for a given deal point.
 
-Accepting an item writes a new row to `labels`, which #28's next calibration run picks up
-against MAUD's own labels the same way it already reads `deal_points`.
+Accepting an item writes a new row to `labels`. Since #41 the calibration grader reads that
+table: the latest decision for a `(matter_id, deal_point_name)` replaces the model's answer and
+is then graded against MAUD like any other answer, so a mistyped label lowers the accuracy
+figure. What that does not buy is a better answer on *this* corpus — every queued item is a
+held-out matter that already has a lawyer's answer, so a reviewer here can only reproduce gold.
+The mechanism is for un-annotated documents; MAUD is where it can be measured.
 """
 
 from __future__ import annotations

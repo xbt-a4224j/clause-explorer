@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { IngestRun, LogLine } from '../types'
+import type { CalibrationLabels, IngestRun, LogLine } from '../types'
 import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { AdminExplainer } from '../components/explainers'
@@ -24,6 +24,7 @@ export function Admin() {
 
       <IngestStatus />
       <CalibrationReport />
+      <LabelLoopCalibration />
       <EvalResults />
       <LogViewer />
     </div>
@@ -121,6 +122,107 @@ function ReportSection({
 
 function CalibrationReport() {
   return <ReportSection title="Calibration" path="/api/admin/calibration" />
+}
+
+/**
+ * Accuracy per deal point before and after the Label tab's decisions (#41).
+ *
+ * Read from `docs/results/calibration-labels.json`, which a run of
+ * `python -m explorer.evals.calibration` writes — not recomputed here, so the table and the file
+ * in the repo cannot become two numbers that disagree.
+ *
+ * Counts, not percentages: n is 20 per deal point, well under the threshold where a percentage
+ * would imply precision the sample does not support.
+ */
+function LabelLoopCalibration() {
+  const [data, setData] = useState<CalibrationLabels | null>(null)
+  const [missing, setMissing] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/calibration-labels')
+      .then(async (r) => {
+        if (cancelled) return
+        if (!r.ok) {
+          setMissing(true)
+          return
+        }
+        const body = (await r.json()) as CalibrationLabels
+        if (!cancelled) setData(body)
+      })
+      .catch(() => !cancelled && setMissing(true))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return (
+    <section className="admin__section">
+      <h2 className="admin__heading">Calibration — what human labels changed</h2>
+
+      <p className="admin__note" data-testid="calibration-labels-caveat">
+        Grading prefers a Label-tab decision over the model&rsquo;s answer for the same matter and
+        deal point, then scores it against MAUD like any other answer — so a mistyped label lowers
+        the number rather than being quietly discarded. Read that against what this corpus is:
+        every item in the queue is a held-out matter that <strong>already has a lawyer&rsquo;s
+        answer</strong>, so reviewing one teaches the system nothing gold did not. The loop closing
+        means calibration <em>can</em> prefer a human label; it does not mean this corpus needs one.
+        The mechanism earns its keep on <strong>un-annotated</strong> documents, where the
+        reviewer&rsquo;s decision is the only answer there is.
+      </p>
+
+      {missing && <p className="admin__missing">Not run yet.</p>}
+      {!missing && !data && (
+        <div className="skeleton skeleton--row" aria-label="loading label calibration" />
+      )}
+
+      {data && (
+        <>
+          <p className="admin__note" data-testid="calibration-labels-summary">
+            <span className="mono">{data.labels_applied}</span> labels applied, of which{' '}
+            <span className="mono">{data.labels_differing}</span> differed from the model&rsquo;s
+            answer. Graded correct{' '}
+            <span className="mono">
+              {data.correct_before} of {data.prediction_count}
+            </span>{' '}
+            before,{' '}
+            <span className="mono">
+              {data.correct_after} of {data.prediction_count}
+            </span>{' '}
+            after. Produced <span className="mono">{data.generated_at.slice(0, 10)}</span> by{' '}
+            <code>{data.command}</code>.
+          </p>
+
+          <table className="admin__table" data-testid="calibration-labels">
+            <thead>
+              <tr>
+                <th>deal point</th>
+                <th>n</th>
+                <th>correct before</th>
+                <th>correct after</th>
+                <th>labels applied</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.results.map((r) => (
+                <tr key={r.deal_point_name}>
+                  <td>{r.deal_point_name}</td>
+                  <td className="mono">{r.n}</td>
+                  <td className="mono">
+                    {r.correct_before} of {r.n}
+                  </td>
+                  <td className="mono">
+                    {r.correct} of {r.n}
+                  </td>
+                  <td className="mono">{r.labels_applied}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  )
 }
 
 function EvalResults() {

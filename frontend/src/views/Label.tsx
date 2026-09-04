@@ -112,12 +112,29 @@ export function Label() {
           we do not have. Every key writes a decision or skips: <code>y n e s</code>.
         </p>
         <p>
-          <strong>The limit.</strong> Each decision writes one row to <code>labels</code> and{' '}
-          <strong>nothing reads that table yet</strong> — calibration grades against
-          MAUD&rsquo;s own answers, not your review. On this corpus it could not: every queued
-          item is one of the 20 held-out matters, where a lawyer&rsquo;s answer already exists.
-          This is the mechanism you would need on un-annotated firm documents, shown on a
-          corpus that does not need it.
+          <strong>Why these items and not others.</strong> Two extractors read the same
+          contract: a language model, whose predictions were recorded to disk in an earlier
+          run, and a keyword baseline that costs nothing to run. Where they disagree, at
+          least one is wrong. That is the cheapest useful ranking signal available — it needs
+          no calibrated confidence score, which is convenient, because producing a trustworthy
+          confidence score is the very thing we have not done yet.
+        </p>
+        <p>
+          <strong>What your keystroke does.</strong> Each decision writes one row to{' '}
+          <code>labels</code>, and <strong>calibration reads that table</strong>. On the next
+          grading run your answer <em>replaces</em> the model&rsquo;s for that matter and deal
+          point and is scored against MAUD like any other answer — which means a mistyped label
+          moves the accuracy table down, not up. The before/after pair, and the count of labels
+          applied, are on <strong>Admin</strong>.
+        </p>
+        <p>
+          <strong>What that does not mean.</strong> Every item queued here is one of the 20
+          held-out matters — documents MAUD <strong>already has a lawyer&rsquo;s answer for</strong>
+          . Reviewing a prediction where gold already exists tells you nothing gold did not. The
+          loop closing means calibration <em>can</em> prefer a human label; it does not mean this
+          corpus needs one. This tab is the mechanism you would need on <em>un-annotated</em> firm
+          documents — where the reviewer&rsquo;s decision is the only answer there is —
+          demonstrated on a corpus that does not need it.
         </p>
       </ExplainerPanel>
 

@@ -16,7 +16,7 @@ import os
 
 import psycopg
 import pytest
-from explorer.evals.calibration import grade, wilson_interval
+from explorer.evals.calibration import grade, score, wilson_interval
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 
@@ -106,3 +106,83 @@ class TestGradeIsOfflineAndPerDealPoint:
 
         summary = grade(predictions_path=fixture_predictions)
         assert summary["min_extraction_confidence"] == settings.min_extraction_confidence
+
+
+DP = "Announcement, pendency or consummation of deal (Y/N)"
+
+
+def _prediction(matter_id: str, position: str, deal_point: str = DP) -> dict:  # type: ignore[type-arg]
+    return {
+        "matter_id": matter_id,
+        "deal_point_name": deal_point,
+        "predicted_position": position,
+        "quoted_text": None,
+        "span_start": None,
+        "span_end": None,
+        "tokens": 10,
+    }
+
+
+# 5 rows, one of them wrong: the shape the AC's "moves by exactly 1/n" is stated against.
+PREDICTIONS = [
+    _prediction("contract_1", "Yes"),
+    _prediction("contract_2", "Yes"),
+    _prediction("contract_3", "Yes"),
+    _prediction("contract_4", "Yes"),
+    _prediction("contract_5", "No"),
+]
+ACTUAL = {(f"contract_{i}", DP): "Yes" for i in range(1, 6)}
+
+
+class TestHumanLabelsAreReadBackIntoTheScore:
+    """#41 — the Label tab wrote rows nothing read. `score` is the pure half of `grade`: it
+    takes the predictions, MAUD's gold, and whatever humans labelled, so the substitution rule
+    is testable without a database and without a key."""
+
+    def test_with_no_labels_the_score_is_the_extractor_alone(self) -> None:
+        summary = score(PREDICTIONS, ACTUAL, {})
+        assert summary["labels_applied"] == 0
+        r = summary["results"][0]
+        assert (r.correct, r.n) == (4, 5)
+        assert r.accuracy == r.accuracy_before == 0.8
+
+    def test_a_labelled_disagreement_flips_a_graded_row_and_moves_accuracy_by_one_over_n(
+        self,
+    ) -> None:
+        labels = {("contract_5", DP): "Yes"}
+        summary = score(PREDICTIONS, ACTUAL, labels)
+
+        r = summary["results"][0]
+        assert r.correct_before == 4
+        assert r.correct == 5
+        assert r.labels_applied == 1
+        assert r.accuracy - r.accuracy_before == pytest.approx(1 / r.n)
+        assert summary["accuracy_after"] - summary["accuracy_before"] == pytest.approx(1 / 5)
+
+    def test_a_wrong_human_label_moves_the_score_down_by_one_over_n(self) -> None:
+        """The loop is not a ratchet. A reviewer who mistypes degrades the measurement, and
+        the grader must show that rather than quietly keeping the better number."""
+        summary = score(PREDICTIONS, ACTUAL, {("contract_1", DP): "s"})
+        r = summary["results"][0]
+        assert r.accuracy_before - r.accuracy == pytest.approx(1 / r.n)
+
+    def test_a_label_agreeing_with_the_prediction_counts_as_applied_but_moves_nothing(
+        self,
+    ) -> None:
+        summary = score(PREDICTIONS, ACTUAL, {("contract_1", DP): "Yes"})
+        assert summary["labels_applied"] == 1
+        assert summary["labels_differing"] == 0
+        r = summary["results"][0]
+        assert r.accuracy == r.accuracy_before
+
+    def test_a_label_for_a_row_that_was_never_predicted_is_ignored(self) -> None:
+        summary = score(PREDICTIONS, ACTUAL, {("contract_99", DP): "Yes"})
+        assert summary["labels_applied"] == 0
+        assert summary["results"][0].accuracy == 0.8
+
+    def test_the_confidence_interval_is_computed_on_the_post_label_score(self) -> None:
+        """A CI carried over from the pre-label number would understate a corrected extractor
+        exactly where #23's reportable gate reads it."""
+        summary = score(PREDICTIONS, ACTUAL, {("contract_5", DP): "Yes"})
+        r = summary["results"][0]
+        assert (r.ci_low, r.ci_high) == tuple(round(x, 3) for x in wilson_interval(5, 5))

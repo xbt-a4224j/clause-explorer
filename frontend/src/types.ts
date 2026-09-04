@@ -239,6 +239,32 @@ export interface IngestRun {
   started_at: string | null
 }
 
+/** One deal point's row in the label-aware calibration artefact (#41). */
+export interface CalibrationLabelRow {
+  deal_point_name: string
+  n: number
+  correct_before: number
+  accuracy_before: number
+  correct: number
+  accuracy: number
+  labels_applied: number
+  reportable: boolean
+}
+
+/** `docs/results/calibration-labels.json`, served verbatim by `/admin/calibration-labels`. */
+export interface CalibrationLabels {
+  generated_at: string
+  command: string
+  prediction_count: number
+  labels_applied: number
+  labels_differing: number
+  correct_before: number
+  correct_after: number
+  accuracy_before: number
+  accuracy_after: number
+  results: CalibrationLabelRow[]
+}
+
 export interface LogLine {
   timestamp?: string
   level?: string

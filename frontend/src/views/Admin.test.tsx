@@ -26,6 +26,45 @@ function mockApi() {
         }),
       } as Response
     }
+    // #41's artefact must be matched before the markdown report — its path is a superstring
+    if (u.includes('calibration-labels')) {
+      return {
+        ok: true,
+        json: async () => ({
+          generated_at: '2026-09-04T01:58:24+00:00',
+          command: 'PYTHONPATH=backend python -m explorer.evals.calibration',
+          prediction_count: 100,
+          labels_applied: 6,
+          labels_differing: 2,
+          correct_before: 45,
+          correct_after: 44,
+          accuracy_before: 0.45,
+          accuracy_after: 0.44,
+          results: [
+            {
+              deal_point_name: '"Ability to consummate" concept is subject to MAE carveouts',
+              n: 20,
+              correct_before: 6,
+              accuracy_before: 0.3,
+              correct: 5,
+              accuracy: 0.25,
+              labels_applied: 1,
+              reportable: false,
+            },
+            {
+              deal_point_name: 'Actions taken by Buyer-Answer (Y/N)',
+              n: 20,
+              correct_before: 4,
+              accuracy_before: 0.2,
+              correct: 4,
+              accuracy: 0.2,
+              labels_applied: 0,
+              reportable: false,
+            },
+          ],
+        }),
+      } as Response
+    }
     if (u.includes('calibration')) {
       return { ok: true, json: async () => ({ markdown: '| deal point | n |\n|---|---|\n' }) } as Response
     }
@@ -71,6 +110,39 @@ describe('calibration and evals', () => {
     render(<Admin />)
     expect(await screen.findByText(/deadbee/)).toBeInTheDocument()
     expect(screen.getByText(/refusal_accuracy/)).toBeInTheDocument()
+  })
+})
+
+describe('human labels in calibration (#41)', () => {
+  it('shows accuracy before and after human labels, per deal point, with denominators', async () => {
+    render(<Admin />)
+    const table = await screen.findByTestId('calibration-labels')
+    // before and after as counts over their own n, never a bare percentage
+    expect(table).toHaveTextContent(/6 of 20/)
+    expect(table).toHaveTextContent(/5 of 20/)
+    expect(table).toHaveTextContent(/MAE carveouts/)
+  })
+
+  it('states how many labels were applied and how many differed from the prediction', async () => {
+    render(<Admin />)
+    const section = await screen.findByTestId('calibration-labels-summary')
+    expect(section).toHaveTextContent(/6/)
+    expect(section).toHaveTextContent(/2/)
+    expect(section).toHaveTextContent(/45 of 100/)
+    expect(section).toHaveTextContent(/44 of 100/)
+  })
+
+  it('names the command that produced the numbers, so they are checkable', async () => {
+    render(<Admin />)
+    const section = await screen.findByTestId('calibration-labels-summary')
+    expect(section).toHaveTextContent(/explorer\.evals\.calibration/)
+  })
+
+  it('keeps the corpus caveat: every reviewed item already had gold', async () => {
+    render(<Admin />)
+    const section = await screen.findByTestId('calibration-labels-caveat')
+    expect(section).toHaveTextContent(/already has a lawyer/i)
+    expect(section).toHaveTextContent(/un-annotated/i)
   })
 })
 

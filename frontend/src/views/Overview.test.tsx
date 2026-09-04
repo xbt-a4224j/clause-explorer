@@ -125,9 +125,20 @@ describe('the three journeys (#40)', () => {
     })
   })
 
-  it('states the half-built journey’s limit on its own card rather than in a footnote', () => {
+  it('a journey’s stated limit renders on its own card rather than in a footnote', () => {
+    render(<Overview onStartJourney={() => {}} />)
+    for (const journey of JOURNEYS) {
+      if (!journey.limit) continue
+      const card = screen.getByTestId(`journey-${journey.id}`)
+      expect(within(card).getByText(journey.limit)).toBeInTheDocument()
+    }
+  })
+
+  it('no longer says the extractor journey is half built — the loop closed (#41)', () => {
     render(<Overview onStartJourney={() => {}} />)
     const card = screen.getByTestId('journey-trust-the-extractor')
-    expect(within(card).getByText(/calibration does not read them back yet/i)).toBeInTheDocument()
+    expect(card.textContent ?? '').not.toMatch(/half built|does not read them back/i)
+    // the card must name the payoff step, or "closed" is an assertion with nothing behind it
+    expect(within(card).getByText(/the number moves/i)).toBeInTheDocument()
   })
 })

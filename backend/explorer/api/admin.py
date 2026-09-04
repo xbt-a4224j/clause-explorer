@@ -23,6 +23,7 @@ router = APIRouter(prefix="/admin")
 
 ROOT = Path(__file__).resolve().parents[3]
 CALIBRATION_REPORT = ROOT / "docs" / "results" / "calibration.md"
+CALIBRATION_LABELS = ROOT / "docs" / "results" / "calibration-labels.json"
 MEASURE_SELECTION_REPORT = ROOT / "docs" / "results" / "measure-selection.md"
 RETRIEVAL_ABLATION_REPORT = ROOT / "docs" / "results" / "retrieval-ablation.md"
 LOG_FILE = ROOT / "logs" / "explorer.jsonl"
@@ -72,6 +73,25 @@ def calibration() -> dict[str, Any]:
             "(needs a key) and commit docs/results/calibration.md.",
         )
     return {"markdown": CALIBRATION_REPORT.read_text(encoding="utf-8")}
+
+
+@router.get("/calibration-labels")
+def calibration_labels() -> dict[str, Any]:
+    """Accuracy per deal point before and after the Label tab's decisions (#41).
+
+    Served from the committed artefact, not recomputed: recomputing on request would make the
+    Admin table and the file in the repo two numbers that can disagree, and the whole point of
+    the section is that a reviewer can check it against a command that ran.
+    """
+    if not CALIBRATION_LABELS.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="No label-aware calibration yet — run "
+            "`PYTHONPATH=backend python -m explorer.evals.calibration` and commit "
+            "docs/results/calibration-labels.json.",
+        )
+    payload: dict[str, Any] = json.loads(CALIBRATION_LABELS.read_text(encoding="utf-8"))
+    return payload
 
 
 def git_sha() -> str:
