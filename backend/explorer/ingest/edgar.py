@@ -8,9 +8,14 @@ MAUD ships agreements with no metadata. EDGAR has the same filings and is free, 
 | field | source | inferred? |
 |---|---|---|
 | `signing_date` | the agreement's own header text | no — it is in the document |
-| `target_name` / `acquirer_name` | the agreement's own header text | no |
+| `target_name` / `acquirer_name` | agreement header, **placed by MAUD's deal name** | no |
 | `sic_code` | EDGAR company submissions for the resolved CIK | no — SEC's own code |
 | `folio_industry_code` | `data/mappings/sic_to_folio.csv` crosswalk | **yes** |
+
+**The registrant is the target's, or there isn't one (#42).** MAUD names every deal
+`<Target>_<Acquirer>`, so a party's side is knowable without trusting whoever filed. A party
+we cannot place on a side is not written down: `target_name` and `acquirer_name` are NULL
+rather than the header parser's best guess, and `sic_code` is NULL rather than the buyer's.
 
 `is_inferred_industry` is TRUE for every enriched row. SIC is coarse and self-assigned, and a
 crosswalk from it to a FOLIO concept is a judgement — presenting that as gold alongside MAUD's
@@ -40,7 +45,7 @@ import psycopg
 from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings
 from explorer.ingest.maud import clean_excerpt
-from explorer.ingest.maud_corpus import contract_paths
+from explorer.ingest.maud_corpus import contract_paths, deal_titles
 
 ROOT = Path(__file__).resolve().parents[3]
 MAPPING_FILE = ROOT / "data" / "mappings" / "sic_to_folio.csv"
@@ -360,31 +365,45 @@ class Enrichment:
 
 
 def enrich(
-    client: EdgarClient | None = None, index: dict[str, str] | None = None
+    client: EdgarClient | None = None,
+    index: dict[str, str] | None = None,
+    titles: dict[str, str] | None = None,
 ) -> list[Enrichment]:
     cik_index = index if index is not None else load_cik_index()
     edgar = client or EdgarClient()
     mapping = SicFolioMap.load()
+    deal_names = titles if titles is not None else deal_titles()
 
     results: list[Enrichment] = []
     for path in contract_paths():
         header = parse_header(path.read_text(encoding="utf-8", errors="replace"))
-        sic = None
-        identified: str | None = None
-        for candidate in _candidates(header):
-            cik = resolve_cik(candidate, cik_index)
-            if not cik:
-                continue
-            payload = edgar.submissions(cik)
-            facts = submissions_to_facts(payload) if payload else None
-            if facts and facts.sic:
-                sic, identified = facts.sic, candidate
-                break
+        title = deal_names.get(path.stem)
+        title_words = deal_title_words(title)
+        registrant = identify_registrant(header, title, cik_index, edgar)
+        sic = registrant.facts.sic if registrant else None
+
+        # `target_name` is written down only where MAUD's title puts that name on the sell
+        # side. The header parser's own role assignment is a heuristic over word order and
+        # name stems; where the title disagrees or cannot place the name, the column stays
+        # NULL rather than naming the wrong company as the seller.
+        target_name = registrant.name if registrant else None
+        if target_name is None and title_role(header.target_name, title_words) == "target":
+            target_name = header.target_name
+
+        # `acquirer_name` is deliberately left as the header parser produced it, even though
+        # MAUD's title contradicts it on 23 of 152 and cannot place it on 41 more. Applying
+        # the same rule here would NULL 64 of them, and the retrieval title is
+        # `target_name / acquirer_name` — so it would invalidate 64 cached embeddings and
+        # break the CLAUDE.md hard constraint that the app serves retrieval with no API key
+        # until someone re-warms the cache. Out of scope for #42, which is about whose
+        # industry the matter carries; tracked in MERGE-NOTES-42.md as its own problem.
+        acquirer_name = header.acquirer_name
+
         results.append(
             Enrichment(
                 matter_id=path.stem,
-                target_name=identified or header.target_name,
-                acquirer_name=header.acquirer_name,
+                target_name=target_name,
+                acquirer_name=acquirer_name,
                 signing_date=header.signing_date,
                 sic_code=sic,
                 folio_industry_code=mapping.resolve(sic),
@@ -393,28 +412,165 @@ def enrich(
     return results
 
 
-def _candidates(header: ParsedHeader) -> list[str]:
-    """Parties to try against EDGAR, best guess first.
+def deal_title_words(title: str | None) -> tuple[str, ...]:
+    """MAUD's `<Target>_<Acquirer>.pdf` deal name, normalized to a word tuple.
 
-    MAUD is a *public target* study, so the target is an SEC registrant with an assigned SIC
-    code. Merger subs are excluded — a shell formed last month has no SIC — and the remaining
-    parties are tried last-listed first, which is where the target sits in the majority of
-    these headers. Accepting the first party that resolves *with an SIC* means a matter is
-    never enriched from a company EDGAR does not classify.
-
-    Measured on a 20-matter hand check (docs/worklog.md #9): the identified registrant is the
-    target in 17, the acquirer in 3. Those three carry the acquirer's industry, which is a
-    real error — recorded rather than hidden, and the reason `is_inferred_industry` is TRUE.
+    Underscores are separators *and* spaces inside a name
+    (`TIFFANY_&_CO._LVMH_MOET_HENNESSY-LOUIS_VUITTON`), so where one side ends is not
+    recoverable from the string. It does not need to be: the target's words are at the front
+    and the acquirer's at the back, which is enough for `title_role`.
     """
-    ordered: list[str] = []
-    if header.target_name:
-        ordered.append(header.target_name)
-    for party in reversed(header.parties):
-        if any(marker in party.upper() for marker in SUB_MARKERS):
+    if not title:
+        return ()
+    # some rows name the amendment on a second line; the deal is the first
+    first_line = re.sub(r"(?:\.pdf)+\s*$", "", title.splitlines()[0].strip(), flags=re.IGNORECASE)
+    # `~` appears as a separator in a handful of titles where `_` is used elsewhere
+    words = normalize_company_name(first_line.replace("_", " ").replace("~", " ")).split()
+    return tuple(_drop_leading_the(words))
+
+
+def title_role(name: str | None, title_words: tuple[str, ...]) -> str | None:
+    """`"target"` if `name` opens MAUD's deal title, `"acquirer"` if it closes it, else None.
+
+    This is the whole of #42's honesty claim: a party we cannot place on a side is not a
+    party we know anything about, and `None` means the matter is left alone.
+
+    **It is a heuristic and it has a false-match cost.** Comparison is on normalized words —
+    case and punctuation dropped, `INCORPORATED`/`CORPORATION` folded to `INC`/`CORP`, a
+    leading `THE` removed, and a trailing legal suffix optionally dropped (at three words or
+    more, so `X INC` never shortens to a bare `X`). A false match attaches another company's
+    SIC to the deal, which is invisible in the UI and wrong in every rollup that touches the
+    matter — the same failure this function exists to remove, arriving by a different door.
+
+    Hand-reviewed over all 139 identifications this produces on the corpus: **0 matched the
+    wrong company.** Two classes of near-miss were found and are not errors: 5 registrants
+    whose EDGAR-recorded name is a post-closing rename of the deal-era company under the same
+    CIK (Eaton Vance, FLIR, Meredith, PNM Resources, Parsley Energy), and 1 name shared by two
+    distinct registrants (contract_129, `STERLING BANCORP` — both are commercial banks, SIC
+    6021 either way, so the industry does not turn on which one `resolve_cik` returns among
+    them). That last one is a name collision in the CIK index,
+    not a normalisation failure, and it is the shape a real false match would take.
+    """
+    if not name or not title_words:
+        return None
+    for words in _name_variants(name):
+        if len(words) >= len(title_words):
             continue
-        if party not in ordered:
-            ordered.append(party)
+        if title_words[: len(words)] == words:
+            return "target"
+        if title_words[-len(words) :] == words:
+            return "acquirer"
+    return None
+
+
+def _name_variants(name: str) -> list[tuple[str, ...]]:
+    """The name as written, then the same name without its trailing legal suffix.
+
+    MAUD's titles drop the suffix the agreement carries — `Acacia_Communications` for
+    `ACACIA COMMUNICATIONS, INC.` — so an exact word match alone places almost nothing.
+    The shortened form is only tried at two words or more: dropping `INC` off a two-word
+    name leaves one word, and a single word is a prefix of far too many company names to be
+    evidence of anything.
+    """
+    words = tuple(_drop_leading_the(normalize_company_name(name).split()))
+    if not words:
+        return []
+    variants = [words]
+    if len(words) >= 3 and words[-1] in CORPORATE_SUFFIXES:
+        variants.append(words[:-1])
+    return variants
+
+
+def _drop_leading_the(words: list[str]) -> list[str]:
+    """`THE EXONE COMPANY` and `EXONE COMPANY` are one registrant.
+
+    MAUD's titles keep the article, the agreements' party blocks often do not, and a leading
+    article is never what distinguishes two companies. Stripped on both sides so the two
+    spellings compare equal; `normalize_company_name` is left alone because it also builds
+    the CIK index keys, where the article is part of EDGAR's own recorded name.
+    """
+    return words[1:] if len(words) > 1 and words[0] == "THE" else words
+
+
+@dataclass(frozen=True)
+class Registrant:
+    name: str
+    cik: str
+    facts: CompanyFacts
+
+
+def target_candidates(header: ParsedHeader, title_words: tuple[str, ...]) -> list[str]:
+    """Names to try against EDGAR, all of them target-side by construction.
+
+    Two sources, in confidence order:
+
+    1. **Parties the agreement itself names, that MAUD's title confirms are the target.**
+       Two independent documents agreeing on the name.
+    2. **Prefixes of MAUD's title**, longest first. The target's registered name is one of
+       them; longest-first is what keeps `TIFFANY & CO` from being tried as bare `TIFFANY`,
+       which is a different registrant.
+
+    The full title is never tried — the acquirer is at least one word, so a prefix spanning
+    the whole string is not a company.
+    """
+    if not title_words:
+        return []
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    def add(name: str) -> None:
+        key = normalize_company_name(name)
+        if key and key not in seen:
+            seen.add(key)
+            ordered.append(name)
+
+    for party in (header.target_name, *reversed(header.parties)):
+        if party and title_role(party, title_words) == "target":
+            add(party)
+    for length in range(len(title_words) - 1, 0, -1):
+        add(" ".join(title_words[:length]))
     return ordered
+
+
+def identify_registrant(
+    header: ParsedHeader,
+    title: str | None,
+    index: dict[str, str],
+    client: EdgarClient,
+) -> Registrant | None:
+    """The *target's* EDGAR registration, or None. Never the acquirer, never a guess.
+
+    MAUD is a public-target study, so the target is an SEC registrant with an assigned SIC.
+    The first target-side candidate that resolves to a CIK *with* an SIC wins; a company
+    EDGAR does not classify is not an answer, and neither is the buyer.
+
+    The old rule — first party that resolved, subs excluded — took the acquirer whenever the
+    target was missing from EDGAR's index, and the matter then carried the acquirer's
+    industry through every rollup that touched it.
+
+    **Hand check, 20 matters (seed 42, `random.Random(42).sample`), judged against MAUD's own
+    deal name: 19 target, 0 acquirer, 1 left NULL** (contract_107, Pandion/Merck — the target
+    does not resolve to an EDGAR registrant with an SIC). The same 20 under the old rule were
+    14 target, 3 acquirer, 2 a target-side entity that is not the target (an operating
+    partnership), 1 NULL; that is what the previously recorded 17-of-20 / 3-of-20 figure
+    measured, and this replaces it. Over all 152, the old rule's registrant was the acquirer
+    on 15 and unplaceable on 9.
+
+    A miss is now the only failure mode left, and a miss is visible: NULL industry, excluded
+    from every rollup, counted in the Coverage grid's thin cells.
+    """
+    title_words = deal_title_words(title)
+    for candidate in target_candidates(header, title_words):
+        cik = resolve_cik(candidate, index)
+        if not cik:
+            continue
+        payload = client.submissions(cik)
+        if payload is None:
+            continue
+        facts = submissions_to_facts(payload)
+        if facts.sic:
+            return Registrant(name=candidate, cik=cik, facts=facts)
+    return None
 
 
 UPDATE_MATTER = """
