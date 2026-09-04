@@ -86,9 +86,9 @@ export function TablesExplainer() {
     <>
       <p>
         <strong>What this tab is for.</strong> Checking the app&rsquo;s homework without opening{' '}
-        <code>psql</code>. Six tables — <code>matters</code> (152), <code>deal_points</code>{' '}
-        (12,937), <code>clauses</code> (13,823, from <Term>CUAD</Term>), <code>folio_concepts</code>{' '}
-        (18,259), <code>labels</code>, <code>ingest_runs</code> — sorted and filtered on the
+        <code>psql</code>. Five tables — <code>matters</code> (152), <code>deal_points</code>{' '}
+        (12,937), <code>folio_concepts</code> (18,259), <code>labels</code>,{' '}
+        <code>ingest_runs</code> — sorted and filtered on the
         server, with the state mirrored into the URL so a row you found is a link you can send.
         Every table marks which columns are <em>inferred</em> rather than expert-labelled.
       </p>

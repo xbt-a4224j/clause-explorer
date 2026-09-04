@@ -114,7 +114,7 @@ UNINFORMATIVE = {"unknown", "unclassified"}
 VALUE_REASONS = {
     "industry": (
         "No industry: EDGAR did not resolve this matter's registrant to an SIC code, so the "
-        "SIC to FOLIO crosswalk had nothing to map. 134 of 152 matters resolved."
+        "SIC to FOLIO crosswalk had nothing to map. 139 of 152 matters resolved."
     ),
     "year": (
         "No signing year: no signing date was parsed from the filing header for these matters."

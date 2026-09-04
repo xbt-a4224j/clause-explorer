@@ -109,7 +109,7 @@ cubes:
         type: string
         description: >-
           The SEC's own four-digit industry code for the identified registrant, from EDGAR.
-          Populated for 134 of 152. This is the raw code, not our grouping — see
+          Populated for 139 of 152. This is the raw code, not our grouping — see
           folio_industry_label for what the product actually facets on.
 
       - name: folio_industry_code
@@ -130,7 +130,7 @@ cubes:
         sql: "{CUBE}.folio_industry_code IS NOT NULL"
         type: boolean
         description: >-
-          Whether the matter could be classified at all — TRUE for 134 of 152. Use it to state
+          Whether the matter could be classified at all — TRUE for 139 of 152. Use it to state
           coverage honestly instead of letting 18 unclassified matters vanish from a facet.
 
       - name: deal_value_usd

@@ -50,7 +50,7 @@ class TestExactHit:
         result = resolve_filter_value(conn, cache, "Health Care Industry")
         assert result.resolved == "Health Care Industry"
         assert result.method == "exact"
-        assert result.matter_count == 25
+        assert result.matter_count == 26
 
 
 @needs_corpus
@@ -116,4 +116,4 @@ class TestResponseShape:
         assert result.raw == "healthcare"
         assert result.resolved == "Health Care Industry"
         assert result.method in {"exact", "alias", "embedding"}
-        assert result.matter_count == 25
+        assert result.matter_count == 26

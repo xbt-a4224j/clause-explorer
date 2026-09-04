@@ -31,6 +31,9 @@ either request body can disable it, because none exists to.
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -45,6 +48,9 @@ from explorer.api.settings import settings
 
 router = APIRouter()
 log = get_logger()
+
+ROOT = Path(__file__).resolve().parents[3]
+ACCURACY_FILE = ROOT / "docs" / "eval" / "calibration_accuracy.json"
 
 NAME = "deal_points.deal_point_name"
 MATTER_ID = "deal_points.matter_id"
@@ -184,16 +190,50 @@ def _refusal(matter_ids: list[str]) -> Refusal | None:
     )
 
 
+@lru_cache(maxsize=1)
+def _accuracy_rows() -> dict[str, float | None]:
+    """The committed calibration table, keyed by deal point. Cached: it is a file that only
+    changes when a calibration run is committed, and this is on the deal-terms request path."""
+    if not ACCURACY_FILE.is_file():
+        return {}
+    table = json.loads(ACCURACY_FILE.read_text(encoding="utf-8"))
+    return {
+        str(row["deal_point_name"]): (row["ci_low"] if row.get("measured") else None)
+        for row in table.get("results", [])
+    }
+
+
 def confidence_lookup(deal_point_name: str) -> float | None:
     """Calibrated extraction accuracy for a deal point, or None if never measured.
 
-    Returns None for everything today: MAUD's labels are gold and are never gated by this
-    (CLAUDE.md — do not re-extract what lawyers already labelled), and no extractor has run
-    the #28 calibration pass yet. This is the honest state, not a stub to fill in later with a
-    guess — CLAUDE.md forbids a plausible invented number here. Once #28 publishes measured
-    per-deal-point accuracy, this becomes a lookup against that table.
+    #44 gave this real numbers: `docs/eval/calibration_accuracy.json`, produced by running the
+    calibration extractor over the held-out matters for every deal point MAUD labelled there.
+
+    It returns the **lower bound** of the 95% Wilson interval, not the point estimate. 3 of 4
+    correct reads as 0.75 and its interval reaches 0.30; a sample too small to distinguish the
+    extractor from a coin flip must not clear a 0.70 gate. The cost of that choice is that
+    thinly-measured deal points score lower than their headline accuracy, so the gate is
+    conservative by construction — which is the direction to be wrong in.
+
+    A deal point the run never reached returns None. Unmeasured is not zero, and a coverage gap
+    must not read as a failed extraction.
+
+    This is a **pure lookup**. It does not decide whether the gate applies — see
+    `ROLLUP_IS_GOLD_LABELLED`.
     """
-    return None
+    return _accuracy_rows().get(deal_point_name)
+
+
+# Every one of the 12,937 `deal_points` rows this endpoint aggregates is a MAUD annotation made
+# by a lawyer (`is_inferred = false` on all of them, measured, not assumed). The
+# extraction-confidence gate exists for extractor output ONLY, so it must not fire here.
+#
+# This is not a formality. #44's measured accuracy is below 0.70 on most deal points, and the
+# obvious wiring — hand `confidence_lookup()` to the rollup now that it returns numbers — would
+# suppress the majority of the product's own gold data on the strength of a figure that
+# describes a throwaway GPT-4o-mini classifier, not the annotator. The gate stays armed and
+# inert, and flips the day a row in this table comes from an extractor instead.
+ROLLUP_IS_GOLD_LABELLED = True
 
 
 def render(present: int, answered: int, selection_n: int, threshold: int) -> tuple[str, str]:
@@ -290,7 +330,7 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
         answered = int(row.get(N) or 0)
         present = int(row.get(PRESENT) or 0)
 
-        confidence = confidence_lookup(name)
+        confidence = None if ROLLUP_IS_GOLD_LABELLED else confidence_lookup(name)
         if confidence is not None and confidence < settings.min_extraction_confidence:
             rows.append(
                 DealTermRow(

@@ -1,14 +1,30 @@
 {
-  "generated_at": "2026-09-04T03:12:58+00:00",
-  "command": "PYTHONPATH=backend python -m explorer.evals.calibration",
+  "vocabulary_size": 92,
+  "measured_deal_point_count": 90,
+  "reportable_count": 5,
   "prediction_count": 1701,
+  "total_tokens": 5504632,
+  "min_extraction_confidence": 0.7,
+  "cost": {
+    "call_count": 1701,
+    "unpriced_call_count": 0,
+    "models": [
+      "gpt-4o-mini"
+    ],
+    "prompt_tokens": 5440750,
+    "completion_tokens": 63882,
+    "total_tokens": 5504632,
+    "cost_usd": 0.854442,
+    "cost_usd_per_call": 0.00050232,
+    "price_source": "https://developers.openai.com/api/docs/pricing",
+    "price_checked_on": "2026-09-03"
+  },
   "labels_applied": 6,
   "labels_differing": 5,
   "correct_before": 569,
   "correct_after": 565,
-  "accuracy_before": 0.335,
-  "accuracy_after": 0.332,
-  "min_extraction_confidence": 0.7,
+  "accuracy_before": 0.33450911228689006,
+  "accuracy_after": 0.3321575543797766,
   "results": [
     {
       "deal_point_name": "Accuracy of Fundamental Target R&Ws-Types of R&Ws",
@@ -1179,6 +1195,32 @@
       "accuracy_before": 0.95,
       "labels_applied": 0,
       "measured": true
+    },
+    {
+      "deal_point_name": "Absence of Litigation Closing Condition: Governmental v. Non-Governmental-Answer",
+      "n": 0,
+      "correct": 0,
+      "accuracy": null,
+      "ci_low": null,
+      "ci_high": null,
+      "reportable": false,
+      "correct_before": 0,
+      "accuracy_before": null,
+      "labels_applied": 0,
+      "measured": false
+    },
+    {
+      "deal_point_name": "Absence of Litigation Closing Condition: Pending v. Threatened v. Threatened in Writing-Answer",
+      "n": 0,
+      "correct": 0,
+      "accuracy": null,
+      "ci_low": null,
+      "ci_high": null,
+      "reportable": false,
+      "correct_before": 0,
+      "accuracy_before": null,
+      "labels_applied": 0,
+      "measured": false
     }
   ]
 }

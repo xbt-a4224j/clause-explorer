@@ -1,0 +1,16 @@
+{
+  "call_count": 1701,
+  "unpriced_call_count": 0,
+  "models": [
+    "gpt-4o-mini"
+  ],
+  "prompt_tokens": 5440750,
+  "completion_tokens": 63882,
+  "total_tokens": 5504632,
+  "cost_usd": 0.854442,
+  "cost_usd_per_call": 0.00050232,
+  "price_source": "https://developers.openai.com/api/docs/pricing",
+  "price_checked_on": "2026-09-03",
+  "scheduled_pairs": 1704,
+  "dropped_pairs": 3
+}

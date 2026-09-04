@@ -87,18 +87,35 @@ describe('deep-linkable state', () => {
 })
 
 /**
- * Relocated from Admin.test.tsx in #45. The claim was pinned on `ArchitectureDiagram`'s
- * description, which that issue deleted; it survives here, where CUAD is actually on screen.
- * Overstating a loaded-but-unqueried corpus as a working input is the exact species of quiet
- * error this product exists to refuse, so it keeps a test wherever the prose lives.
+ * Relocated from Admin.test.tsx in #45, then re-pointed here.
+ *
+ * The original claim was that CUAD is *loaded but unqueried* — overstating a
+ * loaded-but-unqueried corpus as a working input is the exact species of quiet error this
+ * product exists to refuse. #40 then dropped CUAD from ingest, the schema and the UI, and the
+ * `clauses` table with it. Between the two, this tab's prose was left naming a table that no
+ * longer exists and a row count for it, which is the stronger version of the same error. The
+ * guard now holds the post-#40 truth: the corpus is gone, so the tab must not name it at all,
+ * and the table list must be the five tables `api/tables.py` will actually serve.
  */
-describe('CUAD is not overstated (#35, moved in #45)', () => {
-  it('says CUAD is loaded and that no other tab queries it', async () => {
+describe('the Tables prose names only tables that exist (#35, moved in #45, corrected after #40)', () => {
+  it('does not mention CUAD or a clauses table', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Tables />)
     fireEvent.click(await screen.findByRole('button', { name: /what this tab is for/i }))
-    const explainer = document.querySelector('.explain__prose')
-    expect(explainer?.textContent ?? '').toMatch(/CUAD is loaded and no other tab queries it/i)
+    const explainer = document.querySelector('.explain__prose')?.textContent ?? ''
+    expect(explainer).not.toMatch(/CUAD/i)
+    expect(explainer).not.toMatch(/clauses/i)
+  })
+
+  it('names the five browsable tables', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Tables />)
+    fireEvent.click(await screen.findByRole('button', { name: /what this tab is for/i }))
+    const explainer = document.querySelector('.explain__prose')?.textContent ?? ''
+    for (const table of ['matters', 'deal_points', 'folio_concepts', 'labels', 'ingest_runs']) {
+      expect(explainer).toContain(table)
+    }
   })
 })

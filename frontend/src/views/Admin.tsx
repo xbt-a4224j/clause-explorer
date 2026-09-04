@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { CalibrationLabels, IngestRun, LogLine } from '../types'
+import { Fragment, useEffect, useState } from 'react'
+import type { CalibrationLabels, CalibrationResponse, IngestRun, LogLine } from '../types'
 import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { AdminExplainer } from '../components/explainers'
@@ -82,46 +82,116 @@ function IngestStatus() {
   )
 }
 
-function ReportSection({
-  title,
-  path,
-}: {
-  title: string
-  path: string
-}) {
-  const [markdown, setMarkdown] = useState<string | null>(null)
+/**
+ * Calibration (#44) — the extractor's weakness map, all 92 deal points, worst first.
+ *
+ * The ordering and the reportable flag are computed by the grader and committed to
+ * `docs/eval/calibration_accuracy.json`; this renders them. The same file backs
+ * `deal_terms.confidence_lookup()`, so the accuracy on screen is the accuracy in the gate.
+ *
+ * Two rules this table exists to hold:
+ * - Every accuracy carries its own n. A deal point measured on 4 matters and one measured on 20
+ *   are not comparable, and a bare percentage hides that.
+ * - "Not measured" is its own state, never 0.00. A deal point the run never reached is a
+ *   coverage gap, not a failed extraction.
+ */
+function CalibrationReport() {
+  const [report, setReport] = useState<CalibrationResponse | null>(null)
   const [missing, setMissing] = useState(false)
 
   useEffect(() => {
+    // #38: every fetch in this file is aborted on teardown, not merely ignored on arrival
     const controller = new AbortController()
-    fetch(path, { signal: controller.signal })
+    fetch('/api/admin/calibration', { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) {
           setMissing(true)
           return
         }
-        const body = await r.json()
-        setMarkdown(body.markdown ?? null)
+        const body: CalibrationResponse = await r.json()
+        setReport(body)
       })
       .catch(ignoreAbort(() => setMissing(true)))
     return () => controller.abort()
-  }, [path])
+  }, [])
+
+  const threshold = report?.min_extraction_confidence ?? null
+  const results = report?.results ?? []
+  // Rows are worst-first, so everything that fails the gate comes before everything that clears
+  // it: the line goes immediately above the first reportable row. Drawn as a row rather than
+  // left to a column of yes/no, so "below the line" is a position you can see at a glance.
+  const firstReportable = results.findIndex((r) => r.measured && r.reportable)
 
   return (
     <section className="admin__section">
-      <h2 className="admin__heading">{title}</h2>
+      <h2 className="admin__heading">Calibration</h2>
       {missing && <p className="admin__missing">Not run yet.</p>}
-      {markdown && (
-        <pre className="admin__report" data-testid="calibration-report">
-          {markdown}
-        </pre>
+      {report && (
+        <>
+          <p className="admin__missing" data-testid="calibration-cost">
+            {report.measured_deal_point_count} of {report.vocabulary_size} deal points measured ·{' '}
+            {report.reportable_count} clear the {threshold?.toFixed(2)} gate ·{' '}
+            {report.cost ? (
+              <>
+                {report.cost.call_count} calls, {report.cost.total_tokens?.toLocaleString()} tokens,{' '}
+                ${report.cost.cost_usd?.toFixed(2)} measured
+              </>
+            ) : (
+              'cost not recorded'
+            )}
+          </p>
+          <table className="admin__table" data-testid="calibration-table">
+            <thead>
+              <tr>
+                <th>deal point</th>
+                <th>n</th>
+                <th>correct</th>
+                <th>accuracy</th>
+                <th>95% CI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((row, index) => (
+                <Fragment key={row.deal_point_name}>
+                  {index === firstReportable && threshold !== null && (
+                    <tr className="admin__gate-row">
+                      <td colSpan={5} data-testid="calibration-gate-line">
+                        {threshold.toFixed(2)} extraction-confidence gate — {report.reportable_count}{' '}
+                        of {report.measured_deal_point_count} measured deal points clear it.
+                        Everything above this line is not reportable from extractor output.
+                      </td>
+                    </tr>
+                  )}
+                  <tr className={row.measured && !row.reportable ? 'admin__row--below' : undefined}>
+                    <td data-testid="calibration-row-name">{row.deal_point_name}</td>
+                    <td className="mono" data-testid="calibration-row-n">
+                      {row.n}
+                    </td>
+                    <td className="mono">{row.measured ? row.correct : '—'}</td>
+                    <td className="mono" data-testid="calibration-row-accuracy">
+                      {row.measured && row.accuracy !== null ? (
+                        row.accuracy.toFixed(2)
+                      ) : (
+                        <span className="admin__unmeasured">not measured</span>
+                      )}
+                    </td>
+                    <td className="mono">
+                      {row.measured && row.ci_low !== null && row.ci_high !== null
+                        ? `[${row.ci_low.toFixed(2)}, ${row.ci_high.toFixed(2)}]`
+                        : '—'}
+                    </td>
+                  </tr>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+          <pre className="admin__report" data-testid="calibration-report">
+            {report.markdown}
+          </pre>
+        </>
       )}
     </section>
   )
-}
-
-function CalibrationReport() {
-  return <ReportSection title="Calibration" path="/api/admin/calibration" />
 }
 
 /**
@@ -139,21 +209,18 @@ function LabelLoopCalibration() {
   const [missing, setMissing] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/admin/calibration-labels')
+    const controller = new AbortController()
+    fetch('/api/admin/calibration-labels', { signal: controller.signal })
       .then(async (r) => {
-        if (cancelled) return
         if (!r.ok) {
           setMissing(true)
           return
         }
         const body = (await r.json()) as CalibrationLabels
-        if (!cancelled) setData(body)
+        setData(body)
       })
-      .catch(() => !cancelled && setMissing(true))
-    return () => {
-      cancelled = true
-    }
+      .catch(ignoreAbort(() => setMissing(true)))
+    return () => controller.abort()
   }, [])
 
   return (

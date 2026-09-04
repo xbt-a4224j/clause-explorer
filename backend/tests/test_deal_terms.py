@@ -13,6 +13,7 @@ Runs with `OPENAI_API_KEY` unset.
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -310,17 +311,21 @@ class TestMinNRefusal:
 
 class TestExtractionConfidenceGate:
     """The second gate #23 requires: a deal point whose calibrated extraction accuracy is below
-    threshold must not be aggregated. MAUD's own labels are gold (never gated); this applies
-    only to extractor output, and no extractor has run a calibration pass yet (#28) — so the
-    mechanism is exercised here via an injected confidence source rather than real numbers,
-    which do not exist yet. Fabricating a plausible accuracy would violate the no-fabricated-
-    numbers rule; "not yet measured" is why this gate is currently inert in production.
+    threshold must not be aggregated. The gate exists for **extractor output only**.
+
+    #44 gave it real numbers to gate on, and that is exactly when the dangerous version of this
+    becomes possible: the measured accuracy is low on most deal points, and every row this
+    endpoint serves is a MAUD lawyer label. Applying the extractor's score to lawyer-labelled
+    data would suppress the product's own gold data on the strength of a number that describes
+    something else entirely. `ROLLUP_IS_GOLD_LABELLED` is the switch that prevents it, and the
+    test below is the one that must never be deleted.
     """
 
     def test_a_low_confidence_deal_point_is_excluded_with_its_own_message(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stub(monkeypatch, StubCube([rollup_row("Extractor field", n=8, present=5)]))
+        monkeypatch.setattr(module, "ROLLUP_IS_GOLD_LABELLED", False)
         monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.3)
         body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
         row = _row(body, "Extractor field")
@@ -328,15 +333,84 @@ class TestExtractionConfidenceGate:
         assert row["display"] == "not characterized"
         assert "confidence" in row["gate_note"].lower()
 
+    def test_gold_labelled_rows_are_never_gated_however_bad_the_extractor_scored(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MAUD's annotations ARE the product data. A 0.20 extractor accuracy on a deal point
+        says the extractor cannot read it — it says nothing about the lawyer who labelled it,
+        and must not remove that lawyer's answer from the rollup."""
+        _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
+        monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.2)
+        assert module.ROLLUP_IS_GOLD_LABELLED is True
+        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        row = _row(body, "Fiduciary exception")
+        assert row["display_kind"] == "count"
+        assert row["display"] == "6 of 8"
+
     def test_a_deal_point_with_no_measured_confidence_is_not_gated(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The default: nothing has been calibrated yet, so nothing is excluded by this gate."""
+        """Unmeasured is not zero: a deal point the calibration run never reached is served,
+        not suppressed."""
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
+        monkeypatch.setattr(module, "ROLLUP_IS_GOLD_LABELLED", False)
         monkeypatch.setattr(module, "confidence_lookup", lambda name: None)
         body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         assert row["display_kind"] == "count"
+
+
+class TestConfidenceLookupReadsTheCommittedTable:
+    """#44 AC: the lookup reads the committed calibration table instead of returning None."""
+
+    def test_a_measured_deal_point_returns_its_lower_ci_bound(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:  # type: ignore[no-untyped-def]
+        """The lower bound, not the point estimate: 3 of 4 correct reads as 0.75 but its CI
+        reaches 0.30, and a sample too small to tell the extractor from a coin flip must not
+        clear a 0.70 gate."""
+        table = tmp_path / "accuracy.json"
+        table.write_text(
+            json.dumps(
+                {
+                    "results": [
+                        {
+                            "deal_point_name": "Measured point",
+                            "accuracy": 0.75,
+                            "ci_low": 0.301,
+                            "measured": True,
+                        },
+                        {
+                            "deal_point_name": "Unmeasured point",
+                            "accuracy": None,
+                            "ci_low": None,
+                            "measured": False,
+                        },
+                    ]
+                }
+            )
+        )
+        monkeypatch.setattr(module, "ACCURACY_FILE", table)
+        module._accuracy_rows.cache_clear()
+        assert module.confidence_lookup("Measured point") == 0.301
+        assert module.confidence_lookup("Unmeasured point") is None
+        assert module.confidence_lookup("A deal point not in the table") is None
+        module._accuracy_rows.cache_clear()
+
+    def test_a_missing_table_is_not_an_error(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:  # type: ignore[no-untyped-def]
+        """No calibration run yet is the honest None, not a 500 on every deal-terms request."""
+        monkeypatch.setattr(module, "ACCURACY_FILE", tmp_path / "absent.json")
+        module._accuracy_rows.cache_clear()
+        assert module.confidence_lookup("anything") is None
+        module._accuracy_rows.cache_clear()
+
+    def test_the_committed_table_has_real_numbers_in_it(self) -> None:
+        """The AC in one line: after #44 this is no longer None for everything."""
+        module._accuracy_rows.cache_clear()
+        measured = [r for r in module._accuracy_rows().values() if r is not None]
+        assert measured, "docs/eval/calibration_accuracy.json has no measured deal points"
 
     def test_the_confidence_threshold_is_reported(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

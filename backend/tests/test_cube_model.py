@@ -236,13 +236,13 @@ class TestFacetCountsAgainstSql:
         with urllib.request.urlopen(url, timeout=30) as response:
             rows = json.load(response)["data"]
         counts = {r["comparable_deals.label"]: int(r["comparable_deals.n"]) for r in rows}
-        assert counts["Health Care Industry"] == 25
-        assert counts["Finance and Insurance Services Industry"] == 25
+        assert counts["Health Care Industry"] == 26
+        assert counts["Finance and Insurance Services Industry"] == 24
         assert counts["Manufacturing Industry"] == 22
         assert sum(counts.values()) == 152, "every matter must appear in exactly one facet cell"
 
     def test_unclassified_matters_are_visible_not_dropped(self) -> None:
-        """18 matters have no industry. An inner join would hide them; the product must show
+        """13 matters have no industry. An inner join would hide them; the product must show
         them, or a coverage grid quietly understates what it does not know."""
         url = f"{CUBE_URL}/load?query=" + urllib.parse.quote(
             json.dumps(
@@ -259,8 +259,8 @@ class TestFacetCountsAgainstSql:
             str(r["comparable_deals.has_industry"]).lower(): int(r["comparable_deals.n"])
             for r in rows
         }
-        assert by_flag["false"] == 18
-        assert by_flag["true"] == 134
+        assert by_flag["false"] == 13
+        assert by_flag["true"] == 139
 
     def test_a_matter_filter_constrains_a_deal_point_rollup(self) -> None:
         """The join's whole purpose: 'fiduciary out, healthcare only' has to be one query."""
@@ -290,7 +290,7 @@ class TestFacetCountsAgainstSql:
         with urllib.request.urlopen(url, timeout=30) as response:
             rows = json.load(response)["data"]
         total = sum(int(r["deal_points.n"]) for r in rows)
-        assert total == 25, f"healthcare slice should be the 25 health-care matters, got {total}"
+        assert total == 26, f"healthcare slice should be the 26 health-care matters, got {total}"
 
 
 class TestFreshnessContract:

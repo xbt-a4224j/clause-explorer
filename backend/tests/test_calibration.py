@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import asdict
 
 import psycopg
 import pytest
@@ -186,3 +187,186 @@ class TestHumanLabelsAreReadBackIntoTheScore:
         summary = score(PREDICTIONS, ACTUAL, {("contract_5", DP): "Yes"})
         r = summary["results"][0]
         assert (r.ci_low, r.ci_high) == tuple(round(x, 3) for x in wilson_interval(5, 5))
+
+
+ANNOUNCEMENT = "Announcement, pendency or consummation of deal (Y/N)"
+
+
+@pytest.fixture
+def wrong_predictions(tmp_path):  # type: ignore[no-untyped-def]
+    """Two predictions, both deliberately wrong, for one real deal point."""
+    preds = [
+        {
+            "matter_id": matter,
+            "deal_point_name": ANNOUNCEMENT,
+            "predicted_position": "definitely-wrong-value",
+            "quoted_text": None,
+            "span_start": None,
+            "span_end": None,
+            "model": "gpt-4o-mini",
+            "prompt_tokens": 100,
+            "completion_tokens": 10,
+            "tokens": 110,
+            "cost_usd": 0.000021,
+        }
+        for matter in ("contract_4", "contract_8")
+    ]
+    path = tmp_path / "predictions.json"
+    path.write_text(json.dumps(preds))
+    return path
+
+
+class TestFullVocabularyCoverage:
+    """#44: the calibration table has to cover the whole deal-point vocabulary, and has to be
+    honest about the part of it that could not be measured. A deal point MAUD never answers on
+    the holdout is not 0% accurate — it is unmeasured, and the two must not render alike."""
+
+    @pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
+    def test_the_vocabulary_comes_from_the_data_not_a_hardcoded_list(self) -> None:
+        from explorer.evals.calibration import deal_point_vocabulary
+
+        vocabulary = deal_point_vocabulary()
+        assert len(vocabulary) > 5  # the pre-#44 hardcoded slice
+        assert vocabulary == sorted(vocabulary)
+
+    @pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
+    def test_only_pairs_with_a_gold_label_are_scheduled(self) -> None:
+        """Predicting a (matter, deal point) MAUD never answered would score as wrong against
+        a label that does not exist — a fabricated error rate, paid for in real tokens."""
+        from explorer.evals.calibration import SPLIT_FILE, holdout_pairs
+
+        pairs = holdout_pairs()
+        assert pairs
+        holdout = set(json.loads(SPLIT_FILE.read_text())["holdout_matter_ids"])
+        assert {m for m, _ in pairs} <= holdout
+        with psycopg.connect(DSN) as conn:
+            labelled = {
+                (m, d)
+                for m, d in conn.execute(
+                    "SELECT matter_id, deal_point_name FROM deal_points WHERE matter_id = ANY(%s)",
+                    (sorted(holdout),),
+                ).fetchall()
+            }
+        assert set(pairs) <= labelled
+
+    @pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
+    def test_an_unmeasured_deal_point_is_a_row_marked_unmeasured_not_a_zero(
+        self, wrong_predictions
+    ) -> None:  # type: ignore[no-untyped-def]
+        summary = grade(
+            predictions_path=wrong_predictions,
+            vocabulary=[ANNOUNCEMENT, "A deal point nobody predicted"],
+        )
+        unmeasured = next(
+            r for r in summary["results"] if r.deal_point_name == "A deal point nobody predicted"
+        )
+        assert unmeasured.n == 0
+        assert unmeasured.measured is False
+        assert unmeasured.accuracy is None
+        assert unmeasured.reportable is False
+        assert summary["vocabulary_size"] == 2
+        assert summary["measured_deal_point_count"] == 1
+
+    @pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
+    def test_results_are_sorted_worst_first_with_unmeasured_last(self, wrong_predictions) -> None:  # type: ignore[no-untyped-def]
+        """The Admin table's ordering is decided here, not in the UI, so the committed file and
+        the screen cannot disagree about which deal point is the weakest."""
+        summary = grade(
+            predictions_path=wrong_predictions,
+            vocabulary=["A deal point nobody predicted", ANNOUNCEMENT],
+        )
+        assert [r.measured for r in summary["results"]] == [True, False]
+
+
+class TestRunCost:
+    """#44 AC: token and dollar cost recorded alongside the results, measured."""
+
+    def test_cost_sums_input_and_output_separately_across_predictions(self) -> None:
+        from explorer.evals.calibration import run_cost
+
+        predictions = [
+            {"model": "gpt-4o-mini", "prompt_tokens": 3000, "completion_tokens": 100},
+            {"model": "gpt-4o-mini", "prompt_tokens": 2000, "completion_tokens": 50},
+        ]
+        cost = run_cost(predictions)
+        assert cost["call_count"] == 2
+        assert cost["prompt_tokens"] == 5000
+        assert cost["completion_tokens"] == 150
+        assert cost["cost_usd"] == pytest.approx(5000 / 1e6 * 0.15 + 150 / 1e6 * 0.60)
+        assert cost["cost_usd_per_call"] == pytest.approx(cost["cost_usd"] / 2)
+
+    def test_an_empty_run_has_no_per_call_cost_rather_than_dividing_by_zero(self) -> None:
+        from explorer.evals.calibration import run_cost
+
+        assert run_cost([])["cost_usd_per_call"] is None
+
+
+class TestResumeSkipsWhatIsAlreadyRecorded:
+    """#44: a 1,704-call run dropped 325 pairs to rate limits on its first pass.
+
+    Re-running the whole thing to recover them would pay twice for the 1,379 that landed. The
+    resume path computes the difference and prices only the difference, which is also what
+    makes the committed cost figure the cost of the *table*, not of one attempt at it.
+    """
+
+    def test_missing_pairs_are_the_scheduled_set_minus_the_recorded_one(self) -> None:
+        from explorer.evals.calibration import missing_pairs
+
+        scheduled = [("m1", "d1"), ("m1", "d2"), ("m2", "d1")]
+        recorded = [{"matter_id": "m1", "deal_point_name": "d1"}]
+        assert missing_pairs(scheduled, recorded) == [("m1", "d2"), ("m2", "d1")]
+
+    def test_a_complete_run_has_nothing_left_to_do(self) -> None:
+        from explorer.evals.calibration import missing_pairs
+
+        scheduled = [("m1", "d1")]
+        recorded = [{"matter_id": "m1", "deal_point_name": "d1"}]
+        assert missing_pairs(scheduled, recorded) == []
+
+
+@pytest.mark.needs_key
+@pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
+class TestOneRealCallIsPricedEndToEnd:
+    """One real call, so the cost path is exercised against the API's own usage numbers rather
+    than a fixture that agrees with itself.
+
+    This is the check that made #44's full run affordable to authorise: measure one call, read
+    its token split off `response.usage`, price it, multiply. It is `needs_key` and therefore
+    out of the CI gate — CI must stay runnable with no key and no spend.
+    """
+
+    def test_a_real_prediction_reports_a_priced_token_split(self) -> None:
+        from explorer.api.settings import settings
+        from explorer.evals.calibration import ROOT, holdout_pairs, run_cost
+        from explorer.evals.extract_deal_point import predict
+
+        if not settings.has_openai_key or settings.openai_api_key is None:
+            pytest.skip("no key")
+
+        matter_id, deal_point = holdout_pairs()[0]
+        with psycopg.connect(DSN) as conn:
+            source_file = conn.execute(
+                "SELECT source_file FROM matters WHERE id = %s", (matter_id,)
+            ).fetchone()[0]
+            allowed = sorted(
+                {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s",
+                        (deal_point,),
+                    ).fetchall()
+                }
+            )
+        text = (ROOT / "data" / source_file).read_text(encoding="utf-8", errors="replace")
+        prediction = predict(matter_id, text, deal_point, allowed, settings.openai_api_key)
+
+        assert prediction.prompt_tokens > 0
+        assert prediction.completion_tokens > 0
+        assert prediction.tokens == prediction.prompt_tokens + prediction.completion_tokens
+        assert prediction.cost_usd > 0
+        # The answer is decoded back to a real position, never left as the option id.
+        assert prediction.predicted_position in allowed
+
+        cost = run_cost([asdict(prediction)])
+        assert cost["cost_usd"] == pytest.approx(prediction.cost_usd, rel=1e-3)
+        assert cost["unpriced_call_count"] == 0

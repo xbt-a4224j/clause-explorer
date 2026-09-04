@@ -54,7 +54,7 @@ def cached_query() -> str:
 class TestFiltering:
     def test_industry_filter_constrains_the_candidate_set(self, client: TestClient) -> None:
         body = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE}).json()
-        assert body["candidate_count"] == 25
+        assert body["candidate_count"] == 26
         assert {m["industry"] for m in body["matters"]} == {"Health Care Industry"}
 
     def test_an_out_of_filter_matter_never_appears(
@@ -76,7 +76,7 @@ class TestFiltering:
     def test_hierarchy_rolls_up(self, client: TestClient) -> None:
         """Filtering on the level-2 'Industry' concept matches every sector beneath it."""
         body = client.post("/comparables", json={"folio_industry_code": INDUSTRY_LEVEL_2}).json()
-        assert body["candidate_count"] == 134  # every classified matter
+        assert body["candidate_count"] == 139  # every classified matter
         assert body["applied_filters"]["rolled_up_to_descendants"] > 0
 
     def test_date_range_filters(self, client: TestClient) -> None:
@@ -89,7 +89,7 @@ class TestFiltering:
         """The facet rail offered this filter and the result list ignored it.
 
         Explore showed "All Cash" selected, the facet counts dropped from 25 to 21, and the
-        list still returned all 25 health-care matters. That is the failure mode this product
+        list still returned all 26 health-care matters. That is the failure mode this product
         exists to prevent: the UI asserts a constraint the data does not carry, and every
         figure downstream is labelled with a slice it was not computed over.
         """

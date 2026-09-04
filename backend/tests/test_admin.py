@@ -74,6 +74,55 @@ class TestCalibrationReport:
         response = client.get("/admin/calibration")
         assert response.status_code == 404
 
+    def test_serves_the_per_deal_point_rows_the_gate_reads(
+        self, client: TestClient, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """#44: the table on screen and the table in `confidence_lookup()` are the same file,
+        so the Admin view cannot show an accuracy the gate is not using."""
+        import json
+
+        report = tmp_path / "calibration.md"
+        report.write_text("# report\n")
+        table = tmp_path / "accuracy.json"
+        table.write_text(
+            json.dumps(
+                {
+                    "min_extraction_confidence": 0.7,
+                    "vocabulary_size": 2,
+                    "measured_deal_point_count": 1,
+                    "reportable_count": 0,
+                    "cost": {"cost_usd": 1.23, "call_count": 4},
+                    "results": [
+                        {"deal_point_name": "Weak", "n": 20, "accuracy": 0.2, "measured": True},
+                        {
+                            "deal_point_name": "Never run",
+                            "n": 0,
+                            "accuracy": None,
+                            "measured": False,
+                        },
+                    ],
+                }
+            )
+        )
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_REPORT", report)
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_ACCURACY", table)
+        body = client.get("/admin/calibration").json()
+        assert body["min_extraction_confidence"] == 0.7
+        assert body["vocabulary_size"] == 2
+        assert body["cost"]["cost_usd"] == 1.23
+        assert [r["deal_point_name"] for r in body["results"]] == ["Weak", "Never run"]
+
+    def test_a_report_with_no_accuracy_table_still_serves_its_prose(
+        self, client: TestClient, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        report = tmp_path / "calibration.md"
+        report.write_text("# report\n")
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_REPORT", report)
+        monkeypatch.setattr("explorer.api.admin.CALIBRATION_ACCURACY", tmp_path / "absent.json")
+        body = client.get("/admin/calibration").json()
+        assert body["results"] == []
+        assert "report" in body["markdown"]
+
 
 class TestCalibrationLabels:
     """#41 — the before/after artefact. Served, not recomputed, so the endpoint's job is to
