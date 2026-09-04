@@ -278,7 +278,7 @@ TITLE_LIMIT = 200
 
 def _title_from(source: str) -> str:
     """The document's own opening line-run, trimmed. Real bytes from the file — party names
-    and dates come from EDGAR in #9 rather than being guessed at here."""
+    and dates come from EDGAR (#9) rather than being guessed at here."""
     head = clean_excerpt(source[:600]).lstrip("﻿")
     return head[:TITLE_LIMIT].strip() or "untitled"
 

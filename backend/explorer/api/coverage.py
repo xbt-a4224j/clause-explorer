@@ -11,7 +11,7 @@ read the same `min_n`.
 the cell is gone, and only one of them is a finding.
 
 The column axis is `signing_year` by default. #22 specifies deal size, and `deal_value_usd` is
-NULL on all 152 matters (#9), so that grid is exactly one column wide. Deal size is still
+NULL on all 152 matters (#46), so that grid is exactly one column wide. Deal size is still
 offered — it is not silently substituted — and both axes carry a note saying what they are.
 """
 
@@ -41,11 +41,11 @@ COLUMN_DIMENSION = {"year": YEAR, "band": BAND}
 COLUMN_NOTE = {
     "year": (
         "Columns are signing year. Deal size is the intended axis (#22) but deal_value_usd is "
-        "NULL on all 152 matters, so that grid would be one column wide — see issue #9."
+        "NULL on all 152 matters, so that grid would be one column wide — see issue #46."
     ),
     "band": (
         "Columns are deal size, which currently has a single value: no deal values have been "
-        "enriched yet (#9). The axis is shown as requested, not as a finding about the market."
+        "enriched yet (#46). The axis is shown as requested, not as a finding about the market."
     ),
 }
 

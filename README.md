@@ -18,8 +18,8 @@ system by keyword, open eight agreements, read each no-shop section, build a tab
 ![Explore — faceted comparable-deal search over 152 real merger agreements](docs/img/explore.png)
 
 *Explore. A plain-English description plus one facet narrows 152 agreements to 25, ranked by hybrid
-retrieval. Add the All Cash facet and it is 20. Note the header: **134 filterable**, not 152 — eighteen matters have no industry at all,
-and the count says what the dimension can actually narrow. Every row is badged **INFERRED**, because
+retrieval. Add the All Cash facet and it is 20. Note the header: **139 filterable**, not 152. Thirteen
+matters have no industry at all, and the count says what the dimension can actually narrow. Every row is badged **INFERRED**, because
 industry is derived from the SEC's coarse self-assigned code rather than a lawyer's label.*
 
 ![Deal Terms — the rollup, in counts rather than percentages](docs/img/deal-terms.png)
