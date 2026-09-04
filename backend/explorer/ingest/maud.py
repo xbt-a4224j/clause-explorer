@@ -17,10 +17,12 @@ loading either would double-count matters in every rollup.
 
 from __future__ import annotations
 
+import bisect
 import csv
 import re
 import time
 from dataclasses import dataclass
+from functools import cached_property
 
 import psycopg
 from psycopg import Connection
@@ -43,6 +45,23 @@ RARE_ANSWERS = "<RARE_ANSWERS>"
 # short ones are the fallback for segments that differ from the source in the middle
 ANCHOR_LENGTHS = (400, 200, 100, 50, 30, 20)
 MIN_SEGMENT = 20
+
+# A run of underscores, dashes or dots on its own is a page-break rule or a leader line — a
+# typographic artifact of the filing, not language. MAUD's excerpts drop them, the contract
+# files keep them, and until they are dropped on our side too an otherwise exact quotation
+# fails to match: dropping them moves the measured anchor rate from 32.3% to 57.8%
+# (docs/results/span-anchoring.md). Deleting a rule cannot change what the text says.
+RULE_TOKEN = re.compile(r"^[_\-–—=.*]{3,}$")
+
+ANCHORED = "anchored"
+RECORDED = "recorded"
+
+# why an anchoring attempt ended the way it did; ANCHORED is the only success
+DISCONTINUOUS = "discontinuous excerpt"
+TOO_SHORT = "excerpt too short to anchor"
+NOT_FOUND = "quoted text not found in the span"
+AMBIGUOUS = "quoted text appears more than once in the span"
+ANCHOR_OUTCOMES = (ANCHORED, DISCONTINUOUS, TOO_SHORT, NOT_FOUND, AMBIGUOUS)
 
 
 def clean_excerpt(text: str) -> str:
@@ -96,6 +115,65 @@ class SpanLocator:
         )
         return start, end
 
+    @cached_property
+    def _anchor_index(self) -> tuple[str, list[int]]:
+        """A second normalized view, with typographic rules deleted, used only by `anchor`.
+
+        Kept separate from the index `locate` uses so that recorded spans keep exactly the
+        semantics they had before #43 — anchoring is a stricter pass layered on top, never a
+        change to what "recorded" means.
+        """
+        return _normalize_with_offsets(self.source, drop_rules=True)
+
+    def anchor(self, excerpt: str, span: tuple[int, int] | None) -> tuple[int, int] | None:
+        """The anchored span, or None. `anchor_with_reason` carries why a miss missed."""
+        return self.anchor_with_reason(excerpt, span)[0]
+
+    def anchor_with_reason(
+        self, excerpt: str, span: tuple[int, int] | None
+    ) -> tuple[tuple[int, int] | None, str]:
+        """The characters the annotator actually quoted, if they sit uniquely inside `span`.
+
+        `span` is the recorded span, or None to search the whole document (the 495 deal points
+        MAUD's excerpt would not locate at all). Returns None — a miss, never a guess — when:
+
+        * the excerpt is discontinuous (`<omitted>` joins separate provisions): several
+          provisions are not one clause, and storing one of them would present part of the
+          basis for the answer as the whole of it;
+        * the quoted text is not present in the window verbatim after whitespace collapse and
+          rule deletion (the filing's own page furniture is inside some quotations);
+        * **the quoted text appears more than once in the window.** Then we do not know which
+          occurrence the annotator meant. Taking the first would store an offset that opens a
+          real clause, looks entirely correct, and is wrong.
+
+        The second element is the outcome, one of ANCHOR_OUTCOMES, so the hit-rate report
+        can say *why* a miss missed without a second copy of this logic.
+        """
+        # Any non-empty piece counts, unlike `locate`'s MIN_SEGMENT floor: an annotation
+        # reading `9.8 Remedies. <omitted> (b) Specific Performance. ...` has a first piece of
+        # 13 characters, and dropping it as noise would anchor the span to the second
+        # provision while claiming the span is the whole quotation. Measured: 18 rows anchored
+        # wrongly in exactly that way before this rule (7,494 anchors then, 7,476 now).
+        pieces = [s for s in (clean_excerpt(p) for p in OMITTED.split(excerpt)) if s]
+        if len(pieces) != 1:
+            return None, DISCONTINUOUS
+        needle = _strip_rules(pieces[0])
+        if len(needle) < MIN_SEGMENT:
+            return None, TOO_SHORT
+
+        normalized, offsets = self._anchor_index
+        low, high = 0, len(offsets)
+        if span is not None:
+            low = bisect.bisect_left(offsets, span[0])
+            high = bisect.bisect_left(offsets, span[1])
+
+        at = normalized.find(needle, low, high)
+        if at == -1:
+            return None, NOT_FOUND
+        if normalized.find(needle, at + 1, high) != -1:
+            return None, AMBIGUOUS
+        return (offsets[at], offsets[at + len(needle) - 1] + 1), ANCHORED
+
     def _find(self, segment: str, cursor: int) -> tuple[int, int] | None:
         for length in ANCHOR_LENGTHS:
             if length > len(segment):
@@ -122,7 +200,12 @@ class SpanLocator:
 TOKEN = re.compile(r"\S+")
 
 
-def _normalize_with_offsets(source: str) -> tuple[str, list[int]]:
+def _strip_rules(text: str) -> str:
+    """The same whitespace-collapsed form the anchor index uses, for the excerpt side."""
+    return " ".join(token for token in text.split(" ") if not RULE_TOKEN.match(token))
+
+
+def _normalize_with_offsets(source: str, drop_rules: bool = False) -> tuple[str, list[int]]:
     """Whitespace-collapsed text plus, per normalized character, its offset in `source`.
 
     Built token-wise rather than character-wise on purpose: the per-character version is the
@@ -132,12 +215,15 @@ def _normalize_with_offsets(source: str) -> tuple[str, list[int]]:
     """
     chars: list[str] = []
     offsets: list[int] = []
-    for index, match in enumerate(TOKEN.finditer(source)):
+    for match in TOKEN.finditer(source):
+        token = match.group()
+        if drop_rules and RULE_TOKEN.match(token):
+            continue
         start = match.start()
-        if index:
+        if chars:
             chars.append(" ")
             offsets.append(start - 1)
-        chars.append(match.group())
+        chars.append(token)
         offsets.extend(range(start, match.end()))
     return "".join(chars), offsets
 
@@ -180,6 +266,11 @@ class DealPoint:
     source_excerpt: str
     numeric_value: float | None = None
     is_inferred: bool = False
+    # 'anchored' — the span is the quoted answer text itself, located uniquely (#43).
+    # 'recorded' — the span is MAUD's own envelope: where the answer was found, which for a
+    # discontinuous annotation includes provisions the annotator did not quote.
+    # None — no span at all; nothing to say about a range that does not exist.
+    span_kind: str | None = None
 
 
 TITLE_LIMIT = 200
@@ -232,7 +323,12 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
         if matter_id not in locators:
             locators[matter_id] = SpanLocator(sources[matter_id])
         locator = locators[matter_id]
-        span = locator.locate(excerpt)
+        recorded = locator.locate(excerpt)
+        # The recorded span says where the answer was found; try to replace it with the text
+        # the annotator quoted, searched inside it (or in the whole document when MAUD's
+        # excerpt located nothing at all). A miss keeps the recorded span untouched.
+        anchored = locator.anchor(excerpt, recorded)
+        span = anchored or recorded
         points.append(
             DealPoint(
                 matter_id=matter_id,
@@ -243,6 +339,7 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
                 source_span_end=span[1] if span else None,
                 source_excerpt=excerpt,
                 is_inferred=False,
+                span_kind=(ANCHORED if anchored else RECORDED) if span else None,
             )
         )
     return matters, points
@@ -262,19 +359,20 @@ WHERE (matters.source_file, matters.source_contract_title, matters.corpus)
 UPSERT_DEAL_POINT = """
 INSERT INTO deal_points
     (matter_id, deal_point_name, position, numeric_value, source_span_start, source_span_end,
-     is_inferred)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
+     span_kind, is_inferred)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (matter_id, deal_point_name) DO UPDATE SET
     position = EXCLUDED.position,
     numeric_value = EXCLUDED.numeric_value,
     source_span_start = EXCLUDED.source_span_start,
     source_span_end = EXCLUDED.source_span_end,
+    span_kind = EXCLUDED.span_kind,
     is_inferred = EXCLUDED.is_inferred
 WHERE (deal_points.position, deal_points.numeric_value, deal_points.source_span_start,
-       deal_points.source_span_end, deal_points.is_inferred)
+       deal_points.source_span_end, deal_points.span_kind, deal_points.is_inferred)
   IS DISTINCT FROM
       (EXCLUDED.position, EXCLUDED.numeric_value, EXCLUDED.source_span_start,
-       EXCLUDED.source_span_end, EXCLUDED.is_inferred)
+       EXCLUDED.source_span_end, EXCLUDED.span_kind, EXCLUDED.is_inferred)
 """
 
 
@@ -294,6 +392,7 @@ def upsert_maud(conn: Connection, matters: list[Matter], points: list[DealPoint]
                     p.numeric_value,
                     p.source_span_start,
                     p.source_span_end,
+                    p.span_kind,
                     p.is_inferred,
                 )
                 for p in points
@@ -309,6 +408,7 @@ def run(dsn: str | None = None) -> dict[str, object]:
 
     matters, points = parse_maud()
     located = sum(1 for p in points if p.source_span_start is not None)
+    anchored = sum(1 for p in points if p.span_kind == ANCHORED)
 
     with psycopg.connect(dsn or settings.database_url) as conn:
         upsert_maud(conn, matters, points)
@@ -322,7 +422,10 @@ def run(dsn: str | None = None) -> dict[str, object]:
                 len(matters) + len(points),
                 duration_ms,
                 "ok",
-                f"{located}/{len(points)} deal points with a located source span",
+                (
+                    f"{located}/{len(points)} deal points with a located source span; "
+                    f"{anchored} anchored to the quoted answer text"
+                ),
             ),
         )
         conn.commit()
@@ -333,6 +436,8 @@ def run(dsn: str | None = None) -> dict[str, object]:
         "deal_point_names": len({p.deal_point_name for p in points}),
         "spans_located": located,
         "spans_null": len(points) - located,
+        "spans_anchored": anchored,
+        "spans_recorded": located - anchored,
         "with_numeric_value": sum(1 for p in points if p.numeric_value is not None),
         "duration_ms": duration_ms,
     }
@@ -350,6 +455,9 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "ANCHORED",
+    "ANCHOR_OUTCOMES",
+    "RECORDED",
     "DealPoint",
     "Matter",
     "SpanLocator",
