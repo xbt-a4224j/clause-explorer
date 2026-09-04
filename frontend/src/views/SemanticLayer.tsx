@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CatalogEntry, CatalogResponse } from '../types'
+import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
 import { QueryBuilder } from '../components/QueryBuilder'
@@ -41,18 +42,17 @@ export function SemanticLayer() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/agent/catalog')
+    // #38
+    const controller = new AbortController()
+    fetch('/api/agent/catalog', { signal: controller.signal })
       .then(async (r) => {
         const body = await r.json()
         if (!r.ok) throw new Error(body?.detail ?? 'The semantic layer did not answer.')
         return body as CatalogResponse
       })
-      .then((d) => !cancelled && setCatalog(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
-    return () => {
-      cancelled = true
-    }
+      .then(setCatalog)
+      .catch(ignoreAbort((e) => setError(e.message)))
+    return () => controller.abort()
   }, [])
 
   if (error) {

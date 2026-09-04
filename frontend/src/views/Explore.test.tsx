@@ -148,7 +148,7 @@ describe('facet rail', () => {
     // scoped to the rail: "Health Care Industry" also appears on the matter cards, and an
     // unscoped query matches both
     const rail = await screen.findByLabelText('filters')
-    const healthCare = within(rail).getByRole('button', { name: /Health Care Industry/ })
+    const healthCare = await within(rail).findByRole('button', { name: /Health Care Industry/ })
     expect(within(healthCare).getByText('n=25')).toBeInTheDocument()
   })
 
@@ -206,7 +206,9 @@ describe('filter before rank', () => {
     renderExplore()
 
     const rail = await screen.findByLabelText('filters')
-    fireEvent.click(within(rail).getByRole('button', { name: /Health Care Industry/ }))
+    // #38: the rail's landmark renders before its facets arrive, so a synchronous getByRole
+    // here raced the response. Wait for the button, not for its container.
+    fireEvent.click(await within(rail).findByRole('button', { name: /Health Care Industry/ }))
 
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(
@@ -238,7 +240,9 @@ describe('filter before rank', () => {
     )
     renderExplore()
     const rail = await screen.findByLabelText('filters')
-    fireEvent.click(within(rail).getByRole('button', { name: /Health Care Industry/ }))
+    // #38: the rail's landmark renders before its facets arrive, so a synchronous getByRole
+    // here raced the response. Wait for the button, not for its container.
+    fireEvent.click(await within(rail).findByRole('button', { name: /Health Care Industry/ }))
 
     await waitFor(() => expect(screen.getByTestId('matter-contract_104')).toBeInTheDocument())
   })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { TableRowsResponse } from '../types'
+import { ignoreAbort } from '../abort'
 import {
   HybridRetrievalDiagram,
   ProvenanceDiagram,
@@ -49,19 +50,18 @@ function CorpusStrip() {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
+    // #38
+    const controller = new AbortController()
     Promise.all(
       COUNTED.map(({ table }) =>
-        fetch(`/api/tables/${table}/rows?limit=1`)
+        fetch(`/api/tables/${table}/rows?limit=1`, { signal: controller.signal })
           .then((r) => (r.ok ? (r.json() as Promise<TableRowsResponse>) : Promise.reject(r.status)))
           .then((d) => [table, d.total_count] as const),
       ),
     )
-      .then((pairs) => !cancelled && setCounts(Object.fromEntries(pairs)))
-      .catch(() => !cancelled && setFailed(true))
-    return () => {
-      cancelled = true
-    }
+      .then((pairs) => setCounts(Object.fromEntries(pairs)))
+      .catch(ignoreAbort(() => setFailed(true)))
+    return () => controller.abort()
   }, [])
 
   if (failed) {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CatalogEntry, RunSelectionResponse } from '../types'
+import { isAbortError, useAbortOnUnmount } from '../abort'
 
 /**
  * The click-to-build query panel (#37).
@@ -136,6 +137,9 @@ export function QueryBuilder({
   const [result, setResult] = useState<RunSelectionResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
+  // #38: this component had no cancel handling of any kind — the query runs from a click, so
+  // there was no effect cleanup to hang a guard on
+  const nextSignal = useAbortOnUnmount()
 
   const query = useMemo(
     () => ({ measures: pickedM, dimensions: pickedD, filters }),
@@ -168,6 +172,7 @@ export function QueryBuilder({
   }
 
   async function run() {
+    const signal = nextSignal()
     setRunning(true)
     setError(null)
     try {
@@ -175,14 +180,19 @@ export function QueryBuilder({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(query),
+        signal,
       })
       const body = await r.json()
       if (!r.ok) throw new Error(body?.detail ?? 'The query was rejected.')
       setResult(body as RunSelectionResponse)
     } catch (e) {
+      // an abort is the panel going away or a newer run superseding this one — neither is a
+      // rejected query, and showing it in the red "Rejected before it reached the database"
+      // box would accuse the semantic layer of something it did not do
+      if (isAbortError(e)) return
       setError((e as Error).message)
     } finally {
-      setRunning(false)
+      if (!signal.aborted) setRunning(false)
     }
   }
 

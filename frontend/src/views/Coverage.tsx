@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CoverageResponse } from '../types'
+import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { CoverageDiagram } from '../components/diagrams'
 import { CoverageExplainer } from '../components/explainers'
@@ -26,22 +27,22 @@ export function Coverage({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
+    // #38
+    const controller = new AbortController()
     fetch('/api/coverage', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
+      signal: controller.signal,
     })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error?.message ?? 'coverage grid failed')
         return payload as CoverageResponse
       })
-      .then((d) => !cancelled && setData(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
-    return () => {
-      cancelled = true
-    }
+      .then(setData)
+      .catch(ignoreAbort((e) => setError(e.message)))
+    return () => controller.abort()
   }, [])
 
   if (error) {

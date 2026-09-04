@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { LabelQueueItem, LabelQueueResponse } from '../types'
+import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { LoopDiagram } from '../components/LoopDiagram'
 
@@ -21,15 +22,19 @@ export function Label() {
   const [labelledThisSession, setLabelledThisSession] = useState(0)
 
   useEffect(() => {
-    // guarded like Coverage, DealTerms and Explore: without it the response can land after the
+    // aborted like Coverage, DealTerms and Explore: without it the response can land after the
     // view is gone and set state on an unmounted component (#38)
-    let cancelled = false
-    fetch('/api/label/queue')
+    const controller = new AbortController()
+    fetch('/api/label/queue', { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => !cancelled && setQueue(d))
-    return () => {
-      cancelled = true
-    }
+      .then(setQueue)
+      // swallow only the abort; a genuine failure keeps the behaviour this view already had
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [])
 
   const item: LabelQueueItem | undefined = queue?.items[cursor]

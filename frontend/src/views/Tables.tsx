@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { TableRowsResponse, TableSchema } from '../types'
+import { ignoreAbort, useAbortOnUnmount } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { TablesDiagram } from '../components/diagrams'
 import { TablesExplainer } from '../components/explainers'
@@ -27,6 +28,7 @@ export function Tables() {
 
   const [schema, setSchema] = useState<TableSchema | null>(null)
   const [data, setData] = useState<TableRowsResponse | null>(null)
+  const nextRowSignal = useAbortOnUnmount()
   const limit = 25
 
   useEffect(() => {
@@ -38,14 +40,17 @@ export function Tables() {
 
   useEffect(() => {
     // #38: a response landing after the table changed would overwrite the new schema with the
-    // old one — the same guard Coverage and Explore already use
-    let cancelled = false
-    fetch(`/api/tables/${table}/schema`)
+    // old one — now aborted outright rather than discarded on arrival
+    const controller = new AbortController()
+    fetch(`/api/tables/${table}/schema`, { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => !cancelled && setSchema(d))
-    return () => {
-      cancelled = true
-    }
+      .then(setSchema)
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [table])
 
   useEffect(() => {
@@ -56,13 +61,16 @@ export function Tables() {
       params.set('filter_column', filterColumn)
       params.set('filter_value', filterValue)
     }
-    let cancelled = false
-    fetch(`/api/tables/${table}/rows?${params}`)
+    const controller = new AbortController()
+    fetch(`/api/tables/${table}/rows?${params}`, { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => !cancelled && setData(d))
-    return () => {
-      cancelled = true
-    }
+      .then(setData)
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [table, sort, dir, filterColumn, filterValue, offset])
 
   function toggleExpand(rowId: string) {
@@ -72,9 +80,15 @@ export function Tables() {
       return
     }
     setExpanded(rowId)
-    fetch(`/api/tables/${table}/rows/${encodeURIComponent(rowId)}`)
+    // #38: click-driven, so the effect cleanup does not cover it
+    fetch(`/api/tables/${table}/rows/${encodeURIComponent(rowId)}`, { signal: nextRowSignal() })
       .then((r) => r.json())
       .then(setExpandedRow)
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
   }
 
   function exportCsv() {

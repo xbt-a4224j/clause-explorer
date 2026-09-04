@@ -36,6 +36,23 @@ const QUEUE: LabelQueueResponse = {
   ],
 }
 
+/**
+ * Wait until a keypress will actually reach the view (#38).
+ *
+ * The clause text appearing in the DOM does not mean React has run the passive effect that
+ * installs the `keydown` listener — `findBy*` resolves off a DOM mutation, which happens at
+ * commit, while effects flush afterwards. Normally the gap is invisible. Under CPU contention
+ * it widened enough that the key was pressed into a window with no handler attached, and the
+ * assertion failed *fast* with nothing having happened — which is exactly the shape reported
+ * in #38 and was mis-attributed to the missing fetch abort.
+ *
+ * Awaiting an empty `waitFor` runs an async `act`, which flushes those pending effects.
+ */
+async function readyForKeys() {
+  await screen.findByText(/a fee shall accrue/)
+  await waitFor(() => {})
+}
+
 function mockApi() {
   const decisions: unknown[] = []
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
@@ -78,7 +95,7 @@ describe('keyboard flow', () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 'y' })
 
@@ -95,7 +112,7 @@ describe('keyboard flow', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 'n' })
     // synchronous on purpose: the keydown handler sets state in the same flush, so there is
@@ -108,7 +125,7 @@ describe('keyboard flow', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 'e' })
     expect(screen.getByLabelText('correct value')).toBeInTheDocument()
@@ -118,7 +135,7 @@ describe('keyboard flow', () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 's' })
 
@@ -130,7 +147,7 @@ describe('keyboard flow', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: '?' })
     const dialog = await screen.findByRole('dialog', { name: /label shortcuts/i })
@@ -192,7 +209,7 @@ describe('explaining the loop (#33)', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 's' })
 
@@ -205,7 +222,7 @@ describe('explaining the loop (#33)', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await screen.findByText(/a fee shall accrue/)
+    await readyForKeys()
 
     fireEvent.keyDown(window, { key: 's' })
 
@@ -219,6 +236,7 @@ describe('explaining the loop (#33)', () => {
     render(<Label />)
 
     const toggle = await screen.findByRole('button', { name: /how this queue works/i })
+    await waitFor(() => {})
     toggle.focus()
     fireEvent.keyDown(window, { key: 'y' })
 
