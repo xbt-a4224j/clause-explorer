@@ -315,3 +315,38 @@ export interface GradingResponse {
   refusal_correct: number
   note: string
 }
+
+/**
+ * `GET /admin/calibration` (#44) — the extractor's per-deal-point weakness map.
+ *
+ * `accuracy` and the CI bounds are null when `measured` is false: the calibration run reached
+ * that deal point on zero held-out matters. Rendering a null as 0 would turn a coverage gap
+ * into a reported failure.
+ */
+export interface CalibrationRow {
+  deal_point_name: string
+  n: number
+  correct: number
+  accuracy: number | null
+  ci_low: number | null
+  ci_high: number | null
+  reportable: boolean
+  measured: boolean
+}
+
+export interface CalibrationCost {
+  call_count: number
+  total_tokens: number
+  cost_usd: number
+}
+
+export interface CalibrationResponse {
+  markdown: string
+  /** Sorted worst-first by the grader, with unmeasured deal points last. */
+  results: CalibrationRow[]
+  min_extraction_confidence: number
+  vocabulary_size: number | null
+  measured_deal_point_count: number | null
+  reportable_count: number | null
+  cost: CalibrationCost | null
+}

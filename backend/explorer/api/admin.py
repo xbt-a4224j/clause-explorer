@@ -23,6 +23,7 @@ router = APIRouter(prefix="/admin")
 
 ROOT = Path(__file__).resolve().parents[3]
 CALIBRATION_REPORT = ROOT / "docs" / "results" / "calibration.md"
+CALIBRATION_ACCURACY = ROOT / "docs" / "eval" / "calibration_accuracy.json"
 MEASURE_SELECTION_REPORT = ROOT / "docs" / "results" / "measure-selection.md"
 RETRIEVAL_ABLATION_REPORT = ROOT / "docs" / "results" / "retrieval-ablation.md"
 LOG_FILE = ROOT / "logs" / "explorer.jsonl"
@@ -63,15 +64,34 @@ def ingest_status() -> dict[str, Any]:
 
 @router.get("/calibration")
 def calibration() -> dict[str, Any]:
-    """The committed report, rendered as-is. The numbers in it are #28's, not recomputed here —
-    recomputation would risk drifting from the file a reviewer actually reads."""
+    """The committed report plus the committed per-deal-point table.
+
+    Neither is recomputed here. The prose comes from `docs/results/calibration.md` and the rows
+    from `docs/eval/calibration_accuracy.json` — the same file `deal_terms.confidence_lookup()`
+    reads, so the accuracy on screen and the accuracy in the gate cannot drift apart. Rows are
+    already sorted worst-first by the grader (#44), because the ordering is a finding about the
+    extractor, not a UI preference.
+    """
     if not CALIBRATION_REPORT.is_file():
         raise HTTPException(
             status_code=404,
             detail="No calibration report yet — run `python -m explorer.evals.calibration` "
             "(needs a key) and commit docs/results/calibration.md.",
         )
-    return {"markdown": CALIBRATION_REPORT.read_text(encoding="utf-8")}
+    table: dict[str, Any] = {}
+    if CALIBRATION_ACCURACY.is_file():
+        table = json.loads(CALIBRATION_ACCURACY.read_text(encoding="utf-8"))
+    return {
+        "markdown": CALIBRATION_REPORT.read_text(encoding="utf-8"),
+        "results": table.get("results", []),
+        "min_extraction_confidence": table.get(
+            "min_extraction_confidence", settings.min_extraction_confidence
+        ),
+        "vocabulary_size": table.get("vocabulary_size"),
+        "measured_deal_point_count": table.get("measured_deal_point_count"),
+        "reportable_count": table.get("reportable_count"),
+        "cost": table.get("cost"),
+    }
 
 
 def git_sha() -> str:

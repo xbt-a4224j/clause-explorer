@@ -1,0 +1,943 @@
+{
+  "vocabulary_size": 92,
+  "measured_deal_point_count": 90,
+  "reportable_count": 5,
+  "prediction_count": 1701,
+  "min_extraction_confidence": 0.7,
+  "cost": {
+    "call_count": 1701,
+    "unpriced_call_count": 0,
+    "models": [
+      "gpt-4o-mini"
+    ],
+    "prompt_tokens": 5440750,
+    "completion_tokens": 63882,
+    "total_tokens": 5504632,
+    "cost_usd": 0.854442,
+    "cost_usd_per_call": 0.00050232,
+    "price_source": "https://developers.openai.com/api/docs/pricing",
+    "price_checked_on": "2026-09-03"
+  },
+  "results": [
+    {
+      "deal_point_name": "Accuracy of Fundamental Target R&Ws-Types of R&Ws",
+      "n": 17,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.184,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "COR standard (board determination only)-answer",
+      "n": 2,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.658,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Definition includes stock deals-Answer",
+      "n": 19,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.168,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Initial matching rights period (FTR)-Answer",
+      "n": 16,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.194,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Tail Period Length-Answer",
+      "n": 20,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.161,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "W/N/A/F applies to-Answer",
+      "n": 20,
+      "correct": 0,
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.161,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Acquisition Proposal Timing-Answer",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Change in Target's industry: subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "General political and/or social conditions:  subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Initial matching rights period (COR)-Answer",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Specific Performance-Answer",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "W/N/A/F subject to \"disproportionate impact\"-Answer",
+      "n": 20,
+      "correct": 1,
+      "accuracy": 0.05,
+      "ci_low": 0.009,
+      "ci_high": 0.236,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Definition contains knowledge requirement - answer",
+      "n": 18,
+      "correct": 1,
+      "accuracy": 0.056,
+      "ci_low": 0.01,
+      "ci_high": 0.258,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Additional matching rights period for modifications (COR)-Answer",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Changes in Target's industry (Y/N)",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "FLS (MAE) Standard-Answer",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "General political and/or social conditions (Y/N)",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Number of additional matching rights periods for modifications (COR)",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Pandemic or other public health event:  subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Pandemic or other public health event: Specific reference to COVID-19",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Relational language (MAE carveout)-Answer (Dropdown)",
+      "n": 20,
+      "correct": 2,
+      "accuracy": 0.1,
+      "ci_low": 0.028,
+      "ci_high": 0.301,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Number of additional matching rights periods for modifications (FTR)",
+      "n": 16,
+      "correct": 2,
+      "accuracy": 0.125,
+      "ci_low": 0.035,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Breach of No Shop required to be willful, material and/or intentional",
+      "n": 7,
+      "correct": 1,
+      "accuracy": 0.143,
+      "ci_low": 0.026,
+      "ci_high": 0.513,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Accuracy of Target Capitalization R&W (outstanding shares): Bringdown Standard Answer",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Application of Buyer consent requirement (negative interim covenant)-Answer",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "COR permitted with board fiduciary determination only",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Change in law:  subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Changes in GAAP or other accounting principles (Y/N)",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Changes in market price/trading volume of Target's securities or credit rating (Y/N)",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Fiduciary exception:  Board determination standard-Answer (no-shop)",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Pandemic or other public health event-Answer (Y/N)",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "War, terrorism, natural disasters, \"acts of God\" or force majeure-Answer (Y/N)",
+      "n": 20,
+      "correct": 3,
+      "accuracy": 0.15,
+      "ci_low": 0.052,
+      "ci_high": 0.36,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Definition includes asset deals-Answer",
+      "n": 19,
+      "correct": 3,
+      "accuracy": 0.158,
+      "ci_low": 0.055,
+      "ci_high": 0.376,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Limitations on FTR Exercise-Answer",
+      "n": 16,
+      "correct": 3,
+      "accuracy": 0.188,
+      "ci_low": 0.066,
+      "ci_high": 0.43,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "\"Ability to consummate\" concept is subject to MAE carveouts",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "A/P/C application to-Answer",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "COR permitted in response to Intervening Event",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "COR standard (superior offer)",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Changes in GAAP or other accounting principles:  subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "FLS (MAE) applies to",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "General economic and financial conditions: subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Ordinary course efforts standard-Answer",
+      "n": 20,
+      "correct": 4,
+      "accuracy": 0.2,
+      "ci_low": 0.081,
+      "ci_high": 0.416,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Failure to meet projections (Y/N)",
+      "n": 20,
+      "correct": 5,
+      "accuracy": 0.25,
+      "ci_low": 0.112,
+      "ci_high": 0.469,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Includes \"consistent with past practice\"",
+      "n": 20,
+      "correct": 5,
+      "accuracy": 0.25,
+      "ci_low": 0.112,
+      "ci_high": 0.469,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Relational language (MAE carveout)-Answer (Y/N)",
+      "n": 20,
+      "correct": 5,
+      "accuracy": 0.25,
+      "ci_low": 0.112,
+      "ci_high": 0.469,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Materiality/MAE Scrape applies to",
+      "n": 19,
+      "correct": 5,
+      "accuracy": 0.263,
+      "ci_low": 0.118,
+      "ci_high": 0.488,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Intervening Event - Required to Occur After Signing - answer",
+      "n": 18,
+      "correct": 5,
+      "accuracy": 0.278,
+      "ci_low": 0.125,
+      "ci_high": 0.509,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Accuracy of Target \"General\" R&W: Bringdown Timing Answer",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Change in law (Y/N)",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "General Antitrust Efforts Standard-Answer",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "MAE Forward looking standard (Y/N)",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Matters listed on disclosure schedules-Answer (Y/N)",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Breach of Meeting Covenant required to be willful, material and/or intentional",
+      "n": 3,
+      "correct": 1,
+      "accuracy": 0.333,
+      "ci_low": 0.061,
+      "ci_high": 0.792,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Definition contains a materiality standard (Y/N)",
+      "n": 18,
+      "correct": 6,
+      "accuracy": 0.333,
+      "ci_low": 0.163,
+      "ci_high": 0.563,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Knowledge persons include Target management (intervening event)",
+      "n": 18,
+      "correct": 6,
+      "accuracy": 0.333,
+      "ci_low": 0.163,
+      "ci_high": 0.563,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Accuracy of Target \"General\" R&W: Bringdown Standard Answer",
+      "n": 20,
+      "correct": 7,
+      "accuracy": 0.35,
+      "ci_low": 0.181,
+      "ci_high": 0.567,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Actions taken by Buyer-Answer (Y/N)",
+      "n": 20,
+      "correct": 7,
+      "accuracy": 0.35,
+      "ci_low": 0.181,
+      "ci_high": 0.567,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "COR standard (intervening event)",
+      "n": 20,
+      "correct": 7,
+      "accuracy": 0.35,
+      "ci_low": 0.181,
+      "ci_high": 0.567,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Relational language (MAE) applies to",
+      "n": 20,
+      "correct": 7,
+      "accuracy": 0.35,
+      "ci_low": 0.181,
+      "ci_high": 0.567,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Target stockholder proceedings-Answer (Y/N)",
+      "n": 20,
+      "correct": 7,
+      "accuracy": 0.35,
+      "ci_low": 0.181,
+      "ci_high": 0.567,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "General economic and financial conditions (Y/N)",
+      "n": 20,
+      "correct": 8,
+      "accuracy": 0.4,
+      "ci_low": 0.219,
+      "ci_high": 0.613,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Liability for breaches of no-shop by Target Representatives (Y/N)",
+      "n": 20,
+      "correct": 8,
+      "accuracy": 0.4,
+      "ci_low": 0.219,
+      "ci_high": 0.613,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Additional matching rights period for modifications (FTR)-Answer",
+      "n": 14,
+      "correct": 6,
+      "accuracy": 0.429,
+      "ci_low": 0.214,
+      "ci_high": 0.674,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Knowledge Definition-Answer",
+      "n": 20,
+      "correct": 9,
+      "accuracy": 0.45,
+      "ci_low": 0.258,
+      "ci_high": 0.658,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "MAE definition includes adverse impact on Target's ability to consummate (Y/N)",
+      "n": 20,
+      "correct": 9,
+      "accuracy": 0.45,
+      "ci_low": 0.258,
+      "ci_high": 0.658,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Liability standard for no-shop breach by Target Non-D&O Representatives",
+      "n": 19,
+      "correct": 9,
+      "accuracy": 0.474,
+      "ci_low": 0.273,
+      "ci_high": 0.683,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Failure to meet projections: subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 10,
+      "accuracy": 0.5,
+      "ci_low": 0.299,
+      "ci_high": 0.701,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Negative Interim Covenant includes carveout for pandemic responses-Answer (Y/N)",
+      "n": 20,
+      "correct": 11,
+      "accuracy": 0.55,
+      "ci_low": 0.342,
+      "ci_high": 0.742,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Type of Consideration-Answer",
+      "n": 20,
+      "correct": 11,
+      "accuracy": 0.55,
+      "ci_low": 0.342,
+      "ci_high": 0.742,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "FTR Triggers-Answer",
+      "n": 16,
+      "correct": 9,
+      "accuracy": 0.562,
+      "ci_low": 0.332,
+      "ci_high": 0.769,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Acquisition Proposal required to be still pending-Answer (Y/N)",
+      "n": 20,
+      "correct": 12,
+      "accuracy": 0.6,
+      "ci_low": 0.387,
+      "ci_high": 0.781,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Pandemic or other public health event: specific reference to pandemic-related governmental responses or measures",
+      "n": 20,
+      "correct": 12,
+      "accuracy": 0.6,
+      "ci_low": 0.387,
+      "ci_high": 0.781,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Accuracy of Fundamental Target R&Ws: Bringdown Standard",
+      "n": 20,
+      "correct": 13,
+      "accuracy": 0.65,
+      "ci_low": 0.433,
+      "ci_high": 0.819,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+      "n": 20,
+      "correct": 13,
+      "accuracy": 0.65,
+      "ci_low": 0.433,
+      "ci_high": 0.819,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Knowledge Definition limited to one or more identified persons-Answer (Y/",
+      "n": 20,
+      "correct": 13,
+      "accuracy": 0.65,
+      "ci_low": 0.433,
+      "ci_high": 0.819,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Actions taken with consent or approval of Buyer-Answer (Y/N)",
+      "n": 20,
+      "correct": 14,
+      "accuracy": 0.7,
+      "ci_low": 0.481,
+      "ci_high": 0.855,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Ordinary Course Covenant includes carve-out for Pandemic responses-Answer (Y/N)",
+      "n": 20,
+      "correct": 14,
+      "accuracy": 0.7,
+      "ci_low": 0.481,
+      "ci_high": 0.855,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "\"Financial point of view\" is the sole consideration",
+      "n": 15,
+      "correct": 12,
+      "accuracy": 0.8,
+      "ci_low": 0.548,
+      "ci_high": 0.93,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Fiduciary exception: Board determination trigger (no shop)-Answer",
+      "n": 20,
+      "correct": 16,
+      "accuracy": 0.8,
+      "ci_low": 0.584,
+      "ci_high": 0.919,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Buyer consent requirement (ordinary course)-Answer",
+      "n": 20,
+      "correct": 17,
+      "accuracy": 0.85,
+      "ci_low": 0.64,
+      "ci_high": 0.948,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Compliance with Target Covenant Closing Condition-Answer",
+      "n": 20,
+      "correct": 18,
+      "accuracy": 0.9,
+      "ci_low": 0.699,
+      "ci_high": 0.972,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "MAE definition includes reference to Target \"prospects\" (Y/N)",
+      "n": 20,
+      "correct": 18,
+      "accuracy": 0.9,
+      "ci_low": 0.699,
+      "ci_high": 0.972,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Constructive Knowledge-Answer",
+      "n": 11,
+      "correct": 10,
+      "accuracy": 0.909,
+      "ci_low": 0.623,
+      "ci_high": 0.984,
+      "reportable": false,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Actions required under transaction agreement-Answer (Y/N)",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Buyer consent requirement (negative interim covenant)-Answer",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "measured": true
+    },
+    {
+      "deal_point_name": "MAE applies to Target and subsidiaries (MAE)-Answer",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Target's securities or credit rating: subject to \"disproportionate impact\" modifier",
+      "n": 20,
+      "correct": 19,
+      "accuracy": 0.95,
+      "ci_low": 0.764,
+      "ci_high": 0.991,
+      "reportable": true,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Absence of Litigation Closing Condition: Governmental v. Non-Governmental-Answer",
+      "n": 0,
+      "correct": 0,
+      "accuracy": null,
+      "ci_low": null,
+      "ci_high": null,
+      "reportable": false,
+      "measured": false
+    },
+    {
+      "deal_point_name": "Absence of Litigation Closing Condition: Pending v. Threatened v. Threatened in Writing-Answer",
+      "n": 0,
+      "correct": 0,
+      "accuracy": null,
+      "ci_low": null,
+      "ci_high": null,
+      "reportable": false,
+      "measured": false
+    }
+  ]
+}

@@ -95,6 +95,26 @@ class TestQueueOrdering:
         assert "labelled_count" in body
 
 
+@needs_corpus
+class TestQueueDrawsFromTheFullPredictionSet:
+    """#44: the queue's reach is the calibration run's reach.
+
+    Before #44 the committed predictions covered 5 hand-picked deal points, so the reviewer's
+    queue could only ever surface disagreements on 5% of the label space — the deal points
+    least likely to need review, since they were picked for being easy. Nothing in `label.py`
+    changes here: the queue reads whatever was committed, which is the point of it having been
+    written that way. This test is the assertion that the committed file is now the wide one.
+    """
+
+    def test_the_queue_spans_the_whole_committed_prediction_set(self, client: TestClient) -> None:
+        from explorer.api.label import PREDICTIONS_FILE
+
+        predictions = json.loads(PREDICTIONS_FILE.read_text())
+        body = client.get("/label/queue").json()
+        assert body["queue_size"] == len(predictions)
+        assert len({i["deal_point_name"] for i in body["items"]}) > 5
+
+
 class TestDecide:
     def test_accepting_a_label_writes_to_the_labels_table(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
