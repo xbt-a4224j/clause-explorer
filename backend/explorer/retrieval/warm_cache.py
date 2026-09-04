@@ -10,7 +10,6 @@ What gets embedded:
 
 * one summary line per matter — title, parties, industry, year — which is what comparable-deal
   ranking scores against (#18)
-* clause text from CUAD, truncated per clause, for clause-level search
 
 Requires `OPENAI_API_KEY`. Everything downstream then runs without one.
 """
@@ -26,10 +25,6 @@ from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings
 from explorer.retrieval.embeddings import EmbeddingCache, content_key
 
-# Clause text is truncated before embedding: the model's context is not the constraint, cost
-# and cache size are, and a clause's first 2,000 characters carry its type and terms.
-CLAUSE_CHARS = 2000
-
 MATTER_SUMMARY_SQL = """
 SELECT m.id,
        concat_ws(' · ',
@@ -41,13 +36,6 @@ SELECT m.id,
 FROM matters m
 LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
 ORDER BY m.id
-"""
-
-CLAUSE_SQL = f"""
-SELECT id, left(text, {CLAUSE_CHARS}) AS text
-FROM clauses
-WHERE text <> ''
-ORDER BY id
 """
 
 # The distinct industry labels actually used on matters — not the 18k-concept ontology
@@ -93,8 +81,6 @@ def gather_texts(dsn: str | None = None) -> dict[str, str]:
         for matter_id, summary in conn.execute(MATTER_SUMMARY_SQL):
             if summary:
                 texts[f"matter:{matter_id}"] = summary
-        for clause_id, text in conn.execute(CLAUSE_SQL):
-            texts[f"clause:{clause_id}"] = text
         for (label,) in conn.execute(INDUSTRY_LABEL_SQL):
             texts[f"industrylabel:{label}"] = label
     return texts

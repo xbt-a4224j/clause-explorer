@@ -172,21 +172,12 @@ export function TablesExplainer() {
         verify a number the app just put on screen.
       </p>
       <p>
-        <strong>What the six tables are.</strong> <code>matters</code> is the universe of
+        <strong>What the five tables are.</strong> <code>matters</code> is the universe of
         comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
-        agreement per ABA question, 12,937 of them. <code>clauses</code> is a separate corpus,
-        <Term>CUAD</Term> (the <em>Contract Understanding Atticus Dataset</em>), 13,823 expert-annotated clauses
-        from 510 commercial contracts — <strong>loaded but not yet used by any other tab</strong>. <code>folio_concepts</code> is the 18,259-concept legal
-        ontology supplying the industry vocabulary. <code>labels</code> records human review
-        decisions. <code>ingest_runs</code> records what was loaded, when, how long it took and
-        with what checksum.
-      </p>
-      <p>
-        <strong>Why clauses have no matter.</strong> CUAD&rsquo;s 510 commercial contracts are
-        deliberately <em>not</em> rows in <code>matters</code>. If they were, every facet count
-        that reads as &ldquo;comparable deals&rdquo; would be inflated by 510 documents that are
-        not deals. So <code>clauses.matter_id</code> is NULL, and those rows stand on their own
-        source file and title.
+        agreement per ABA question, 12,937 of them. <code>folio_concepts</code> is the
+        18,259-concept legal ontology supplying the industry vocabulary. <code>labels</code>
+        records human review decisions. <code>ingest_runs</code> records what was loaded, when,
+        how long it took and with what checksum.
       </p>
       <p>
         <strong>What to look for.</strong> Sorting and filtering happen on the server, and the
@@ -197,8 +188,8 @@ export function TablesExplainer() {
       </p>
       <p>
         <strong>The provenance rule this tab lets you test.</strong> A row whose text cannot be
-        traced to a byte range in a downloaded file is a bug. Clause rows carry their source file
-        and character offsets; open the file at those offsets and you get exactly that text, never
+        traced to a byte range in a downloaded file is a bug. Deal-point rows carry their source
+        file and character offsets; open the file at those offsets and you get exactly that text, never
         a paraphrase. 3.8% of deal points have no located span at all, and they store NULL rather
         than a nearest guess — a wrong offset opens the wrong clause and looks completely right.
       </p>

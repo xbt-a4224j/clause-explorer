@@ -21,7 +21,6 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 
 TABLES = [
     "deal_points",
-    "clauses",
     "labels",
     "ingest_runs",
     "matters",

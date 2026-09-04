@@ -4,7 +4,7 @@ import { ExplainerPanel } from '../components/ExplainerPanel'
 import { TablesDiagram } from '../components/diagrams'
 import { TablesExplainer } from '../components/explainers'
 
-const TABLE_NAMES = ['matters', 'deal_points', 'clauses', 'folio_concepts', 'labels', 'ingest_runs']
+const TABLE_NAMES = ['matters', 'deal_points', 'folio_concepts', 'labels', 'ingest_runs']
 
 /**
  * Tables — browsable raw data so nobody opens psql (#31). Explicitly requested.

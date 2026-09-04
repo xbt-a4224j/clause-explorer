@@ -47,10 +47,21 @@ def _columns(conn, table: str) -> dict[str, str]:
 class TestTablesExist:
     @pytest.mark.parametrize(
         "table",
-        ["matters", "deal_points", "clauses", "folio_concepts", "labels", "ingest_runs"],
+        ["matters", "deal_points", "folio_concepts", "labels", "ingest_runs"],
     )
     def test_table_exists(self, conn, table: str) -> None:
         assert _columns(conn, table), f"{table} is missing"
+
+    def test_clauses_is_gone(self, conn) -> None:
+        """#40 dropped CUAD, the only corpus that ever wrote `clauses`.
+
+        The table has to actually disappear from an already-migrated database, not just
+        stop being written: an empty table left behind is still a Tables-view row, a
+        refresh_key target, and a thing to explain.
+        """
+        assert not _columns(conn, "clauses"), (
+            "clauses still exists; migrate up did not drop the CUAD-only table"
+        )
 
 
 class TestDealPointsIsLong:
@@ -90,12 +101,8 @@ class TestProvenanceAndInference:
         cols = _columns(conn, "matters")
         assert {"source_file", "source_contract_title"} <= set(cols)
 
-    def test_clauses_carry_char_offsets(self, conn) -> None:
-        cols = _columns(conn, "clauses")
-        assert {"char_start", "char_end", "source_file"} <= set(cols)
-
     def test_inferred_fields_are_flagged(self, conn) -> None:
-        """FOLIO codes on CUAD are classifier output, not ground truth. The schema must say so."""
+        """FOLIO industry codes are classifier output, not ground truth. The schema says so."""
         cols = set(_columns(conn, "matters"))
         assert any(c.startswith("is_inferred") for c in cols), (
             "no is_inferred_* column on matters; inferred data would be indistinguishable "
@@ -106,9 +113,7 @@ class TestProvenanceAndInference:
 class TestUpdatedAt:
     """Cube's refresh_key (#14) is SELECT MAX(updated_at); every table needs one."""
 
-    @pytest.mark.parametrize(
-        "table", ["matters", "deal_points", "clauses", "folio_concepts", "labels"]
-    )
+    @pytest.mark.parametrize("table", ["matters", "deal_points", "folio_concepts", "labels"])
     def test_has_updated_at(self, conn, table: str) -> None:
         assert "updated_at" in _columns(conn, table)
 

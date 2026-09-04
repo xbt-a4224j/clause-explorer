@@ -7,13 +7,23 @@
 --    Cube model edit + a UI change. Long makes it rows, and lets deal_point_name be a Cube
 --    dimension so new values appear in the product automatically.
 --
--- 2. Inferred values are marked in the schema, not just in documentation. CUAD ships no
---    industry metadata, so FOLIO industry/service codes are classifier output. Without an
---    is_inferred_* flag they are indistinguishable from MAUD's expert gold labels, and every
---    downstream aggregate silently mixes the two.
+-- 2. Inferred values are marked in the schema, not just in documentation. FOLIO
+--    industry/service codes are classifier output, not label data. Without an is_inferred_*
+--    flag they are indistinguishable from MAUD's expert gold labels, and every downstream
+--    aggregate silently mixes the two.
 --
 -- updated_at exists on every table because Cube's refresh_key (#14) is
 -- `SELECT MAX(updated_at)`. A table without it goes permanently stale in the semantic layer.
+--
+-- Removals. This file is applied idempotently rather than as a revision chain (see
+-- db/migrate.py), so a table that leaves the model has to be dropped here or it survives
+-- forever on every database that already ran an earlier version.
+--
+-- #40 dropped `clauses`. It held CUAD only — 13,823 rows, every one corpus='cuad' with a
+-- NULL matter_id, written by one ingest step and read by no endpoint. An emptied table left
+-- in place would still be a Tables-view row and a thing to explain, so the table goes with
+-- the corpus. If clause-level storage returns it comes back as a table with a consumer.
+DROP TABLE IF EXISTS clauses CASCADE;
 
 CREATE TABLE IF NOT EXISTS folio_concepts (
     code            TEXT PRIMARY KEY,
@@ -89,22 +99,6 @@ CREATE TABLE IF NOT EXISTS deal_points (
 CREATE INDEX IF NOT EXISTS idx_dp_name ON deal_points (deal_point_name);
 CREATE INDEX IF NOT EXISTS idx_dp_matter ON deal_points (matter_id);
 
-CREATE TABLE IF NOT EXISTS clauses (
-    id                  TEXT PRIMARY KEY,
-    matter_id           TEXT REFERENCES matters (id) ON DELETE CASCADE,
-    corpus              TEXT NOT NULL DEFAULT 'cuad',
-    clause_type         TEXT NOT NULL,          -- CUAD category: expert gold label
-    text                TEXT NOT NULL,
-    source_file         TEXT NOT NULL,
-    char_start          INTEGER NOT NULL,
-    char_end            INTEGER NOT NULL,
-    folio_industry_code TEXT REFERENCES folio_concepts (code) ON DELETE SET NULL,
-    is_inferred_industry BOOLEAN NOT NULL DEFAULT TRUE,  -- CUAD ships no industry metadata
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_clauses_type ON clauses (clause_type);
-CREATE INDEX IF NOT EXISTS idx_clauses_matter ON clauses (matter_id);
-
 -- human labels from the Label tab (#29); feed re-calibration (#28)
 CREATE TABLE IF NOT EXISTS labels (
     id                  BIGSERIAL PRIMARY KEY,
@@ -149,7 +143,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['folio_concepts','matters','deal_points','clauses','labels','ingest_runs']
+    FOREACH t IN ARRAY ARRAY['folio_concepts','matters','deal_points','labels','ingest_runs']
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_touch_%1$s ON %1$s', t);
         EXECUTE format(

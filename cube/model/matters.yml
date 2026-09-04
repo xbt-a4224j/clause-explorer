@@ -53,8 +53,7 @@ cubes:
     description: >-
       One row per merger agreement — the comparable-deals universe a partner filters when
       asking "what have we got that looks like this deal?". 152 agreements from the MAUD
-      corpus, signed between 2020-03-13 and 2021-11-21. CUAD's commercial contracts are
-      deliberately NOT in here; they are a clause corpus, not deals.
+      corpus, signed between 2020-03-13 and 2021-11-21.
 
     refresh_key:
       sql: SELECT MAX(updated_at) FROM public.matters

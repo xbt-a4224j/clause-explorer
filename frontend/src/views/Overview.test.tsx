@@ -28,14 +28,15 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('Overview', () => {
   it('renders corpus counts from the API rather than hardcoded values', async () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937, clauses: 13823 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const strip = await screen.findByTestId('corpus-strip')
     // Thousands separators matter here: these are read as evidence, not decoration.
     expect(strip).toHaveTextContent('152')
     expect(strip).toHaveTextContent('12,937')
-    expect(strip).toHaveTextContent('13,823')
+    // #40 removed CUAD; the strip must not still be counting its 13,823 clauses.
+    expect(strip).not.toHaveTextContent('13,823')
   })
 
   it('says the counts are unavailable instead of showing zeros when the API fails', async () => {
@@ -52,7 +53,7 @@ describe('Overview', () => {
   })
 
   it('exposes every diagram to assistive technology with a described mechanism', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const figures = screen.getAllByRole('img')
@@ -67,7 +68,7 @@ describe('Overview', () => {
   // same claims for screen readers, so document-wide text queries here are ambiguous by
   // construction, not by accident. See the note in CLAUDE.md — three tests have broken this way.
   it('states the boundary — that this is not a document Q&A tool', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const boundaries = screen.getByTestId('boundaries')
@@ -76,7 +77,7 @@ describe('Overview', () => {
   })
 
   it('explains min_n as a confidentiality control, not only a statistical one', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     // All three jobs, because naming only the statistical one is the misreading this

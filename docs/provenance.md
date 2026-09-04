@@ -32,27 +32,13 @@ Every corpus records the exact acquisition command, the resulting filename, byte
 > same label CSVs but only **100** of the 152 contract texts, and a matter whose text is
 > missing cannot satisfy the mandatory drill-through to source clauses.
 
-## CUAD — Contract Understanding Atticus Dataset
+## CUAD — removed
 
-- Source: https://www.atticusprojectai.org/cuad · https://github.com/TheAtticusProject/cuad
-- License: CC BY 4.0
-- Contents: 510 commercial contracts, 41 expert-annotated clause categories
-- Attribution: CUAD, The Atticus Project, CC BY 4.0.
-- Command (run 2026-07-30) — `scripts/download_cuad.sh`:
-  ```
-  curl -sfL -o data/cuad/data.zip \
-    https://raw.githubusercontent.com/The-Atticus-Project/cuad/main/data.zip
-  curl -sfL -o data/cuad/category_descriptions.csv \
-    https://raw.githubusercontent.com/The-Atticus-Project/cuad/main/category_descriptions.csv
-  unzip -qn data/cuad/data.zip -d data/cuad
-  ```
-- File: `data/cuad/data.zip`
-- Bytes: 18,309,308 (`wc -c`)
-- sha256: `f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a`
-- Extracted: `CUADv1.json` (510 contracts, 20,910 question rows, 6,702 answered),
-  `test.json`, `train_separate_questions.json`, plus the 41-row
-  `category_descriptions.csv` read alongside it.
-- Loaded by `python -m explorer.ingest.cuad` → 13,823 clause rows over 41 clause types.
+CUAD (the Contract Understanding Atticus Dataset) was ingested into a `clauses` table until
+#40. It was dropped because nothing queried it: 13,823 rows, every one `corpus='cuad'` with a
+NULL `matter_id`, excluded from every facet by design and reachable only through the raw
+Tables view. The ingest step, the table and the download script are gone. If clause-level
+data comes back it comes back with a consumer, and its provenance block returns here with it.
 
 ## FOLIO — Federated Open Legal Information Ontology
 

@@ -15,12 +15,12 @@ import os
 import psycopg
 import pytest
 from explorer.ingest.cli import SOURCES, run_source
-from explorer.ingest.cuad import corpus_available as cuad_available
+from explorer.ingest.folio import DEFAULT_PATH as FOLIO_PATH
 from explorer.ingest.maud_corpus import corpus_available as maud_available
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 
-TABLES = ("folio_concepts", "matters", "deal_points", "clauses")
+TABLES = ("folio_concepts", "matters", "deal_points")
 
 
 def _db_available() -> bool:
@@ -32,8 +32,8 @@ def _db_available() -> bool:
 
 
 needs_everything = pytest.mark.skipif(
-    not (_db_available() and maud_available() and cuad_available()),
-    reason="needs Postgres plus the MAUD and CUAD corpora",
+    not (_db_available() and maud_available() and FOLIO_PATH.exists()),
+    reason="needs Postgres plus the MAUD corpus and the FOLIO ontology",
 )
 
 
@@ -46,7 +46,13 @@ def _snapshot(conn) -> dict[str, tuple[int, object]]:
 
 class TestSources:
     def test_every_source_is_addressable(self) -> None:
-        assert set(SOURCES) == {"folio", "maud", "edgar", "cuad"}
+        assert set(SOURCES) == {"folio", "maud", "edgar"}
+
+    def test_cuad_is_no_longer_a_source(self) -> None:
+        """#40: a corpus no endpoint queries is an ingest path to maintain for nothing."""
+        assert "cuad" not in SOURCES
+        with pytest.raises(KeyError):
+            run_source("cuad")
 
     def test_unknown_source_is_rejected(self) -> None:
         with pytest.raises(KeyError):
@@ -102,7 +108,7 @@ class TestRunTracking:
     def test_each_run_writes_an_ingest_runs_row(self) -> None:
         with psycopg.connect(DSN) as conn:
             before = conn.execute("SELECT count(*) FROM ingest_runs").fetchone()[0]
-        run_source("cuad")
+        run_source("folio")
         with psycopg.connect(DSN) as conn:
             row = conn.execute(
                 "SELECT source, rows_read, rows_upserted, duration_ms, status "
@@ -110,7 +116,7 @@ class TestRunTracking:
             ).fetchone()
             after = conn.execute("SELECT count(*) FROM ingest_runs").fetchone()[0]
         assert after == before + 1
-        assert row[0] == "cuad"
+        assert row[0] == "folio"
         assert row[1] > 0 and row[2] > 0 and row[3] > 0
         assert row[4] == "ok"
 
@@ -118,8 +124,8 @@ class TestRunTracking:
 class TestMissingCorpusFailsLoudly:
     def test_missing_corpus_raises_with_the_fixing_command(self, monkeypatch) -> None:
         """Never silently load nothing: the message has to name the script that fixes it."""
-        from explorer.ingest import cuad
+        from explorer.ingest import maud_corpus
 
-        monkeypatch.setattr(cuad, "corpus_available", lambda: False)
-        with pytest.raises(FileNotFoundError, match="download_cuad.sh"):
-            run_source("cuad")
+        monkeypatch.setattr(maud_corpus, "corpus_available", lambda: False)
+        with pytest.raises(FileNotFoundError, match="download_maud.sh"):
+            run_source("maud")

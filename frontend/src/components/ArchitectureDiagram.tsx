@@ -24,11 +24,10 @@ export function ArchitectureDiagram() {
     >
       <title id="arch-t">Clause Explorer architecture, engineering and product</title>
       <desc id="arch-d">
-        Four public corpora feed an idempotent ingest into Postgres: MAUD supplies 152 merger
-        agreements and 12,937 expert-labelled deal points; CUAD supplies 13,823 clauses from 510 commercial contracts, which are ingested with full provenance but which no endpoint currently queries — they are visible only in the raw Tables view; FOLIO
-        supplies an 18,259-concept legal ontology used as the dimension vocabulary; SEC EDGAR
-        supplies industry codes, which are inferred rather than labelled. Postgres holds six
-        tables. Two independent query paths read from it: Cube Core defines 16 measures and 40
+        Three public corpora feed an idempotent ingest into Postgres: MAUD supplies 152 merger
+        agreements and 12,937 expert-labelled deal points; FOLIO supplies an 18,259-concept legal
+        ontology used as the dimension vocabulary; SEC EDGAR supplies industry codes, which are
+        inferred rather than labelled. Postgres holds five tables. Two independent query paths read from it: Cube Core defines 16 measures and 40
         dimensions in versioned YAML and computes every aggregate, while a hybrid retrieval
         index combines BM25 keyword scoring with 256-dimensional embeddings to rank comparable
         deals — ranking does not go through Cube. FastAPI serves both, and enforces the min_n
@@ -57,32 +56,23 @@ export function ArchitectureDiagram() {
       </text>
       <g className="arch__gold">
         <rect x="20" y="28" width="176" height="52" rx="6" />
-        <rect x="396" y="28" width="176" height="52" rx="6" />
-      </g>
-      {/* CUAD is ingested with full provenance but no endpoint queries it. Drawn muted so it
-          cannot be misread as a peer of MAUD — the diagram showed four equal boxes and implied
-          four equal inputs. */}
-      <g className="arch__dormant">
         <rect x="208" y="28" width="176" height="52" rx="6" />
       </g>
       <g className="arch__inferred">
-        <rect x="584" y="28" width="176" height="52" rx="6" />
+        <rect x="396" y="28" width="176" height="52" rx="6" />
       </g>
       <g className="arch__lbl">
         <text x="108" y="48">MAUD</text>
-        <text x="296" y="48">CUAD</text>
-        <text x="484" y="48">FOLIO</text>
-        <text x="672" y="48">SEC EDGAR</text>
+        <text x="296" y="48">FOLIO</text>
+        <text x="484" y="48">SEC EDGAR</text>
       </g>
       <g className="arch__sub">
         <text x="108" y="62">152 agreements</text>
         <text x="108" y="73">12,937 expert labels</text>
-        <text x="296" y="62">510 commercial contracts</text>
-        <text x="296" y="73">LOADED · NOT YET QUERIED</text>
-        <text x="484" y="62">18,259 concepts</text>
-        <text x="484" y="73">the dimension vocabulary</text>
-        <text x="672" y="62">SIC → FOLIO crosswalk</text>
-        <text x="672" y="73">134 of 152 · INFERRED</text>
+        <text x="296" y="62">18,259 concepts</text>
+        <text x="296" y="73">the dimension vocabulary</text>
+        <text x="484" y="62">SIC → FOLIO crosswalk</text>
+        <text x="484" y="73">134 of 152 · INFERRED</text>
       </g>
 
       {/* legend */}
@@ -101,21 +91,18 @@ export function ArchitectureDiagram() {
       <text className="arch__legend" x="790" y="80">
         dashed = the model may not reach it
       </text>
-      <text className="arch__legend" x="790" y="94">
-        faded = ingested, but nothing queries it yet
-      </text>
 
       {/* ── 2 · INGEST ─────────────────────────────────────────────── */}
       <text className="arch__band" x="20" y="110">
         2 · INGEST — idempotent, provenance recorded
       </text>
       <g className="arch__box">
-        <rect x="20" y="118" width="740" height="44" rx="6" />
+        <rect x="20" y="118" width="552" height="44" rx="6" />
       </g>
-      <text className="arch__lbl" x="390" y="136">
-        folio → maud → edgar → cuad
+      <text className="arch__lbl" x="296" y="136">
+        folio → maud → edgar
       </text>
-      <text className="arch__sub" x="390" y="151">
+      <text className="arch__sub" x="296" y="151">
         sha256 per file · IS DISTINCT FROM guard so a no-op re-run does not invalidate Cube ·
         every row keeps source_file + char offsets
       </text>
@@ -123,8 +110,7 @@ export function ArchitectureDiagram() {
         <path d="M108,80 V118" />
         <path d="M296,80 V118" />
         <path d="M484,80 V118" />
-        <path d="M672,80 V118" />
-        <path d="M390,162 V186" />
+        <path d="M296,162 V186" />
       </g>
 
       {/* ── 3 · POSTGRES ───────────────────────────────────────────── */}
@@ -132,35 +118,30 @@ export function ArchitectureDiagram() {
         3 · STORE — Postgres 16
       </text>
       <g className="arch__store">
-        <rect x="20" y="186" width="740" height="76" rx="6" />
+        <rect x="20" y="186" width="616" height="76" rx="6" />
       </g>
       <g className="arch__inner">
         <rect x="32" y="198" width="116" height="30" rx="4" />
         <rect x="156" y="198" width="116" height="30" rx="4" />
-        <rect x="404" y="198" width="116" height="30" rx="4" />
-        <rect x="528" y="198" width="106" height="30" rx="4" />
-        <rect x="642" y="198" width="106" height="30" rx="4" />
-      </g>
-      <g className="arch__dormant">
         <rect x="280" y="198" width="116" height="30" rx="4" />
+        <rect x="404" y="198" width="106" height="30" rx="4" />
+        <rect x="518" y="198" width="106" height="30" rx="4" />
       </g>
       <g className="arch__tbl">
         <text x="90" y="217">matters</text>
         <text x="214" y="217">deal_points</text>
-        <text x="338" y="217">clauses</text>
-        <text x="462" y="217">folio_concepts</text>
-        <text x="581" y="217">labels</text>
-        <text x="695" y="217">ingest_runs</text>
+        <text x="338" y="217">folio_concepts</text>
+        <text x="457" y="217">labels</text>
+        <text x="571" y="217">ingest_runs</text>
       </g>
       <g className="arch__sub">
         <text x="90" y="240">152</text>
         <text x="214" y="240">12,937 · LONG</text>
-        <text x="338" y="240">13,823 · dormant</text>
-        <text x="462" y="240">18,259</text>
-        <text x="581" y="240">human review</text>
-        <text x="695" y="240">run history</text>
+        <text x="338" y="240">18,259</text>
+        <text x="457" y="240">human review</text>
+        <text x="571" y="240">run history</text>
       </g>
-      <text className="arch__note" x="390" y="256">
+      <text className="arch__note" x="328" y="256">
         updated_at trigger uses clock_timestamp(), not now() — transaction-start time would never
         advance and Cube would serve stale aggregates silently
       </text>

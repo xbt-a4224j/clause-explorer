@@ -114,18 +114,3 @@ describe('architecture diagram (#35)', () => {
     expect(desc).toMatch(/inferred rather than labelled/i)
   })
 })
-
-describe('CUAD is not overstated (#35)', () => {
-  it('the description says CUAD is loaded but unqueried', async () => {
-    render(<Admin />)
-    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
-    expect(desc).toMatch(/no endpoint currently queries/i)
-  })
-
-  it('does not present CUAD as a peer input to MAUD', async () => {
-    render(<Admin />)
-    const svg = await screen.findByRole('img', { name: /architecture/i })
-    // gold = expert-labelled and load-bearing; CUAD must not be in that group
-    expect(svg.querySelectorAll('.arch__dormant rect').length).toBeGreaterThan(0)
-  })
-})

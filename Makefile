@@ -6,7 +6,7 @@ up:            ## boot the whole stack
 down:
 	docker compose down
 
-ingest:        ## idempotent load: FOLIO -> MAUD -> EDGAR enrich -> CUAD
+ingest:        ## idempotent load: FOLIO -> MAUD -> EDGAR enrich
 	PYTHONPATH=backend python -m explorer.ingest --source $(or $(SOURCE),all)
 
 test:          ## everything that runs with no API key
