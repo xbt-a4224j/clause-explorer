@@ -55,3 +55,33 @@ only bound its cost because it recorded total tokens, and output costs 4x input.
 
 Architecture, Data, "Why it refuses to answer sometimes", and the semantic-layer sections are
 unaffected by this branch.
+
+---
+
+## Overlap with #41 (`worktree-agent-ad29e51e1d6b7b79e`, commit d26cbdd)
+
+#41 and #44 both rewrite `calibration.py`, `docs/results/calibration.md`, and the Admin
+calibration area. They are compatible in intent — #41 changes *whose answer* is graded, #44
+changes *how many* deal points are graded — but they cannot be merged textually. The overlaps,
+in the order they matter:
+
+1. **`docs/results/calibration-labels.json` is stale after this branch.** It records
+   `prediction_count: 100`, `correct_before: 45`, `correct_after: 44` against #28's 100
+   predictions. This branch replaces `calibration_predictions.json` with 1,701 predictions
+   from a changed answer channel, so those numbers no longer describe anything on disk.
+   **Regenerate it after the merge**; do not hand-edit the figures. #41's own unit tests for
+   `score()` are fixture-based and will still pass, so nothing will fail loudly to warn you.
+2. **`DealPointResult`.** #41 adds `correct_before`, `accuracy_before`, `labels_applied`.
+   #44 makes `accuracy`, `ci_low`, `ci_high` `float | None` and adds `measured: bool`, so an
+   unmeasured deal point is not reported as 0.00. Both sets of fields should survive; the
+   `| None` change has to propagate to #41's `*_before` fields for the same reason.
+3. **`grade()`.** #41 splits the pure part into `score()` and prefers a human label over the
+   prediction. #44 adds a `vocabulary` argument, emits a row per deal point in the whole
+   vocabulary, sorts worst-first, and attaches the run cost. The label substitution belongs
+   *inside* #44's per-deal-point loop, before the correct/incorrect comparison.
+4. **`DEAL_POINTS`.** #44 deletes the hardcoded five; #41 still imports them. The replacement
+   is `deal_point_vocabulary()` plus `holdout_pairs()`.
+5. **Admin.** #41 adds a labels section; #44 replaces `CalibrationReport` with a 92-row table.
+   Independent components, one file — keep both.
+6. **`docs/results/calibration.md`.** Take #44's structure and fold #41's before/after section
+   into it once the regenerated label numbers exist.
