@@ -69,3 +69,64 @@ def deal_point_names() -> tuple[str, ...]:
                 if question:
                     names.add(question)
     return tuple(sorted(names))
+
+
+RAW_MAIN_CSV = CORPUS_ROOT / "raw" / "main.csv"
+
+# MAUD's raw spreadsheet names each deal `<Target>_<Acquirer>.pdf` — the only place in the
+# corpus that says which side is which. Its `Filename (anon)` column does NOT agree with the
+# `contracts/contract_N.txt` numbering (its contract_35.pdf is Michaels/Apollo; the extracted
+# contract_35.txt is Performance Food Group/Core-Mark), so the two are joined on annotation
+# text instead: raw/main.csv holds the same excerpts the label CSVs carry per contract.
+_TITLE_JOIN_SKIP = ("Filename", "Filename (anon)")
+
+
+def _normalize_ws(text: str) -> str:
+    return " ".join(text.split())
+
+
+@lru_cache(maxsize=1)
+def _excerpt_owners() -> dict[str, str]:
+    """Normalized annotation excerpt -> the single contract it belongs to.
+
+    Excerpts shared by more than one contract are dropped; they cannot identify anything.
+    """
+    seen: dict[str, set[str]] = {}
+    for path in label_csv_paths():
+        with path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                if row.get("data_type") != "main":
+                    continue
+                key = _normalize_ws(row.get("text") or "")
+                if key:
+                    seen.setdefault(key, set()).add(row["contract_name"])
+    return {text: next(iter(ids)) for text, ids in seen.items() if len(ids) == 1}
+
+
+@lru_cache(maxsize=1)
+def deal_titles() -> dict[str, str]:
+    """`matter_id -> "<Target>_<Acquirer>.pdf"`, MAUD's own name for the deal.
+
+    A row is attributed only when one contract wins the excerpt vote outright. A tie means we
+    do not know whose deal it is, and a wrong title would attach the wrong party's industry —
+    the exact failure #42 exists to remove — so a tie yields no title and no enrichment.
+    """
+    require_corpus()
+    owners = _excerpt_owners()
+    titles: dict[str, str] = {}
+    with RAW_MAIN_CSV.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            votes: dict[str, int] = {}
+            for column, value in row.items():
+                if column in _TITLE_JOIN_SKIP or not value:
+                    continue
+                owner = owners.get(_normalize_ws(value))
+                if owner:
+                    votes[owner] = votes.get(owner, 0) + 1
+            if not votes:
+                continue
+            ranked = sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))
+            if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+                continue
+            titles.setdefault(ranked[0][0], row["Filename"])
+    return titles

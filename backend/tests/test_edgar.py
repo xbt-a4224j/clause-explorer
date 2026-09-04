@@ -14,10 +14,13 @@ from typing import ClassVar
 import pytest
 from explorer.ingest.edgar import (
     SicFolioMap,
+    deal_title_words,
+    identify_registrant,
     normalize_company_name,
     parse_header,
     resolve_cik,
     submissions_to_facts,
+    title_role,
 )
 
 HEADERS = {
@@ -163,3 +166,102 @@ class TestClientIsOfflineOnceCached:
         client = EdgarClient(cache_dir=tmp_path, offline=True)
         assert client.submissions("0000000000") is None
         assert client.requests_made == 0
+
+
+class TestTitleRole:
+    """MAUD's title reads `<Target>_<Acquirer>`, so a target name is a prefix of it and an
+    acquirer name a suffix. Underscores double as spaces inside a name
+    (`TIFFANY_&_CO._LVMH_...`), so the split point is not recoverable — but a prefix test and
+    a suffix test do not need it."""
+
+    def test_target_is_a_prefix(self) -> None:
+        words = deal_title_words("Acacia_Communications_Cisco_Systems.pdf")
+        assert title_role("ACACIA COMMUNICATIONS, INC.", words) == "target"
+
+    def test_acquirer_is_a_suffix(self) -> None:
+        words = deal_title_words("Acacia_Communications_Cisco_Systems.pdf")
+        assert title_role("Cisco Systems", words) == "acquirer"
+
+    def test_a_party_in_neither_position_is_unknown(self) -> None:
+        words = deal_title_words("Acacia_Communications_Cisco_Systems.pdf")
+        assert title_role("AMARONE ACQUISITION CORP.", words) is None
+
+    def test_underscores_inside_a_name_do_not_break_the_prefix_test(self) -> None:
+        words = deal_title_words("TIFFANY_&_CO._LVMH_MOET_HENNESSY-LOUIS_VUITTON.pdf")
+        assert title_role("Tiffany & Co.", words) == "target"
+        assert title_role("LVMH Moet Hennessy-Louis Vuitton", words) == "acquirer"
+
+
+class TestTargetConstrainedIdentification:
+    """#42 — the registrant must be the *target*, or nothing.
+
+    MAUD names every deal `<Target>_<Acquirer>`, so which side a party is on is knowable
+    without trusting whoever filed. Before this, enrichment accepted the first party that
+    resolved to a registrant with an SIC; on 3 of a 20-matter sample that party was the
+    acquirer, and the matter carried the acquirer's industry.
+    """
+
+    INDEX: ClassVar[dict[str, str]] = {
+        "ACACIA COMMUNICATIONS INC": "0001651235",
+        "CISCO SYSTEMS INC": "0000858877",
+        "ADAMAS PHARMACEUTICALS INC": "0001328143",
+    }
+
+    FACTS: ClassVar[dict[str, dict[str, str]]] = {
+        "0001651235": {"name": "Acacia Communications, Inc.", "sic": "3674"},
+        "0000858877": {"name": "Cisco Systems, Inc.", "sic": "3576"},
+        "0001328143": {"name": "Adamas Pharmaceuticals, Inc.", "sic": "2834"},
+    }
+
+    @pytest.fixture
+    def client(self, tmp_path):
+        from explorer.ingest.edgar import EdgarClient
+
+        for cik, payload in self.FACTS.items():
+            (tmp_path / f"CIK{cik}.json").write_text(json.dumps({"cik": cik, **payload}))
+        return EdgarClient(cache_dir=tmp_path, offline=True)
+
+    def test_target_is_chosen_when_the_target_is_a_registrant(self, client) -> None:
+        found = identify_registrant(
+            parse_header(HEADERS["contract_0"]),
+            "Acacia_Communications_Cisco_Systems.pdf",
+            self.INDEX,
+            client,
+        )
+        assert found is not None
+        assert normalize_company_name(found.name) == "ACACIA COMMUNICATIONS INC"
+        assert found.facts.sic == "3674"
+
+    def test_acquirer_is_refused_even_though_it_resolves(self, client) -> None:
+        """Cisco is in the index and has an SIC. It is the buyer, so it is not an answer.
+
+        With the target absent from the index the old rule took the first party that
+        resolved, which was Cisco, and the matter came out classified 3576 — Cisco's
+        industry, on Acacia's deal.
+        """
+        index = {k: v for k, v in self.INDEX.items() if k != "ACACIA COMMUNICATIONS INC"}
+        assert (
+            identify_registrant(
+                parse_header(HEADERS["contract_0"]),
+                "Acacia_Communications_Cisco_Systems.pdf",
+                index,
+                client,
+            )
+            is None
+        )
+
+    def test_no_registrant_matches_the_target_yields_none_not_a_guess(self, client) -> None:
+        assert (
+            identify_registrant(
+                parse_header(HEADERS["contract_2"]),
+                "Adamas_Pharmaceuticals_Supernus_Pharmaceuticals.pdf",
+                {"SUPERNUS PHARMACEUTICALS INC": "0000000001"},
+                client,
+            )
+            is None
+        )
+
+    def test_a_matter_with_no_maud_title_is_not_enriched(self, client) -> None:
+        """No title means no way to tell the sides apart, so there is no answer to give."""
+        header = parse_header(HEADERS["contract_0"])
+        assert identify_registrant(header, None, self.INDEX, client) is None
