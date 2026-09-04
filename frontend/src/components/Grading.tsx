@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GradingResponse } from '../types'
+import { ignoreAbort } from '../abort'
 
 /**
  * The offline grade (#36).
@@ -18,18 +19,18 @@ export function Grading() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/agent/grading')
+    // #38: abort rather than a `cancelled` flag — the flag discarded the result but let the
+    // request finish, which is why a resolution could still land after teardown
+    const controller = new AbortController()
+    fetch('/api/agent/grading', { signal: controller.signal })
       .then(async (r) => {
         const body = await r.json()
         if (!r.ok) throw new Error(body?.detail ?? 'Grading fixtures are not committed.')
         return body as GradingResponse
       })
-      .then((d) => !cancelled && setData(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
-    return () => {
-      cancelled = true
-    }
+      .then(setData)
+      .catch(ignoreAbort((e) => setError(e.message)))
+    return () => controller.abort()
   }, [])
 
   if (error) {

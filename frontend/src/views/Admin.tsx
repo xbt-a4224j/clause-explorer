@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { IngestRun, LogLine } from '../types'
+import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { AdminExplainer } from '../components/explainers'
 
@@ -33,14 +34,17 @@ function IngestStatus() {
   const [runs, setRuns] = useState<IngestRun[] | null>(null)
 
   useEffect(() => {
-    // #38: every fetch in this file lacked the cancellation guard the other views already use
-    let cancelled = false
-    fetch('/api/admin/ingest-status')
+    // #38: every fetch in this file is aborted on teardown, not merely ignored on arrival
+    const controller = new AbortController()
+    fetch('/api/admin/ingest-status', { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => !cancelled && setRuns(d.runs))
-    return () => {
-      cancelled = true
-    }
+      .then((d) => setRuns(d.runs))
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [])
 
   return (
@@ -88,21 +92,18 @@ function ReportSection({
   const [missing, setMissing] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    fetch(path)
+    const controller = new AbortController()
+    fetch(path, { signal: controller.signal })
       .then(async (r) => {
-        if (cancelled) return
         if (!r.ok) {
           setMissing(true)
           return
         }
         const body = await r.json()
-        if (!cancelled) setMarkdown(body.markdown ?? null)
+        setMarkdown(body.markdown ?? null)
       })
-      .catch(() => !cancelled && setMissing(true))
-    return () => {
-      cancelled = true
-    }
+      .catch(ignoreAbort(() => setMissing(true)))
+    return () => controller.abort()
   }, [path])
 
   return (
@@ -127,17 +128,19 @@ function EvalResults() {
   const [measureSelection, setMeasureSelection] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/admin/evals')
+    const controller = new AbortController()
+    fetch('/api/admin/evals', { signal: controller.signal })
       .then((r) => r.json())
       .then((d) => {
-        if (cancelled) return
         setGitSha(d.git_sha)
         setMeasureSelection(d.measure_selection)
       })
-    return () => {
-      cancelled = true
-    }
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [])
 
   return (
@@ -166,17 +169,19 @@ function LogViewer() {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
     if (level) params.set('level', level)
     if (q) params.set('q', q)
-    let cancelled = false
-    fetch(`/api/admin/logs?${params}`)
+    const controller = new AbortController()
+    fetch(`/api/admin/logs?${params}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((d) => {
-        if (cancelled) return
         setLines(d.lines)
         setTotalMatched(d.total_matched)
       })
-    return () => {
-      cancelled = true
-    }
+      .catch(
+        ignoreAbort((e) => {
+          throw e
+        }),
+      )
+    return () => controller.abort()
   }, [level, q, offset])
 
   return (

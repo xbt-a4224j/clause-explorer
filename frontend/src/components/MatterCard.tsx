@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DealPointDetail, Matter, MatterDetail } from '../types'
+import { ignoreAbort } from '../abort'
 
 /**
  * One comparable deal, with drill-through to the clauses behind it (#19, #20).
@@ -32,10 +33,11 @@ export function MatterCard({
 
   useEffect(() => {
     if (!expanded || detail) return
-    let cancelled = false
+    // #38
+    const controller = new AbortController()
     setError(null)
 
-    fetch(`/api/matters/${encodeURIComponent(matter.matter_id)}`)
+    fetch(`/api/matters/${encodeURIComponent(matter.matter_id)}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error?.message ?? 'could not load deal points')
@@ -46,12 +48,10 @@ export function MatterCard({
         }
         return payload as MatterDetail
       })
-      .then((d) => !cancelled && setDetail(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
+      .then(setDetail)
+      .catch(ignoreAbort((e) => setError(e.message)))
 
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [expanded, detail, matter.matter_id])
 
   async function copySummary() {

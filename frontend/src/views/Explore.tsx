@@ -3,6 +3,7 @@ import { FacetRail } from '../components/FacetRail'
 import { MatterCard } from '../components/MatterCard'
 import { ResultsSkeleton } from '../components/Skeleton'
 import type { ComparablesResponse, FacetsResponse, Matter } from '../types'
+import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { ExploreExplainer } from '../components/explainers'
 import { Term } from '../components/Term'
@@ -81,7 +82,8 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
   }, [seedFilters])
 
   useEffect(() => {
-    let cancelled = false
+    // #38
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
 
@@ -106,21 +108,20 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
     }
 
     Promise.all([
-      post<FacetsResponse>('/api/facets', facetBody),
-      post<ComparablesResponse>('/api/comparables', comparablesBody),
+      post<FacetsResponse>('/api/facets', facetBody, controller.signal),
+      post<ComparablesResponse>('/api/comparables', comparablesBody, controller.signal),
     ])
       .then(([f, r]) => {
-        if (cancelled) return
         setFacets(f)
         setResults(r)
         setCursor(0)
       })
-      .catch((e: Error) => !cancelled && setError(e.message))
-      .finally(() => !cancelled && setLoading(false))
+      .catch(ignoreAbort((e) => setError(e.message)))
+      // `finally` runs on abort too, and clearing the spinner for a view that is going away
+      // would leave the *next* mount briefly showing a stale not-loading state
+      .finally(() => !controller.signal.aborted && setLoading(false))
 
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [filters, description])
 
   // No client-side filtering: the server is the authority on what is in the slice, and dropping
@@ -303,11 +304,12 @@ function describeQuery(results: ComparablesResponse, filters: Filters): string {
   return `${parts.join(' · ')} · n=${results.candidate_count}`
 }
 
-async function post<T>(url: string, body: unknown): Promise<T> {
+async function post<T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   })
   const payload = await response.json()
   if (!response.ok) {

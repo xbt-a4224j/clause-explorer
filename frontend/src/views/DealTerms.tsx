@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import type { DealTermRow, DealTermsResponse, DrillMatter } from '../types'
+import { ignoreAbort, isAbortError, useAbortOnUnmount } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { DealTermsDiagram } from '../components/diagrams'
 import { DealTermsExplainer } from '../components/explainers'
@@ -23,7 +24,8 @@ export function DealTerms({ selection }: { selection: string[] }) {
 
   useEffect(() => {
     if (selection.length === 0) return
-    let cancelled = false
+    // #38
+    const controller = new AbortController()
     setData(null)
     setError(null)
 
@@ -31,18 +33,17 @@ export function DealTerms({ selection }: { selection: string[] }) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ matter_ids: selection }),
+      signal: controller.signal,
     })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error?.message ?? 'rollup failed')
         return payload as DealTermsResponse
       })
-      .then((d) => !cancelled && setData(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
+      .then(setData)
+      .catch(ignoreAbort((e) => setError(e.message)))
 
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [selection])
 
   if (selection.length === 0) {
@@ -129,6 +130,7 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
   const [drillError, setDrillError] = useState<string | null>(null)
   const absent = row.answered_n === 0
   const gated = row.display_kind === 'low_confidence'
+  const nextDrillSignal = useAbortOnUnmount() // #38: drill-through is click-driven
 
   async function drill() {
     if (drilled || absent || gated) return
@@ -137,6 +139,7 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ matter_ids: selection, deal_point_name: row.deal_point_name }),
+        signal: nextDrillSignal(),
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error?.message ?? 'drill-through failed')
@@ -148,6 +151,7 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
       }
       setDrilled(payload.matters)
     } catch (e) {
+      if (isAbortError(e)) return
       setDrillError((e as Error).message)
     }
   }

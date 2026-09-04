@@ -100,5 +100,47 @@ Every corpus records the exact acquisition command, the resulting filename, byte
   under `data/edgar/cache/` and never re-fetched; refreshing is an explicit `rm -rf` of that
   directory. 142 company-submission responses cached on this run.
 - Derived file, checked in: `data/mappings/sic_to_folio.csv` — the SIC → FOLIO crosswalk,
-  95 rows, curated from the SIC division structure against FOLIO's NAICS-aligned Industry
-  concepts.
+  **99 data rows** (`grep -c '^[0-9]' data/mappings/sic_to_folio.csv`), curated from the SIC
+  division structure against FOLIO's NAICS-aligned Industry concepts.
+
+### Crosswalk coverage (#9)
+
+Of the 152 matters, 134 resolved to an SEC-assigned SIC code, spanning **61 distinct SIC
+codes**. The crosswalk resolves **61 of 61 — 100%** of the codes actually present, so every
+matter that got an SIC also got a FOLIO industry. Coverage of SIC space as a whole is *not*
+100% and is not claimed to be: the file maps the codes this corpus contains, longest-prefix
+first, and a code it does not cover produces `NULL`, never a default bucket.
+
+### Enrichment coverage (#9) — measured, not estimated
+
+Counted against the `explorer` database on 2026-09-04:
+
+```sql
+SELECT count(*), count(folio_industry_code), count(signing_date),
+       count(target_name), count(acquirer_name), count(sic_code), count(deal_value_usd)
+FROM matters;
+```
+
+| field | resolved | of |
+|---|---|---|
+| `signing_date` | 149 | 152 |
+| `target_name` | 144 | 152 |
+| `sic_code` | 134 | 152 |
+| `folio_industry_code` | 134 | 152 |
+| `acquirer_name` | 125 | 152 |
+| `deal_value_usd` | **0** | 152 |
+
+`is_inferred_industry` is TRUE on exactly the 134 rows that have a FOLIO industry and FALSE on
+the 18 that do not — no row carries an industry without the inference flag, and none carries
+the flag without an industry.
+
+**`deal_value_usd` is unpopulated and this is a source limitation, not an oversight.** EDGAR's
+company-submissions endpoint — the only endpoint this ingest touches — carries SIC, name and
+state of incorporation. It does not carry transaction value. Stated consideration lives in the
+*text* of the agreement, and extracting it would be an inference over prose rather than a
+lookup, which is a different kind of claim and a different failure mode. `deal_value_usd`,
+`deal_size_band` and `is_inferred_deal_value` therefore stay NULL/FALSE on all 152 rows rather
+than carrying a plausible guess. Tracked separately; see the successor issue to #9.
+
+Re-runs make no network calls: the most recent `ingest_runs` row for `edgar` records
+`0 fetches` against 152 rows read, served entirely from `data/edgar/cache/`.

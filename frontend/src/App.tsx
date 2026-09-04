@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
+import { ignoreAbort } from './abort'
 import type { Journey, JourneySeed } from './journeys'
 import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
@@ -32,10 +33,14 @@ export function App() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/healthz')
+    // #38: the shell outlives every tab, but it is still the one place a failed abort would
+    // be invisible — the app root unmounts only in tests, which is exactly where it mattered
+    const controller = new AbortController()
+    fetch('/api/healthz', { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then(setHealth)
-      .catch(() => setHealthError(true))
+      .catch(ignoreAbort(() => setHealthError(true)))
+    return () => controller.abort()
   }, [])
 
   const focusSearch = useCallback(() => searchRef.current?.focus(), [])
