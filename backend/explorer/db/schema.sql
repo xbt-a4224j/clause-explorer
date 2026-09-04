@@ -92,10 +92,32 @@ CREATE TABLE IF NOT EXISTS deal_points (
     numeric_value       NUMERIC(18, 4),         -- e.g. reverse termination fee percent
     source_span_start   INTEGER,
     source_span_end     INTEGER,
+    -- What the span IS, not merely that it exists (#43). 'anchored' = the characters at the
+    -- span are the annotator's quoted answer text, found exactly once inside the recorded
+    -- range. 'recorded' = MAUD's own envelope, i.e. where the answer was found; for a
+    -- discontinuous annotation that includes provisions nobody quoted, which is why the
+    -- drill-through renders a wide one as a labelled excerpt rather than as the clause.
+    -- NULL = no span. A reader who cannot tell these apart will read an envelope as a clause.
+    span_kind           TEXT,
     is_inferred         BOOLEAN NOT NULL DEFAULT FALSE,  -- FALSE for MAUD gold labels
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (matter_id, deal_point_name)
 );
+-- IF NOT EXISTS so an already-migrated database picks the column up without a reset.
+ALTER TABLE deal_points ADD COLUMN IF NOT EXISTS span_kind TEXT;
+-- The vocabulary and the invariant, in the schema rather than in a docstring: a span_kind
+-- without a span (or a span without a kind) is a row nobody can interpret. NOT VALID so the
+-- constraint governs every write from here on without failing on rows loaded before #43.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'deal_points_span_kind_ck') THEN
+        ALTER TABLE deal_points ADD CONSTRAINT deal_points_span_kind_ck
+            CHECK (
+                (span_kind IS NULL AND source_span_start IS NULL)
+                OR (span_kind IN ('anchored', 'recorded') AND source_span_start IS NOT NULL)
+            ) NOT VALID;
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_dp_name ON deal_points (deal_point_name);
 CREATE INDEX IF NOT EXISTS idx_dp_matter ON deal_points (matter_id);
 
