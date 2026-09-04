@@ -137,56 +137,32 @@ compare against the labels, publish the accuracy per deal point. That's what mak
 
 ## Limitations
 
-Every figure in this README came from a command that ran; `docs/worklog.md` has the commands and
-their raw output. These are the things the product does **not** do, stated here rather than
-discovered later.
+Every figure below comes from a command that ran. What the product does not do, stated here
+rather than discovered later.
 
-- **FOLIO industry codes on CUAD are inferred.** CUAD ships no industry metadata, so anything
-  there is classifier output, flagged `is_inferred_industry` in the schema and labeled inferred
-  everywhere it appears. Currently **no CUAD row has an industry at all** (0 of 13,823) — the
-  classification pass and its accuracy table are still to come, and a keyword guess in the
-  meantime would be worse than a blank.
-- **Industry on the merger matters is also inferred.** It comes from a checked-in SIC → FOLIO
-  crosswalk over the SEC's own coarse, self-assigned code: 134 of 152 matters resolved. A
-  20-matter hand check found the identified registrant was the target in 17 and the acquirer
-  in 3.
-- **Deal value is not populated** for any of the 152 matters. EDGAR's company endpoints do not
-  carry transaction value, so `deal_size_band` is empty and **size-based filtering does not
-  exist** (#9). Consideration type — All Cash / All Stock / Mixed, a MAUD expert label — is the
-  third facet instead.
-- **The corpus spans 20 months**, 2020-03-13 to 2021-11-21 — not five years.
-- **Health Care is 25 matters of 152** — but that grouping is ours, not a standard. The
-  crosswalk places pharma, biotech, devices and CROs with providers; straight NAICS leaves
-  Health Care at 3 and Manufacturing at 42. After the revision Manufacturing is 22. The UI
-  says the grouping is ours wherever it appears.
-- **3.8% of deal points have no source span** (495 of 12,937) and cannot drill through; MAUD's
-  excerpts could not be anchored back into the contract text for those. They store NULL rather
-  than a nearest guess — a wrong offset opens the wrong clause and looks completely right.
-- **The consideration facet did not narrow the results until recently.** The rail offered it, the
-  facet counts recomputed for it, and `/comparables` had no such field — so Pydantic dropped it and
-  the list kept returning the unfiltered set: a rail promising 21 above a list of 25. It is the
-  failure this product is built to prevent, arriving through the one door nobody was watching. Two
-  tests now hold the line, one of which asserts the rail's count and the endpoint's count agree.
-- **Most recorded spans are not clause-scale.** Measured over the 12,442 deal points that do carry
-  a span, the median width is 4,658 characters, the 90th percentile is 238,949 and the widest is
-  739,709. MAUD marks where in the agreement an answer was found, and for a holistic deal point
-  that is most of the document. The drill-through renders anything wider than `max_clause_chars`
-  (6,000) as a bounded excerpt labelled a document-scale span, rather than presenting the slice as
-  the operative language — which is what it did before, and what showed a table of contents.
-- **FOLIO's hierarchy roll-up is loaded but inert on this corpus.** Every matter sits at the same
-  level, so the recursive descendant walk returns exactly what an equality match would. The
-  pharma-and-devices grouping is the checked-in SIC crosswalk's doing, not the ontology's. What
-  FOLIO genuinely earns is a stable *code* to join on instead of a display label.
-- **CUAD is loaded and queried by nothing.** 13,823 clauses with full provenance, 0 attached to a
-  matter (deliberate — 510 commercial contracts inside "comparable deals" would inflate every
-  facet count), and visible only in the raw Tables view.
-- **The Label queue's loop does not close.** Decisions write to `labels`; nothing reads that table
-  yet. And on this corpus it could not — every queued item is a held-out matter that already has a
-  lawyer's answer. It is the mechanism you would need on un-annotated documents, demonstrated on a
-  corpus that does not need it.
-- **The extractor is mostly below its own reporting gate.** Of the 5 deal points calibrated so far,
-  4 fall under 0.7 accuracy (0.50, 0.30, 0.30, 0.20 against one at 0.95). Published rather than
-  buried: it says precisely which questions the system must decline on un-annotated documents.
+- **Industry is inferred, on every matter.** A checked-in SIC to FOLIO crosswalk over the SEC's
+  self-assigned code resolves 134 of 152. A 20-matter hand check found the registrant was the
+  target in 17 and the acquirer in 3. The grouping is ours: it puts pharma, biotech, devices and
+  CROs under Health Care (25 matters); straight NAICS would leave Health Care at 3.
+- **Deal value is empty** for all 152 matters. EDGAR's company endpoints do not carry
+  transaction value, so there is no size filter (#9). Consideration type, a MAUD expert label, is
+  the third facet instead.
+- **The corpus is 20 months**, 2020-03-13 to 2021-11-21.
+- **Most recorded spans are not clauses.** Over the 12,442 deal points with a span, the median
+  width is 4,658 characters and the 90th percentile is 238,949. MAUD marks where an answer was
+  found, and for a holistic deal point that is most of the agreement. Spans wider than 6,000
+  characters render as a labelled excerpt, not as the clause. A further 495 deal points (3.8%)
+  have no span at all and store NULL rather than a nearest guess.
+- **FOLIO's hierarchy is inert here.** Every matter sits at one level, so the descendant walk
+  returns what an equality match would. What FOLIO earns is a stable code to join on.
+- **CUAD is loaded and unused.** 13,823 clauses with provenance, attached to no matter, visible
+  only in Tables. Mixing 510 commercial contracts into "comparable deals" would inflate every
+  facet count. No CUAD row has an industry.
+- **The Label loop does not close.** Decisions write to `labels`; calibration does not read them.
+  On this corpus it could not usefully: every queued item already has a lawyer's answer.
+- **The extractor is mostly below its own gate.** Of 5 calibrated deal points, 4 are under 0.7
+  accuracy (0.50, 0.30, 0.30, 0.20; one at 0.95). Published so it is clear which questions the
+  system must decline on un-annotated documents.
 
 ## Stack
 

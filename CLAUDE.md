@@ -206,7 +206,7 @@ body first: `gh issue view <N> -R xbt-a4224j/clause-explorer`. Acceptance criter
 3. **Run the gates** (below). All must be green.
 4. **Verify against the running stack**, not just unit tests. Curl the endpoint, load the
    page, read the container logs. Unit tests passing is not evidence the feature works.
-5. **Append to `docs/worklog.md`** — what was built, the commands run with their *real
+5. **Append to `docs/worklog.md`** (gitignored, local journal) — what was built, the commands run with their *real
    output*, any decision made (with rationale and accepted cost), and anything not done.
 6. **Commit AND PUSH**, message ending `Closes #N`. One issue per commit so each diff
    maps to its ticket. **Push every time — never batch pushes across issues.** Work that
@@ -243,7 +243,7 @@ stop and say why.
 
 ## Recording decisions
 
-`docs/worklog.md` has a decisions table. Add a row whenever you make a call that a reviewer
+`docs/worklog.md` (gitignored, local) has a decisions table. Add a row whenever you make a call that a reviewer
 might question. Record **the cost you accepted**, not just the choice — a decision without
 its downside reads as marketing. Include decisions that turned out wrong.
 

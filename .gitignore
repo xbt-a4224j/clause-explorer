@@ -38,3 +38,6 @@ logs/
 SPRINT.md
 HANDOFF.md
 data/edgar/
+
+# engineering journal, kept locally
+docs/worklog.md
