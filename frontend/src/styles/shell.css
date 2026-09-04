@@ -361,9 +361,19 @@ kbd {
   display: flex; flex-direction: column; gap: 2px;
   padding: 0 var(--pad-md) var(--pad-sm); font-size: 11px;
 }
-.term__drill li { display: flex; gap: var(--pad-md); color: var(--ink-subtle); }
+/* A drill row stacks: identity line, then the text. It was a horizontal flex row (head |
+   clause | provenance), which only held together at wide viewports — the head has no width of
+   its own, so once a sibling claimed the free space the party name and deal-point label were
+   squeezed to min-content and wrapped one character per line. A column cannot collapse. */
+.term__drill li { display: flex; flex-direction: column; gap: 6px; color: var(--ink-subtle); }
 .drill { padding: var(--pad-sm) 0; border-top: 1px solid var(--hairline); min-width: 0; }
-.drill__head { display: flex; justify-content: space-between; gap: var(--pad-md); align-items: baseline; }
+.drill__head {
+  display: flex; justify-content: space-between; gap: var(--pad-md); align-items: baseline;
+  flex-wrap: wrap;
+}
+/* the deal-point label is long prose, not a chip: let it wrap as a block rather than force
+   the row wider or, worse, wrap per character */
+.drill__head .term__poslabel { flex: 1 1 14rem; text-align: right; min-width: 0; }
 .drill__party { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .explore__corpus { font-size: 11px; color: var(--ink-muted); letter-spacing: 0.02em; }
 
@@ -907,4 +917,4 @@ kbd {
   color: var(--ink-tertiary);
 }
 .dp__clause--excerpt { max-height: 12em; overflow: auto; }
-.drill__text { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.drill__text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
