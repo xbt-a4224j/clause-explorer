@@ -86,46 +86,25 @@ describe('log viewer', () => {
   })
 })
 
-describe('architecture diagram (#35)', () => {
-  it('renders as a labelled image with a text description carrying the same content', async () => {
+/**
+ * #45 deleted `ArchitectureDiagram` and the six tests that pinned its content, because the
+ * behaviour they encoded is gone on purpose: it was a second whole-system drawing, and
+ * `SystemDiagram` on Overview is now the only one. Two of those tests asserted claims that
+ * still matter and simply live elsewhere — "both read paths are named" is now pinned on
+ * `SystemDiagram` in Overview.test.tsx, and "CUAD is loaded but unqueried" in Tables.test.tsx.
+ * What this file keeps is the structural property that outlived the drawing.
+ */
+describe('what Admin still carries (#45)', () => {
+  it('keeps its four sections after the architecture panel was removed', async () => {
     render(<Admin />)
-    const svg = await screen.findByRole('img', { name: /architecture/i })
-    expect(svg).toBeInTheDocument()
+    for (const name of [/ingest status/i, /calibration/i, /eval results/i, /^logs$/i]) {
+      expect(await screen.findByRole('heading', { name })).toBeInTheDocument()
+    }
   })
 
-  it('stands alone rather than hiding inside the collapsible explainer', async () => {
+  it('no longer draws the system a second time', async () => {
     render(<Admin />)
-    const heading = await screen.findByRole('heading', { name: /what this is made of/i })
-    // the explainer body is hidden when collapsed; this section must never be inside it
-    expect(heading.closest('.explain')).toBeNull()
-  })
-
-  it('names both query paths, because the split is the point', async () => {
-    render(<Admin />)
-    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
-    expect(desc).toMatch(/Cube Core/)
-    expect(desc).toMatch(/hybrid retrieval/i)
-    expect(desc).toMatch(/does not go through Cube|not go through Cube/i)
-  })
-
-  it('marks the inferred source as inferred', async () => {
-    render(<Admin />)
-    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
-    expect(desc).toMatch(/inferred rather than labelled/i)
-  })
-})
-
-describe('CUAD is not overstated (#35)', () => {
-  it('the description says CUAD is loaded but unqueried', async () => {
-    render(<Admin />)
-    const desc = (await screen.findByRole('img', { name: /architecture/i })).textContent ?? ''
-    expect(desc).toMatch(/no endpoint currently queries/i)
-  })
-
-  it('does not present CUAD as a peer input to MAUD', async () => {
-    render(<Admin />)
-    const svg = await screen.findByRole('img', { name: /architecture/i })
-    // gold = expert-labelled and load-bearing; CUAD must not be in that group
-    expect(svg.querySelectorAll('.arch__dormant rect').length).toBeGreaterThan(0)
+    await screen.findByRole('heading', { name: /ingest status/i })
+    expect(screen.queryByRole('img', { name: /architecture/i })).not.toBeInTheDocument()
   })
 })

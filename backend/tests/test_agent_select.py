@@ -12,8 +12,6 @@ real call, marked `needs_key`.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 from explorer.agent import select as select_module
 from explorer.agent.select import (
@@ -144,73 +142,21 @@ class TestServerSideValidation:
             )
 
 
-class TestNoNumberComesFromTheModel:
-    """The single most important property: there is no code path from the model's output to a
-    displayed figure. `select_via_llm` is monkeypatched entirely — no API call — and the test
-    proves the returned `rows` come from cube_query(), never from the stubbed selection."""
+class TestTheHttpSurfaceIsGone:
+    """#45 — `POST /agent/select` and `POST /agent/resolve-filter-value` were never called by
+    anything. The UI drives `/agent/run-selection`, and the eval imports `select_via_llm` and
+    `resolve_filter_value` directly. The functions stay and are tested above and in
+    `test_filter_resolution.py`; only the HTTP surface is deleted, so the routes must 404.
 
-    def test_the_response_rows_come_from_cube_not_the_model(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(select_module.settings, "openai_api_key", "sk" + "-test-" + "x" * 10)
-        monkeypatch.setattr(
-            "explorer.api.agent.fetch_vocabulary",
-            lambda: Vocabulary(measures=("comparable_deals.n",), dimensions=()),
-        )
-        monkeypatch.setattr(
-            "explorer.api.agent.select_via_llm",
-            lambda question, vocab, api_key: {
-                "measures": ["comparable_deals.n"],
-                "dimensions": [],
-                "filters": [],
-                "timeDimensions": [],
-            },
-        )
+    The property those route tests carried — no number reaches a response from the model —
+    is still asserted structurally, on the route that survives, in `test_run_selection.py`.
+    """
 
-        cube_rows = [{"comparable_deals.n": 152}]
-        monkeypatch.setattr("explorer.api.agent.cube_query", lambda payload: cube_rows)
+    def test_select_is_no_longer_routed(self, client: TestClient) -> None:
+        assert client.post("/agent/select", json={"question": "anything"}).status_code == 404
 
-        response = client.post("/agent/select", json={"question": "how many matters"})
-        body = response.json()
-        assert body["rows"] == cube_rows
-        # nothing in the model's stubbed output was itself a number the response could have
-        # echoed back as an answer — the 152 came only from the cube_query stub
-        assert "152" not in json.dumps(body["selection"])
-
-    def test_an_invalid_selection_from_the_model_is_rejected_not_forwarded_to_cube(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(select_module.settings, "openai_api_key", "sk" + "-test-" + "x" * 10)
-        monkeypatch.setattr(
-            "explorer.api.agent.fetch_vocabulary",
-            lambda: Vocabulary(measures=("comparable_deals.n",), dimensions=()),
-        )
-        monkeypatch.setattr(
-            "explorer.api.agent.select_via_llm",
-            lambda question, vocab, api_key: {
-                "measures": ["a_measure_that_does_not_exist"],
-                "dimensions": [],
-                "filters": [],
-                "timeDimensions": [],
-            },
-        )
-        called = []
-        monkeypatch.setattr(
-            "explorer.api.agent.cube_query", lambda payload: called.append(payload) or []
-        )
-
-        response = client.post("/agent/select", json={"question": "anything"})
-        assert response.status_code == 400
-        assert called == []  # Cube is never reached with the invalid selection
-
-
-class TestNoKeyIsA503NotASilentSkip:
-    def test_no_key_refuses_rather_than_running_without_one(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(select_module.settings, "openai_api_key", None)
-        response = client.post("/agent/select", json={"question": "anything"})
-        assert response.status_code == 503
+    def test_resolve_filter_value_is_no_longer_routed(self, client: TestClient) -> None:
+        assert client.post("/agent/resolve-filter-value", json={"value": "x"}).status_code == 404
 
 
 @pytest.mark.needs_key

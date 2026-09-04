@@ -110,13 +110,6 @@ cubes:
           currently loaded is FALSE. Filter to is_inferred = false when a figure has to be
           defensible as expert-labelled; never mix the two in one number without saying so.
 
-      - name: has_source_span
-        sql: "{CUBE}.source_span_start IS NOT NULL"
-        type: boolean
-        description: >-
-          Whether this labelled position can be traced to a byte range in the source agreement
-          and therefore drilled into. TRUE for 12,442 of 12,937 loaded rows.
-
       - name: updated_at
         sql: updated_at
         type: time

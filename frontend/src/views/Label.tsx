@@ -99,35 +99,20 @@ export function Label() {
       <ExplainerPanel id="label" title="How this queue works" diagram={<LoopDiagram />}>
         <p>
           <strong>What this tab is for.</strong> Improving the extractor without paying for a
-          full re-annotation. MAUD — the <em>Merger Agreement Understanding Dataset</em>, 152
-          public merger agreements that lawyers annotated against the ABA&rsquo;s 92 deal
-          points — already tells us the right answer for these contracts. The interesting
-          question is how our extractor does on documents nobody annotated, and the only way
-          to know is to check its work on a sample.
+          full re-annotation. Two extractors read the same contract — a language model whose
+          predictions were recorded to disk, and a keyword baseline that costs nothing — and
+          items where they disagree rank to the top, because at least one of them is wrong.
+          That is the cheapest useful signal available; it needs no calibrated confidence
+          score, which is convenient, because a trustworthy confidence score is exactly what
+          we do not have. Every key writes a decision or skips: <code>y n e s</code>.
         </p>
         <p>
-          <strong>Why these items and not others.</strong> Two extractors read the same
-          contract: a language model, whose predictions were recorded to disk in an earlier
-          run, and a keyword baseline that costs nothing to run. Where they disagree, at
-          least one is wrong. That is the cheapest useful ranking signal available — it needs
-          no calibrated confidence score, which is convenient, because producing a trustworthy
-          confidence score is the very thing we have not done yet.
-        </p>
-        <p>
-          <strong>What your keystroke does today — and what it does not.</strong> Each decision
-          writes one row to <code>labels</code>. <strong>Nothing reads that table yet.</strong>{' '}
-          Calibration grades the extractor against MAUD&rsquo;s own answers in{' '}
-          <code>deal_points</code>, not against your review, so pressing a key here does not
-          currently move any number in the product.
-        </p>
-        <p>
-          <strong>And on this corpus it could not.</strong> Every item queued here is one of the
-          20 held-out matters — documents MAUD already has a lawyer&rsquo;s answer for. Reviewing
-          a prediction where gold already exists tells you nothing gold did not. This tab is the
-          mechanism you would need on <em>un-annotated</em> firm documents, demonstrated on a
-          corpus that does not need it. Closing the loop means teaching calibration to prefer a
-          human label over a gold one where the two disagree, which is only meaningful once
-          there are documents with no gold at all.
+          <strong>The limit.</strong> Each decision writes one row to <code>labels</code> and{' '}
+          <strong>nothing reads that table yet</strong> — calibration grades against
+          MAUD&rsquo;s own answers, not your review. On this corpus it could not: every queued
+          item is one of the 20 held-out matters, where a lawyer&rsquo;s answer already exists.
+          This is the mechanism you would need on un-annotated firm documents, shown on a
+          corpus that does not need it.
         </p>
       </ExplainerPanel>
 

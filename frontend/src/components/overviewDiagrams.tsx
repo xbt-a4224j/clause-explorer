@@ -1,11 +1,16 @@
 /**
- * The three Overview diagrams (#39).
+ * The two Overview diagrams (#39, trimmed in #45).
  *
- * Deliberately NOT a fourth drawing of the routing argument — that lives in
- * `RoutingDiagram` under Semantic Layer, and two diagrams making the same claim would
- * invite the reader to look for a difference that is not there. These answer the three
- * questions the other tabs assume you have already asked: what is the shape of the system,
- * how does a document get found, and where does a displayed figure come from.
+ * Deliberately NOT another drawing of the routing argument — that lives in `RoutingDiagram`
+ * under Semantic Layer, and two diagrams making the same claim would invite the reader to
+ * look for a difference that is not there. These answer the two questions the other tabs
+ * assume you have already asked: what is the shape of the system, and where does a displayed
+ * figure come from.
+ *
+ * `HybridRetrievalDiagram` was the third. #45 cut the paragraph it illustrated — the min-max
+ * normalization argument — down to nothing on this tab, and a diagram whose prose no longer
+ * exists is an orphan. The argument itself moved to `docs/walkthrough.md`, and the property it
+ * claimed is still asserted by `backend/tests/test_hybrid_retrieval.py`.
  *
  * Token-only like every other diagram here, so they cannot drift from the palette, and
  * sized by viewBox so they scale with the panel.
@@ -135,114 +140,6 @@ export function SystemDiagram() {
       </text>
       <text className="loop__note" x="300" y="192">
         no figure on any tab is generated from free text
-      </text>
-    </svg>
-  )
-}
-
-/**
- * Hybrid retrieval, and specifically the normalization step — the one part of the blend
- * that is a correctness claim rather than a tuning choice. BM25 scores are unbounded and
- * query-dependent; cosine similarities sit in roughly [0, 1]. Adding them raw is not a
- * weighted blend at all, because BM25's scale swamps the vector term and alpha stops
- * meaning anything. Both sides are min-max normalized per query before combining.
- */
-export function HybridRetrievalDiagram() {
-  return (
-    <svg
-      className="loop"
-      viewBox="0 0 600 210"
-      role="img"
-      aria-labelledby="ov-hybrid-title"
-      aria-describedby="ov-hybrid-desc"
-      preserveAspectRatio="xMinYMin meet"
-    >
-      <title id="ov-hybrid-title">How a query finds documents</title>
-      <desc id="ov-hybrid-desc">
-        A query fans out to two searches over the same corpus. Keyword search using BM25 matches
-        exact terms such as party names and defined terms; vector search over cached embeddings
-        matches paraphrase. Each side produces scores on an incompatible scale, so both are min-max
-        normalized per query before they are combined by a configurable alpha weight. Without that
-        normalization BM25's unbounded scale dominates and the alpha parameter stops meaning
-        anything. The embedding cache is content-addressed and committed, so this path runs with no
-        API key.
-      </desc>
-
-      <defs>
-        <Arrow id="ov-hybrid-arrow" />
-      </defs>
-
-      <g className="loop__edges" markerEnd="url(#ov-hybrid-arrow)">
-        <path d="M100,88 V36 H136" />
-        <path d="M100,88 V140 H136" />
-        <path d="M256,36 H292" />
-        <path d="M256,140 H292" />
-        <path d="M396,52 H420 V80 H444" />
-        <path d="M396,124 H420 V96 H444" />
-      </g>
-
-      <g className="loop__node loop__node--key">
-        <rect x="12" y="68" width="88" height="40" rx="6" />
-      </g>
-
-      <g className="loop__node">
-        <rect x="136" y="16" width="120" height="40" rx="6" />
-        <rect x="136" y="120" width="120" height="40" rx="6" />
-        <rect x="292" y="32" width="104" height="40" rx="6" />
-        <rect x="292" y="104" width="104" height="40" rx="6" />
-      </g>
-
-      <g className="loop__node loop__node--out">
-        <rect x="444" y="68" width="128" height="40" rx="6" />
-      </g>
-
-      <g className="loop__label">
-        <text x="56" y="86">
-          query
-        </text>
-        <text x="196" y="34">
-          BM25 keyword
-        </text>
-        <text x="196" y="138">
-          vector search
-        </text>
-        <text x="344" y="50">
-          normalize
-        </text>
-        <text x="344" y="122">
-          normalize
-        </text>
-        <text x="508" y="86">
-          blend by alpha
-        </text>
-      </g>
-
-      <g className="loop__sub">
-        <text x="56" y="100">
-          one question
-        </text>
-        <text x="196" y="48">
-          exact terms, party names
-        </text>
-        <text x="196" y="152">
-          paraphrase, cached vectors
-        </text>
-        <text x="344" y="64">
-          min-max, per query
-        </text>
-        <text x="344" y="136">
-          min-max, per query
-        </text>
-        <text x="508" y="100">
-          ranked comparables
-        </text>
-      </g>
-
-      <text className="loop__note" x="300" y="182">
-        the normalization is the correctness story: raw BM25 is unbounded, cosine is not
-      </text>
-      <text className="loop__note" x="300" y="196">
-        add them unnormalized and alpha silently stops meaning anything
       </text>
     </svg>
   )

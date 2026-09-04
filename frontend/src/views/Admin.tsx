@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { IngestRun, LogLine } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
-import { AdminDiagram } from '../components/diagrams'
-import { ArchitectureDiagram } from '../components/ArchitectureDiagram'
 import { AdminExplainer } from '../components/explainers'
 
 /**
@@ -11,31 +9,18 @@ import { AdminExplainer } from '../components/explainers'
  * Built for one stated reason: so nobody has to open psql. Every number here is read from an
  * artefact another issue already produces (ingest_runs, docs/results/*.md) — this view is
  * composition, not new computation.
+ *
+ * #45 removed the standalone `ArchitectureDiagram` that sat above the sections. It was a second
+ * whole-system drawing; `SystemDiagram` on Overview is now the only one, so a reader cannot
+ * find two pictures of the same system and go looking for the difference between them.
  */
 export function Admin() {
   return (
     <div className="admin">
-      <ExplainerPanel id="admin" title="What this tab is for: did the data land?" diagram={<AdminDiagram />}>
+      <ExplainerPanel id="admin" title="What this tab is for: did the data land?">
         <AdminExplainer />
       </ExplainerPanel>
 
-      {/* Standalone, outside the collapsible explainer: this is the reference a reader comes
-          back to, not something they read once and fold away. */}
-      <section className="arch__panel" aria-labelledby="arch-heading">
-        <h2 className="admin__heading" id="arch-heading">
-          Architecture — what this is made of
-        </h2>
-        <p className="arch__intro">
-          Two readings of the same picture. Top to bottom is the engineering path: four public
-          corpora, one idempotent ingest, Postgres, then <strong>two independent query paths</strong>{' '}
-          — Cube computes every aggregate, and hybrid retrieval ranks comparable deals without
-          going through it, because ranking is not an aggregate. The bottom band is the product
-          reading: which question each tab answers, and for whom.
-        </p>
-        <div className="arch__scroll">
-          <ArchitectureDiagram />
-        </div>
-      </section>
       <IngestStatus />
       <CalibrationReport />
       <EvalResults />

@@ -4,7 +4,6 @@ import { MatterCard } from '../components/MatterCard'
 import { ResultsSkeleton } from '../components/Skeleton'
 import type { ComparablesResponse, FacetsResponse, Matter } from '../types'
 import { ExplainerPanel } from '../components/ExplainerPanel'
-import { ExploreDiagram } from '../components/diagrams'
 import { ExploreExplainer } from '../components/explainers'
 import { Term } from '../components/Term'
 import type { JourneySeed } from '../journeys'
@@ -193,7 +192,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
 
   return (
     <div className="explore">
-      <ExplainerPanel id="explore" title="What this tab is for: finding comparable deals" diagram={<ExploreDiagram />}>
+      <ExplainerPanel id="explore" title="What this tab is for: finding comparable deals">
         <ExploreExplainer />
       </ExplainerPanel>
       {/* demo script 1 beat 1: what is loaded, before any interaction. An empty-looking rail

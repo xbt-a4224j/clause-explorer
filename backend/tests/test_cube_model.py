@@ -198,6 +198,20 @@ class TestMattersModel:
         assert joins["deal_points"]["relationship"] == "one_to_many"
         assert joins["folio_concepts"]["relationship"] == "many_to_one"
 
+    def test_every_view_include_resolves_to_a_member_that_exists(self, matters_model: dict) -> None:
+        """#45 removed three members nothing referenced. A view that still lists a deleted
+        measure is a dangling reference Cube only complains about at boot, long after the
+        YAML was edited — so the invariant is asserted here, statically."""
+        cubes = {c["name"]: c for c in matters_model["cubes"]}
+        for view in matters_model.get("views", []):
+            for entry in view["cubes"]:
+                cube = cubes[entry["join_path"].split(".")[-1]]
+                members = {m["name"] for m in cube.get("measures", [])} | {
+                    d["name"] for d in cube.get("dimensions", [])
+                }
+                missing = set(entry["includes"]) - members
+                assert not missing, f"{view['name']} includes {missing}, absent from {cube['name']}"
+
     def test_hierarchy_finding_is_recorded_with_the_version(self) -> None:
         """The AC asks which approach was used and why — the answer has to survive in the file."""
         header = MATTERS.read_text(encoding="utf-8")[:2000]

@@ -1,10 +1,15 @@
 /**
- * Per-tab explanatory diagrams (#35).
+ * Per-tab explanatory diagrams (#35, reduced in #45).
  *
- * One per tab, all inline SVG on design tokens so they cannot drift from the palette and stay
- * legible at any zoom. Every one is `role="img"` with a title AND a description that carries
- * the same content in words — a diagram that only works visually is not an explanation for
- * everyone, and these are the load-bearing explanation on each tab.
+ * Inline SVG on design tokens so they cannot drift from the palette and stay legible at any
+ * zoom. Every one is `role="img"` with a title AND a description that carries the same content
+ * in words — a diagram that only works visually is not an explanation for everyone.
+ *
+ * There were five. #45 cut the explainer prose to what a tab is for plus its one honest limit,
+ * and deleted the two diagrams whose argument no longer had prose beside it:
+ * `ExploreDiagram` drew the FOLIO hierarchy roll-up, and `AdminDiagram` drew the
+ * `MAX(updated_at)` freshness chain. Both paragraphs moved to `docs/walkthrough.md`. The three
+ * below survive because the claims they draw are still stated in the explainer beside them.
  *
  * Shared classes live in shell.css under the explainer section: .loop__edges, .loop__node,
  * .loop__label, .loop__sub, .loop__note.
@@ -28,77 +33,6 @@ function Arrow({ id }: { id: string }) {
   )
 }
 
-/** Explore — a query becomes a filtered, ranked set. The join is on the code, not the label. */
-export function ExploreDiagram() {
-  return (
-    <svg
-      className="loop"
-      viewBox="0 0 600 200"
-      role="img"
-      aria-labelledby="dx-t dx-d"
-      preserveAspectRatio="xMinYMin meet"
-    >
-      <title id="dx-t">How a search becomes a set of comparable deals</title>
-      <desc id="dx-d">
-        What you type is matched against a legal ontology called FOLIO, which resolves it to a
-        concept code rather than a display label. That code selects a branch of the industry
-        hierarchy, so asking for healthcare also returns medical devices, pharma and providers.
-        The matching matters are then ranked by hybrid retrieval — keyword matching blended with
-        semantic similarity. Facet counts are live database queries over whatever is left after
-        your filters, which is why they change as you narrow.
-      </desc>
-      <Arrow id="dx-a" />
-
-      <g className="loop__edges" markerEnd="url(#dx-a)">
-        <path d="M118,40 H154" />
-        <path d="M268,40 H304" />
-        <path d="M424,40 H460" />
-        <path d="M362,62 V96" />
-        <path d="M304,116 H268" />
-        <path d="M154,116 H118" />
-      </g>
-
-      <g className="loop__node">
-        <rect x="12" y="20" width="106" height="40" rx="6" />
-        <rect x="154" y="20" width="114" height="40" rx="6" />
-        <rect x="304" y="20" width="120" height="40" rx="6" />
-        <rect x="460" y="20" width="128" height="40" rx="6" />
-        <rect x="304" y="96" width="120" height="40" rx="6" />
-        <rect x="118" y="96" width="150" height="40" rx="6" />
-        <rect x="12" y="96" width="106" height="40" rx="6" />
-      </g>
-
-      <g className="loop__label">
-        <text x="65" y="38">what you type</text>
-        <text x="211" y="38">FOLIO concept</text>
-        <text x="364" y="38">roll up the tree</text>
-        <text x="524" y="38">matching matters</text>
-        <text x="364" y="114">rank them</text>
-        <text x="193" y="114">facet counts</text>
-        <text x="65" y="114">the rail</text>
-      </g>
-      <g className="loop__sub">
-        <text x="65" y="52">“healthcare”</text>
-        <text x="211" y="52">a CODE, not a label</text>
-        <text x="364" y="52">devices · pharma</text>
-        <text x="524" y="52">n = 25 of 152</text>
-        <text x="364" y="128">keyword + meaning</text>
-        <text x="193" y="128">live, over what is left</text>
-        <text x="65" y="128">updates as you filter</text>
-      </g>
-
-      <text className="loop__note" x="300" y="176">
-        joining on the code is the point: a label can drift from “Health Care Industry” to
-        “Healthcare” and return zero rows
-      </text>
-      <text className="loop__note" x="300" y="190">
-        — which looks exactly like “we have no comparable deals”
-      </text>
-    </svg>
-  )
-}
-
-/** Deal Terms — 92 questions, long table, rollup over your selection. */
 export function DealTermsDiagram() {
   return (
     <svg
@@ -323,84 +257,6 @@ export function TablesDiagram() {
       </text>
       <text className="loop__note" x="300" y="186">
         this tab exists so nobody has to open psql to check a number the app just showed them
-      </text>
-    </svg>
-  )
-}
-
-/** Admin — ingest, freshness, and what the operator is actually watching. */
-export function AdminDiagram() {
-  return (
-    <svg
-      className="loop"
-      viewBox="0 0 600 200"
-      role="img"
-      aria-labelledby="ad-t ad-d"
-      preserveAspectRatio="xMinYMin meet"
-    >
-      <title id="ad-t">Ingest, freshness, and what this tab watches</title>
-      <desc id="ad-d">
-        An ingest run writes rows and stamps each one with the time it changed. The semantic layer
-        checks the maximum of those timestamps to decide whether its cached answers are stale; when
-        the maximum moves, it recomputes. The measured delay between a write and a fresh aggregate
-        is eleven point three seconds. This tab shows the last run per source with its checksum,
-        the current extractor accuracy per deal point, and a live tail of structured logs.
-      </desc>
-      <Arrow id="ad-a" />
-
-      <g className="loop__edges" markerEnd="url(#ad-a)">
-        <path d="M130,44 H166" />
-        <path d="M296,44 H332" />
-        <path d="M462,44 H498" />
-      </g>
-
-      <g className="loop__node">
-        <rect x="12" y="24" width="118" height="40" rx="6" />
-        <rect x="166" y="24" width="130" height="40" rx="6" />
-        <rect x="332" y="24" width="130" height="40" rx="6" />
-        <rect x="498" y="24" width="90" height="40" rx="6" />
-      </g>
-
-      <g className="loop__label">
-        <text x="71" y="42">ingest run</text>
-        <text x="231" y="42">updated_at stamp</text>
-        <text x="397" y="42">MAX(updated_at)</text>
-        <text x="543" y="42">recompute</text>
-      </g>
-      <g className="loop__sub">
-        <text x="71" y="56">rows change</text>
-        <text x="231" y="56">per row, on write</text>
-        <text x="397" y="56">the staleness check</text>
-        <text x="543" y="56">11.3 s</text>
-      </g>
-
-      <text className="loop__note" x="300" y="92">WHAT THIS TAB SHOWS YOU, AND WHY EACH ONE MATTERS</text>
-
-      <g className="loop__node">
-        <rect x="12" y="104" width="182" height="46" rx="6" />
-        <rect x="210" y="104" width="182" height="46" rx="6" />
-        <rect x="408" y="104" width="180" height="46" rx="6" />
-      </g>
-      <g className="loop__label">
-        <text x="103" y="122">last run per source</text>
-        <text x="301" y="122">calibration table</text>
-        <text x="498" y="122">live log tail</text>
-      </g>
-      <g className="loop__sub">
-        <text x="103" y="136">rows, duration, sha256</text>
-        <text x="301" y="136">accuracy per deal point</text>
-        <text x="498" y="136">JSON lines, filterable</text>
-        <text x="103" y="146">— did the data land?</text>
-        <text x="301" y="146">— what may we claim?</text>
-        <text x="498" y="146">— what is it doing now?</text>
-      </g>
-
-      <text className="loop__note" x="300" y="180">
-        logs are JSON lines rather than prose so this tab can filter them without parsing English
-      </text>
-      <text className="loop__note" x="300" y="194">
-        and secrets are stripped by a log processor, not by remembering to sanitise at each call
-        site
       </text>
     </svg>
   )

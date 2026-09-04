@@ -190,22 +190,6 @@ cubes:
           THE DENOMINATOR — how many agreements are in the current selection. This is the
           number that must accompany every figure the product reports. Unfiltered it is 152.
 
-      - name: with_industry_n
-        type: count
-        filters:
-          - sql: "{CUBE}.folio_industry_code IS NOT NULL"
-        description: >-
-          Agreements that could be classified into an industry, 134 of 152. Use as the
-          denominator when reporting an industry breakdown, so the 18 unclassified matters are
-          visible rather than silently dropped.
-
-      - name: with_signing_date_n
-        type: count
-        filters:
-          - sql: "{CUBE}.signing_date IS NOT NULL"
-        description: Agreements with a signing date, 149 of 152. The denominator for anything
-          reported over time.
-
   - name: folio_concepts
     sql_table: public.folio_concepts
     description: >-
@@ -279,7 +263,6 @@ views:
           - has_industry
           - is_inferred_industry
           - n
-          - with_industry_n
       - join_path: matters.folio_concepts
         includes:
           - code

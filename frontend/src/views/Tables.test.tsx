@@ -85,3 +85,20 @@ describe('deep-linkable state', () => {
     expect(window.location.search).toContain('table=matters')
   })
 })
+
+/**
+ * Relocated from Admin.test.tsx in #45. The claim was pinned on `ArchitectureDiagram`'s
+ * description, which that issue deleted; it survives here, where CUAD is actually on screen.
+ * Overstating a loaded-but-unqueried corpus as a working input is the exact species of quiet
+ * error this product exists to refuse, so it keeps a test wherever the prose lives.
+ */
+describe('CUAD is not overstated (#35, moved in #45)', () => {
+  it('says CUAD is loaded and that no other tab queries it', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Tables />)
+    fireEvent.click(await screen.findByRole('button', { name: /what this tab is for/i }))
+    const explainer = document.querySelector('.explain__prose')
+    expect(explainer?.textContent ?? '').toMatch(/CUAD is loaded and no other tab queries it/i)
+  })
+})

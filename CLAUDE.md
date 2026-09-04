@@ -88,9 +88,13 @@ light** — canvas `#f6f8fa`, panels `#ffffff`, hairlines `#d1d9e0`, ink `#1f232
 decoratively. Dense, quiet, precise. It should read as an instrument.
 
 Light, not dark, because Deal Terms is a *reading* surface: dense monospace contract prose at
-12–13px is materially easier to read dark-on-light. `docs/DESIGN.md` (Linear) still governs
-spacing, density, and component shape — **its colour values are superseded**. Do not restore
-the dark palette.
+12–13px is materially easier to read dark-on-light. Do not restore the dark palette.
+
+`docs/DESIGN.md` was a vendored 3,031-word spec for Linear's dark marketing site; #45 replaced
+it with a one-page note recording the density and component-shape rules the code actually
+follows — 4px base unit, one 6px radius, hairline borders and no elevation scale — and pointing
+at `tokens.css` as the authority. It is a summary of the code, not a spec the code owes
+anything to. When the two disagree, `tokens.css` is right and `DESIGN.md` is stale.
 
 Every ink token clears WCAG 2.1 AA on `--surface-1`; `--ink-tertiary` (#6e7781, 4.6:1) is the
 floor and carries the sample-size meta lines. Nothing lighter ships. No new hardcoded hex in
@@ -165,7 +169,7 @@ backend/explorer/
 cube/model/   the governed metric vocabulary — measure names are the eval's label space
 frontend/src/
   views/      Explore · DealTerms · Coverage · Tables · Admin · Label
-  components/ design-system primitives from docs/DESIGN.md
+  components/ design-system primitives; tokens in styles/tokens.css
 data/         downloaded corpora (gitignored; provenance in docs/provenance.md)
 docs/results/ committed eval + calibration output
 ```

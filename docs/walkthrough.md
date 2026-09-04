@@ -218,3 +218,163 @@ document itself would be. At a firm, that is a confidentiality control, not a ni
 
 Full transcripts: [`docs/results/walkthrough-script1.txt`](results/walkthrough-script1.txt),
 [`script2`](results/walkthrough-script2.txt), [`script3`](results/walkthrough-script3.txt).
+
+---
+
+# Why it is built this way
+
+These arguments used to live in the app, as explainer prose on each tab — about 2,900 words of
+essay across six components, more than the README. #45 cut each tab's explainer to what the tab
+is for and its one honest limit, roughly 120 words. Nothing true was deleted; it moved here,
+where a reader who wants the whole argument can read it in one place instead of assembling it
+from six collapsed panels. Every number below is the number the UI carried, from the same
+command that produced it above.
+
+## Explore — why an ontology instead of a keyword search
+
+Filtering joins on a concept **code**, not a display label. A label can drift — "Health Care
+Industry" versus "Healthcare" — and a near-miss returns zero results, which reads identically to
+*"we have no comparable deals"*. That is the most dangerous failure this product can have,
+because it is a wrong answer that looks like a finding. A code cannot drift.
+
+FOLIO's hierarchy is loaded and the query walks it, but on this corpus every matter sits at the
+same level, so the walk currently returns exactly what an equality match would. The
+pharma-and-devices grouping happens in a checked-in SIC crosswalk, not in the ontology. This
+paragraph is why `ExploreDiagram` — whose subject was that hierarchy roll-up — was deleted
+rather than left sitting above two paragraphs that no longer mention it.
+
+Facet values with nothing behind them stay visible but disabled: what the corpus *lacks* is
+information too.
+
+## Deal Terms — what a deal point is, and why counts rather than percentages
+
+One negotiated provision, written as a question with a fixed answer set. The American Bar
+Association maintains 92 of them for public-target deals — *public target* meaning the company
+being acquired is publicly traded, which is why these agreements are public records at all.
+Examples: does the target's board keep a fiduciary out, letting it change its recommendation if
+a better offer arrives? Is there a reverse termination fee — what the buyer pays to walk away?
+Is knowledge *Actual* or *Constructive*?
+
+Every two years the ABA publishes its Public Target Deal Points Study: a committee reads a
+sample by hand and reports how often each provision appears. Lawyers cite it to argue what is
+*market* — "a 3.5% reverse termination fee is above market at this size." It is the reference
+work, it is built by hand, and nobody made it queryable.
+
+Below a sample of 30 a row renders "6 of 8", never "75%". A percentage implies a precision eight
+deals cannot support, and reporting one as though it were market is the specific failure this
+domain punishes. The switch is decided **per row**, on how many of the selected deals answer
+*that* question — not on the size of the selection, because those are different numbers.
+
+Two more rules. A deal point that *no* deal in the set has still appears, as "0 of 8" — absence
+is a finding, and a missing row would read as "nobody asked". And medians are true percentiles,
+never averages: on this corpus the mean and median reverse termination fee diverge
+substantially, and the mean is the number that looks right and is wrong.
+
+## Coverage — why refusing is a feature, and one judgement call
+
+One threshold does three jobs at once. *Statistical honesty* — a median over three deals is not
+market. *Extraction confidence* — where accuracy has been measured, 4 of the 5 deal points
+tested fall below the reporting gate, and a thin slice is exactly where that bites. And
+*k-anonymity*: an analyst who can filter until one deal remains has extracted a single client's
+negotiated term through the analytics layer without ever opening a document. In a firm that is a
+confidentiality control, not a nicety.
+
+The gate is server-side. Not a hidden button — the API refuses too, a raw `curl` gets the same
+refusal, and there is a test whose entire job is to prove it (script 3 above runs it).
+
+"Health Care" here groups pharma, biotech, devices and contract research organisations, which
+the standard industry classification does not. That grouping is *our* definition: it produces 25
+matters where the standard one produces 3. A partner asking for healthcare comparables means the
+25 — but it is a departure, and the UI says so wherever it appears.
+
+## Tables — why clauses have no matter, and what the provenance rule buys
+
+CUAD's 510 commercial contracts are deliberately *not* rows in `matters`. If they were, every
+facet count that reads as "comparable deals" would be inflated by 510 documents that are not
+deals. So `clauses.matter_id` is NULL, and those rows stand on their own source file and title.
+
+Sorting and filtering happen on the server and the state is mirrored into the URL, so a row you
+found is a link you can send. Every table marks which of its columns are *inferred* rather than
+expert-labelled — that distinction is the largest source of quiet error in a system like this,
+so it lives in the schema rather than only in documentation.
+
+The rule this tab lets you test: a row whose text cannot be traced to a byte range in a
+downloaded file is a bug. Clause rows carry their source file and character offsets; open the
+file at those offsets and you get exactly that text, never a paraphrase. 3.8% of deal points
+have no located span at all, and they store NULL rather than a nearest guess — a wrong offset
+opens the wrong clause and looks completely right.
+
+## Admin — idempotent ingest, freshness, and reading calibration expecting bad news
+
+Loads are idempotent, so re-running is safe — and unchanged rows are deliberately not rewritten,
+because the semantic layer decides whether its cached answers are stale by looking at the newest
+change timestamp. An unconditional rewrite would make a no-op reload invalidate every cached
+figure in the product.
+
+**Freshness.** Writes stamp each changed row; the semantic layer polls the maximum of those
+stamps and recomputes when it moves. Measured delay between a write and a fresh aggregate:
+**11.3 seconds**. Worth knowing before you re-ingest and wonder why a number has not moved.
+`AdminDiagram` drew that chain — ingest run → `updated_at` → `MAX(updated_at)` → recompute —
+and was deleted when this paragraph moved here.
+
+**Calibration.** MAUD's answers were written by lawyers, so they are ground truth, not model
+output. That makes it possible to run an extractor over agreements deliberately held back,
+compare its answers to the human ones, and publish accuracy *per deal point* with a confidence
+interval. That is what makes "this works on documents nobody annotated" a testable claim instead
+of a sales line. Of the 5 deal points measured so far, 4 fall below the 0.7 reporting gate —
+accuracies of 0.50, 0.30, 0.30 and 0.20 against one of 0.95. A calibration where everything
+passes is usually a calibration that was not run honestly.
+
+**Logs** are structured JSON lines rather than prose, which is why the tab can filter them
+without parsing English. Every request carries an id that follows it down the call stack.
+Secrets are stripped by a processor in the logging pipeline rather than by remembering to
+sanitise at each call site — a credential must not be able to reach the log because one caller
+forgot.
+
+## Overview — how a query finds documents
+
+Vector search alone misses the things legal text is full of — party names, defined terms,
+section references — because embeddings capture meaning and those are exact tokens. Keyword
+search alone misses paraphrase. So both run, and the results are fused.
+
+The step worth looking at is the **normalization**. BM25 scores are unbounded and
+query-dependent while cosine similarities sit in roughly [0, 1], so adding them raw is not a
+weighted blend at all: BM25 swamps the vector term and the alpha weight silently stops meaning
+anything. Both sides are min-max normalized per query before they are combined, and
+`backend/tests/test_hybrid_retrieval.py` asserts it. `HybridRetrievalDiagram` drew this
+paragraph and was deleted with it.
+
+The embedding cache is content-addressed and committed, so a clone with no API key gets
+identical retrieval results to one with a key. Warming the cache is an explicit command, never a
+side effect of serving a request.
+
+## Semantic Layer — what the governed route buys, and what it does not
+
+If the model writes SQL freely it picks both the answer and the definition of the answer, and
+you are left comparing two plausible queries with no way to score either. Constraining it to a
+published vocabulary makes correctness a single discrete question: did it pick the right measure
+and filters? That is gradeable offline — no database, no model. The same discipline gives
+`min_n` somewhere to stand: the gate applies to the resolved query, whoever assembled it.
+
+The measures are defined over MAUD's expert annotations, so the numbers are lawyer-labelled
+data, not model output. The vocabulary, the routing argument and the refusal behaviour are all
+keyless; a key is needed only to run a live selection.
+
+## Label — why these items, and why the loop is not closed
+
+Two extractors read the same contract: a language model, whose predictions were recorded to disk
+in an earlier run, and a keyword baseline that costs nothing to run. Where they disagree, at
+least one is wrong. That is the cheapest useful ranking signal available — it needs no
+calibrated confidence score, which is convenient, because producing a trustworthy confidence
+score is the very thing we have not done yet.
+
+Each decision writes one row to `labels`, and **nothing reads that table yet**. Calibration
+grades the extractor against MAUD's own answers in `deal_points`, not against the review, so a
+keystroke here does not currently move any number in the product.
+
+On this corpus it could not. Every queued item is one of the 20 held-out matters — documents
+MAUD already has a lawyer's answer for. Reviewing a prediction where gold already exists tells
+you nothing gold did not. This tab is the mechanism you would need on *un-annotated* firm
+documents, demonstrated on a corpus that does not need it. Closing the loop means teaching
+calibration to prefer a human label over a gold one where the two disagree, which is only
+meaningful once there are documents with no gold at all.

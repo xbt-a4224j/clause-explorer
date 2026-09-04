@@ -55,8 +55,16 @@ describe('Overview', () => {
     vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1, clauses: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
+    // Two, not three, since #45: `HybridRetrievalDiagram` was deleted along with the
+    // normalization paragraph it drew, which moved to docs/walkthrough.md.
     const figures = screen.getAllByRole('img')
-    expect(figures).toHaveLength(3)
+    expect(figures).toHaveLength(2)
+    // #45 also deleted Admin's ArchitectureDiagram, so this is now the only whole-system
+    // drawing in the app — the "two independent read paths" claim has nowhere else to live.
+    const system = screen.getByRole('img', { name: /how the system is put together/i })
+    expect(system.textContent).toMatch(/two independent read paths/i)
+    expect(system.textContent).toMatch(/keyword and vector search/i)
+    expect(system.textContent).toMatch(/semantic layer/i)
     for (const fig of figures) {
       expect(fig).toHaveAccessibleName()
       expect(fig).toHaveAccessibleDescription()

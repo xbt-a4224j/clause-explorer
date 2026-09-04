@@ -231,10 +231,6 @@ kbd {
 }
 
 .card__detail { padding: 0 var(--pad-md) var(--pad-md); border-top: 1px solid var(--hairline); }
-.card__dl { display: grid; grid-template-columns: auto 1fr; gap: var(--pad-sm) var(--pad-md); font-size: 11px; padding-top: var(--pad-md); }
-.card__dl dt { color: var(--ink-muted); }
-.card__dl dd { font-family: var(--font-mono); }
-.card__note { font-size: 11px; color: var(--ink-tertiary); margin-top: var(--pad-sm); }
 
 /* loading / empty / refusal are three distinct designed states */
 .state { padding: var(--pad-lg) var(--pad-lg); border: 1px dashed var(--hairline); border-radius: var(--radius); text-align: center; }
@@ -370,13 +366,6 @@ kbd {
 .drill__head { display: flex; justify-content: space-between; gap: var(--pad-md); align-items: baseline; }
 .drill__party { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .explore__corpus { font-size: 11px; color: var(--ink-muted); letter-spacing: 0.02em; }
-.card__terms { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 var(--pad-md) var(--pad-sm); }
-.card__term {
-  display: inline-flex; gap: 5px; align-items: baseline;
-  padding: 1px 6px; border: 1px solid var(--hairline); border-radius: var(--radius);
-  font-size: 10px; color: var(--ink-subtle);
-}
-.card__termname { color: var(--ink-tertiary); }
 
 /* ---- Coverage (#22) --------------------------------------------------------------------- */
 
@@ -422,22 +411,7 @@ kbd {
 .state--refusal { border-left: 2px solid var(--accent); background: var(--surface-1); }
 .term__display--low_confidence { color: var(--ink-tertiary); font-style: italic; }
 
-/* ---- ResolvedQuery (#26) ------------------------------------------------------------------ */
-.resolved {
-  font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted);
-  line-height: 1.6; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px;
-}
-.resolved__measure { color: var(--ink); font-weight: 500; }
-.resolved__raw { color: var(--ink-tertiary); text-decoration: line-through; }
-.resolved__value { color: var(--ink); }
-.resolved__inferred { color: #9a6700; font-weight: 500; }
-.resolved__edit {
-  margin-left: 6px; padding: 1px 6px;
-  background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius);
-  color: var(--ink-muted); font: inherit; font-size: 10px; cursor: pointer;
-}
-.resolved__edit:hover { border-color: var(--accent); color: var(--accent); }
-.resolved__edit:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* ResolvedQuery (#26) was deleted; its 6 orphaned selectors went with it in #45. */
 
 /* ---- Label (#29) ------------------------------------------------------------------------- */
 .label { display: flex; flex-direction: column; gap: var(--pad-md); max-width: 42rem; }
@@ -769,50 +743,6 @@ kbd {
   display: block; margin-top: 3px; font-family: var(--font-sans);
   font-size: 10px; line-height: 1.5; color: var(--ink-tertiary);
 }
-
-/* ── Architecture diagram (#35) ──────────────────────────────────────────────────────────
-   Standalone on Admin rather than inside the collapsible explainer: it is a reference a
-   reader returns to, not something read once and folded away. */
-.arch__panel {
-  border: 1px solid var(--hairline); border-radius: var(--radius);
-  background: var(--surface-1); padding: var(--pad-md);
-}
-.arch__intro {
-  margin: 4px 0 var(--pad-md); max-width: 52rem;
-  font-size: 12px; line-height: 1.55; color: var(--ink-subtle);
-}
-.arch__intro strong { color: var(--ink); font-weight: 500; }
-/* Capped at its authored width, like every other diagram here (LoopDiagram is 600px on a 600
-   viewBox). Uncapped, `width: 100%` scaled a 1000-unit viewBox to ~2000px on a wide monitor and
-   rendered 11px labels at 22px — the diagram read as a poster rather than a reference.
-   min-width keeps it legible on narrow screens by scrolling instead of shrinking the type. */
-.arch__scroll { overflow-x: auto; }
-.arch { width: 100%; min-width: 900px; max-width: 1000px; height: auto; display: block; }
-
-.arch__box rect   { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; }
-.arch__box2 rect  { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; }
-.arch__store rect { fill: #e8eef5; stroke: #9db8d0; stroke-width: 1; }
-.arch__inner rect { fill: var(--surface-1); stroke: var(--hairline); stroke-width: 1; }
-/* gold vs inferred is a fill AND a stroke pattern — colour alone is not an accessible cue */
-.arch__gold rect     { fill: var(--surface-2); stroke: #1a6b34; stroke-width: 1.5; }
-.arch__inferred rect { fill: #fff8e5; stroke: #9a6700; stroke-width: 1.5; stroke-dasharray: 4 2; }
-.arch__gate rect     { fill: #fff8e5; stroke: #9a6700; stroke-width: 1.5; }
-.arch__agent rect    { fill: var(--surface-2); stroke: var(--hairline-strong); stroke-dasharray: 4 2; }
-.arch__rule rect     { fill: var(--surface-2); stroke: var(--hairline); }
-
-.arch__edge path { fill: none; stroke: var(--hairline-strong); stroke-width: 1; }
-.arch__band {
-  fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9.5px;
-  letter-spacing: 0.07em; text-anchor: start;
-}
-.arch__lbl  { fill: var(--ink); font-family: var(--font-sans); font-size: 11.5px; text-anchor: middle; }
-.arch__tbl  { fill: var(--ink); font-family: var(--font-mono); font-size: 10px; text-anchor: middle; }
-.arch__sub  { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9.5px; text-anchor: middle; }
-.arch__note { fill: var(--ink-tertiary); font-family: var(--font-sans); font-size: 9px; font-style: italic; text-anchor: middle; }
-.arch__legend { fill: var(--ink-subtle); font-family: var(--font-sans); font-size: 9px; text-anchor: start; }
-/* ingested with full provenance, but no endpoint queries it — CUAD today. Faded plus an
-   explicit label, because fading alone reads as a rendering accident. */
-.arch__dormant rect { fill: var(--surface-2); stroke: var(--hairline); stroke-width: 1; opacity: 0.55; }
 
 /* ── Overview (#39) ──────────────────────────────────────────────────────────────────────
    The only tab that argues rather than demonstrates, so it reuses the Semantic Layer pane

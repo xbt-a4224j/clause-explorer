@@ -86,31 +86,19 @@ export function SemanticLayer() {
       >
         <p>
           <strong>What this tab is for.</strong> Showing what the language model is and is not
-          allowed to do. Ask a question in plain English and something has to decide which
-          number answers it. The model makes that decision — it is a <em>router</em>, not a
-          calculator. Every number on this screen is computed by Postgres.
-        </p>
-        <p>
-          <strong>Why that is worth the trouble.</strong> If the model writes SQL freely, it
-          picks both the answer and the definition of the answer, and you are left comparing
-          two plausible queries with no way to score either. Constraining it to a published
-          vocabulary makes correctness a single discrete question: did it pick the right
-          measure and filters? That is gradeable offline — no database, no model. The same
-          discipline gives <Term>min_n</Term> somewhere to stand: the gate is applied to the
-          resolved query, whoever assembled it.
+          allowed to do. It is a <em>router</em>, not a calculator: it picks a measure and
+          filters from the published vocabulary below, and Postgres computes every number on
+          this screen. Correctness is then one discrete question — did it pick the right
+          measure and filters — gradeable offline with no database and no model. It also gives{' '}
+          <Term>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
+          assembled it. <span data-testid="keyless-note">No API key is needed for any of that.</span>
         </p>
         <p data-testid="relocated-risk">
-          <strong>What this does not fix.</strong> The risk moves; it does not disappear. A{' '}
-          <em>wrong selection returns a real number for the wrong question</em>, which is
-          harder to spot than an obvious error. The mitigation is the resolved query line
-          shown above every answer, which puts the interpretation in front of the one person
-          qualified to catch it.
-        </p>
-        <p data-testid="keyless-note">
-          <strong>No API key needed for any of this.</strong> The vocabulary, the routing
-          argument and the refusal behaviour are all keyless. A key is needed only to run a
-          live selection. The measures are defined over <Term>MAUD</Term>&rsquo;s expert
-          annotations, so the numbers are lawyer-labelled data, not model output.
+          <strong>The limit.</strong> The risk moves, it does not disappear: a{' '}
+          <em>wrong selection returns a real number for the wrong question</em>, which is harder
+          to spot than an obvious error. The only mitigation is the resolved query line shown
+          above every answer, which puts the interpretation in front of the one person qualified
+          to catch it.
         </p>
       </ExplainerPanel>
 
