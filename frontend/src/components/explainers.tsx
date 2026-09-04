@@ -93,10 +93,26 @@ export function TablesExplainer() {
         Every table marks which columns are <em>inferred</em> rather than expert-labelled.
       </p>
       <p>
-        <strong>The limit.</strong> CUAD is loaded and no other tab queries it;{' '}
-        <code>clauses.matter_id</code> is NULL by design, so 510 commercial contracts cannot
-        inflate a count that reads as &ldquo;comparable deals&rdquo;. 3.8% of deal points have no
-        located span and store NULL rather than a nearest guess.
+        <strong>What the five tables are.</strong> <code>matters</code> is the universe of
+        comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
+        agreement per ABA question, 12,937 of them. <code>folio_concepts</code> is the
+        18,259-concept legal ontology supplying the industry vocabulary. <code>labels</code>
+        records human review decisions. <code>ingest_runs</code> records what was loaded, when,
+        how long it took and with what checksum.
+      </p>
+      <p>
+        <strong>What to look for.</strong> Sorting and filtering happen on the server, and the
+        state is mirrored into the URL, so a row you found is a link you can send. Every table
+        marks which of its columns are <em>inferred</em> rather than expert-labelled — that
+        distinction is the largest source of quiet error in a system like this, so it is in the
+        schema rather than only in documentation.
+      </p>
+      <p>
+        <strong>The provenance rule this tab lets you test.</strong> A row whose text cannot be
+        traced to a byte range in a downloaded file is a bug. Deal-point rows carry their source
+        file and character offsets; open the file at those offsets and you get exactly that text, never
+        a paraphrase. 3.8% of deal points have no located span at all, and they store NULL rather
+        than a nearest guess — a wrong offset opens the wrong clause and looks completely right.
       </p>
     </>
   )

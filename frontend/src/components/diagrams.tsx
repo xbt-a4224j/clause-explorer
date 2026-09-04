@@ -196,7 +196,7 @@ export function CoverageDiagram() {
   )
 }
 
-/** Tables — the six tables and why this tab exists. */
+/** Tables — the five tables and why this tab exists. */
 export function TablesDiagram() {
   return (
     <svg
@@ -206,21 +206,18 @@ export function TablesDiagram() {
       aria-labelledby="tb-t tb-d"
       preserveAspectRatio="xMinYMin meet"
     >
-      <title id="tb-t">The six tables and how they connect</title>
+      <title id="tb-t">The five tables and how they connect</title>
       <desc id="tb-d">
         Matters is the universe of comparable deals. Each matter has many deal points, one per
-        ABA question. Clauses come from a separate commercial-contract corpus and deliberately do
-        not become matters. FOLIO concepts supply the industry vocabulary that matters and clauses
-        reference. Labels record human review decisions. Ingest runs record what was loaded, when,
-        and with what checksum.
+        ABA question. FOLIO concepts supply the industry vocabulary that matters reference.
+        Labels record human review decisions. Ingest runs record what was loaded, when, and with
+        what checksum.
       </desc>
       <Arrow id="tb-a" />
 
       <g className="loop__edges" markerEnd="url(#tb-a)">
         <path d="M232,50 H196" />
         <path d="M368,50 H404" />
-        <path d="M300,72 V104" />
-        <path d="M232,124 H196" />
       </g>
 
       <g className="loop__node loop__node--key">
@@ -229,33 +226,26 @@ export function TablesDiagram() {
       <g className="loop__node">
         <rect x="60" y="30" width="136" height="40" rx="6" />
         <rect x="404" y="30" width="136" height="40" rx="6" />
-        <rect x="232" y="104" width="136" height="40" rx="6" />
-        <rect x="60" y="104" width="136" height="40" rx="6" />
-        <rect x="404" y="104" width="136" height="40" rx="6" />
+        <rect x="140" y="104" width="136" height="40" rx="6" />
+        <rect x="324" y="104" width="136" height="40" rx="6" />
       </g>
 
       <g className="loop__label">
         <text x="300" y="48">matters</text>
         <text x="128" y="48">deal_points</text>
         <text x="472" y="48">folio_concepts</text>
-        <text x="300" y="122">clauses</text>
-        <text x="128" y="122">labels</text>
-        <text x="472" y="122">ingest_runs</text>
+        <text x="208" y="122">labels</text>
+        <text x="392" y="122">ingest_runs</text>
       </g>
       <g className="loop__sub">
         <text x="300" y="62">152 · the deal universe</text>
         <text x="128" y="62">12,937 · one per question</text>
         <text x="472" y="62">18,259 · the vocabulary</text>
-        <text x="300" y="136">13,823 · matter_id NULL</text>
-        <text x="128" y="136">your review decisions</text>
-        <text x="472" y="136">what loaded, when, sha256</text>
+        <text x="208" y="136">your review decisions</text>
+        <text x="392" y="136">what loaded, when, sha256</text>
       </g>
 
       <text className="loop__note" x="300" y="172">
-        clauses carry no matter_id on purpose — 510 commercial contracts inside “comparable deals”
-        would inflate every facet count
-      </text>
-      <text className="loop__note" x="300" y="186">
         this tab exists so nobody has to open psql to check a number the app just showed them
       </text>
     </svg>

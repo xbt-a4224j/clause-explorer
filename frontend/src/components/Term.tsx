@@ -4,7 +4,7 @@ import { useState } from 'react'
  * Inline jargon definition (#35).
  *
  * The app was operable by someone who already knew the domain and unlearnable by anyone else:
- * MAUD, CUAD, FOLIO, deal point, public target and min_n all appeared as bare words. A reader
+ * MAUD, FOLIO, deal point, public target and min_n all appeared as bare words. A reader
  * should never have to leave the screen to find out what a word means.
  *
  * Definitions live in one module rather than being retyped per view, because the failure mode
@@ -16,10 +16,6 @@ export const GLOSSARY: Record<string, { short: string; long: string }> = {
   MAUD: {
     short: 'Merger Agreement Understanding Dataset',
     long: '152 public-target merger agreements from SEC filings, annotated by lawyers against the 92 ABA deal points. Public filings — not any firm’s own matter history. CC BY 4.0.',
-  },
-  CUAD: {
-    short: 'Contract Understanding Atticus Dataset',
-    long: '510 commercial contracts with 41 expert-annotated clause types. Deliberately kept out of the comparable-deals universe: 510 contracts inside “deals” would inflate every facet count.',
   },
   FOLIO: {
     short: 'Federated Open Legal Information Ontology',

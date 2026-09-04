@@ -32,11 +32,6 @@ const COUNTED = [
     label: 'deal points',
     note: 'the negotiated terms, modelled long',
   },
-  {
-    table: 'clauses',
-    label: 'clauses',
-    note: 'the text a figure drills through to',
-  },
 ] as const
 
 type Counts = Partial<Record<string, number>>

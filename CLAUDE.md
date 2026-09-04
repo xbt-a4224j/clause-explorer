@@ -35,7 +35,7 @@ measurable offline.
 
 ```
 MAUD (152 merger agreements · 47k expert labels · 92 ABA deal points · CC BY 4.0)
-CUAD (commercial contracts · 41 clause types)     FOLIO (18k legal concepts, OWL)
+FOLIO (18k legal concepts, OWL)
 EDGAR (SIC industry · deal value · dates · parties, for the same 152)
    │
    ▼  idempotent ingest, provenance recorded
@@ -125,9 +125,9 @@ the labels directly. Extraction is a *separate calibration experiment*: run our 
 held-out MAUD slice, compare to labels, publish the accuracy table. That is what makes the
 generalization claim testable instead of asserted.
 
-**FOLIO industry codes on CUAD are INFERRED.** CUAD ships no industry metadata. Label inferred
-fields as inferred in the schema, the Cube `description`, and the UI. Never present them as ground
-truth. This is the largest source of quiet error.
+**FOLIO industry codes are INFERRED.** Neither MAUD nor EDGAR ships a FOLIO code, so every one
+is classifier output. Label inferred fields as inferred in the schema, the Cube `description`, and
+the UI. Never present them as ground truth. This is the largest source of quiet error.
 
 **Filter *values* are not enum-constrained.** Measure and dimension *names* can be locked with
 structured-output enums. Values cannot — the model may emit `"Health Care"` when the data holds
@@ -160,7 +160,7 @@ log secrets or full document text. The Admin tab tails this file — that's why 
 
 ```
 backend/explorer/
-  ingest/     FOLIO loader, MAUD parser, EDGAR enrichment, CUAD parser, CLI
+  ingest/     FOLIO loader, MAUD parser, EDGAR enrichment, CLI
   folio/      ontology queries, hierarchy, code resolution
   retrieval/  embeddings + cache, BM25, hybrid, comparable ranking
   agent/      NL -> Cube selection (enum-constrained), filter-value resolution
@@ -185,11 +185,11 @@ docs/results/ committed eval + calibration output
 ## Provenance
 
 Every dataset records the exact download command, filename, byte size, and `shasum -a 256` in
-`docs/provenance.md`. Clause and deal-point rows carry `source_file`, `source_contract_title`,
+`docs/provenance.md`. Deal-point rows carry `source_file`, `source_contract_title`,
 `char_start`, `char_end`. A row whose text cannot be traced to a byte range in the downloaded
 source is a bug.
 
-MAUD and CUAD are CC BY 4.0; FOLIO is CC BY. Attribution belongs in `docs/provenance.md` and the
+MAUD is CC BY 4.0; FOLIO is CC BY. Attribution belongs in `docs/provenance.md` and the
 README.
 
 ---
