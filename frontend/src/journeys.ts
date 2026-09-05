@@ -55,16 +55,16 @@ export const JOURNEYS: readonly Journey[] = [
     today:
       'Search the document system by keyword, open eight agreements, read each no-shop section, build a table by hand.',
     steps: [
-      'Ask · the measure and the slice',
       'Explore · healthcare, all cash',
       'Deal Terms · roll the set up',
       'the clause, in the filing',
     ],
     outcome: 'Counts with their denominator, and the two deals that went the other way.',
     limit: null,
-    // #48: the journey begins where the question is put, not at the facet rail. The seed below
-    // still travels — Explore applies it when the second step lands there.
-    tab: 'ask',
+    // The journey begins where the question is put, but Ask has no free-text box until #47
+    // lands one. Until then "Run this" goes to Explore, where every step is performable; #47
+    // moves it to 'ask' in the same commit that gives Ask something to type into.
+    tab: 'explore',
     seed: {
       folio_industry_code: HEALTH_CARE,
       folio_industry_label: 'Health Care Industry',
@@ -81,8 +81,8 @@ export const JOURNEYS: readonly Journey[] = [
     steps: [
       'Admin · accuracy per deal point',
       'Label · disagreements first',
-      'decide, by keyboard',
-      'Admin · the number moves',
+      'accept, correct, edit or skip',
+      'Label · the panel says it went down',
     ],
     outcome:
       'Which questions the extractor may answer on un-annotated documents, and which it must decline — with the reviewer’s decisions graded into that number rather than filed away.',

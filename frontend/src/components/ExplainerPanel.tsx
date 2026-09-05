@@ -16,7 +16,7 @@ import type { ReactNode } from 'react'
  * it open.
  *
  * `<button aria-expanded>` rather than `<details>`: the tabs bind bare letter keys
- * (y/n/e/s, j/k, /) at the window, and a focused `<summary>` swallows Enter and Space in
+ * (j/k, /) at the window, and a focused `<summary>` swallows Enter and Space in
  * ways that differ across browsers. An explicit button keeps the keyboard contract legible.
  */
 

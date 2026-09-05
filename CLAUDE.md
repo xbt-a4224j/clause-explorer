@@ -61,7 +61,7 @@ and the coverage grid. It does **not** do retrieval, ranking, individual record 
 | **Coverage** | KM | industry × deal-size grid; **thin cells are the signal, style them prominently** |
 | **Tables** | you | browsable raw tables, sort/filter/paginate — so nobody opens psql |
 | **Admin** | you | ingest status, calibration table, eval results, **live log viewer** |
-| **Label** | KM | keyboard-driven labeling that feeds the review queue and re-calibration |
+| **Label** | KM | a review queue ranked by extractor disagreement; decisions are graded into the next calibration run |
 
 ## Hard constraints
 

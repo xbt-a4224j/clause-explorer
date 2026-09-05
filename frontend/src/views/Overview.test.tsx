@@ -125,9 +125,11 @@ describe('the two journeys (#40, cut to two in #48)', () => {
 
     expect(onStart).toHaveBeenCalledTimes(1)
     const journey = onStart.mock.calls[0][0]
-    // #48: the journey starts where the question is asked, not at the facet rail
-    expect(journey.tab).toBe('ask')
-    expect(journey.steps[0]).toMatch(/^Ask/)
+    // The journey belongs on Ask, but Ask has no free-text box until #47 lands one, and a
+    // "Run this" that drops someone on a tab where step one cannot be performed is worse than
+    // one extra click. #47 moves both of these to 'ask' in the commit that adds the box.
+    expect(journey.tab).toBe('explore')
+    expect(journey.steps[0]).toMatch(/^Explore/)
     // the seed still travels, so the Explore step of this journey arrives already narrowed
     expect(journey.seed).toMatchObject({
       folio_industry_label: 'Health Care Industry',
@@ -148,7 +150,9 @@ describe('the two journeys (#40, cut to two in #48)', () => {
     render(<Overview onStartJourney={() => {}} />)
     const card = screen.getByTestId('journey-trust-the-extractor')
     expect(card.textContent ?? '').not.toMatch(/half built|does not read them back/i)
-    // the card must name the payoff step, or "closed" is an assertion with nothing behind it
-    expect(within(card).getByText(/the number moves/i)).toBeInTheDocument()
+    // The card must name the payoff step, or "closed" is an assertion with nothing behind it.
+    // It also has to name the DIRECTION: the loop closing made the score worse, and a card that
+    // said only "the number moves" would let a reader assume it moved up.
+    expect(within(card).getByText(/went down/i)).toBeInTheDocument()
   })
 })

@@ -23,7 +23,7 @@ export const GLOSSARY: Record<string, { short: string; long: string }> = {
   },
   EDGAR: {
     short: 'the SEC’s public filing system',
-    long: 'Electronic Data Gathering, Analysis and Retrieval. Supplies industry code, dates and parties for the same 152 agreements. 134 of 152 resolved to an industry.',
+    long: 'Electronic Data Gathering, Analysis and Retrieval. Supplies industry code, dates and parties for the same 152 agreements. 139 of 152 resolved to an industry.',
   },
   'deal point': {
     short: 'one negotiated provision, as a question',
