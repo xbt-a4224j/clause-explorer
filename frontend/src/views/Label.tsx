@@ -27,20 +27,26 @@ export function Label() {
   const [editValue, setEditValue] = useState('')
   const [labelledThisSession, setLabelledThisSession] = useState(0)
   const [lastDecision, setLastDecision] = useState<Decision | null>(null)
+  const [queueError, setQueueError] = useState<string | null>(null)
 
   useEffect(() => {
-    // aborted like Coverage, DealTerms and Explore: without it the response can land after the
-    // view is gone and set state on an unmounted component (#38)
+    // aborted like DealTerms and Explore: without it the response can land after the view is
+    // gone and set state on an unmounted component (#38)
     const controller = new AbortController()
     fetch('/api/label/queue', { signal: controller.signal })
-      .then((r) => r.json())
-      .then(setQueue)
-      // swallow only the abort; a genuine failure keeps the behaviour this view already had
-      .catch(
-        ignoreAbort((e) => {
-          throw e
-        }),
-      )
+      .then(async (r) => {
+        const body = await r.json().catch(() => null)
+        if (!r.ok) {
+          // The API answers a missing predictions file with the command that writes it, so the
+          // message is passed through rather than replaced with a generic one.
+          throw new Error(body?.error?.message ?? body?.detail ?? `The queue answered ${r.status}.`)
+        }
+        setQueue(body as LabelQueueResponse)
+      })
+      // This used to rethrow, which put the failure in an unhandled promise rejection and left
+      // the skeleton up forever: the reviewer saw a loading state that never ended and no
+      // reason for it. A loading state that cannot finish is not a loading state.
+      .catch(ignoreAbort((e: Error) => setQueueError(e.message)))
     return () => controller.abort()
   }, [])
 
@@ -125,7 +131,21 @@ export function Label() {
 
       <LoopOutcome />
 
-      {!queue && <div className="skeleton skeleton--row" aria-label="loading queue" />}
+      {!queue && !queueError && (
+        <div className="skeleton skeleton--row" aria-label="loading queue" />
+      )}
+
+      {queueError && (
+        <div className="state state--error" data-testid="label-queue-error">
+          <h3 className="state__title">The review queue could not be loaded</h3>
+          <p className="state__body">{queueError}</p>
+          <p className="state__body">
+            The queue is built from the committed extractor predictions and the corpus&rsquo;s own
+            recorded answers, so there is nothing to show from cache — an empty queue and an
+            unreachable one are different statements, and this is the second.
+          </p>
+        </div>
+      )}
 
       {/* Three numbers over three different denominators: the whole queue, this page load, and
           the database. They must not share a sentence — that is what they used to do, and a
@@ -150,9 +170,11 @@ export function Label() {
       {queue && !item && (
         <div className="state state--empty">
           <h3 className="state__title">Queue is empty</h3>
+          {/* Same two scope words as the progress line above, so the same number does not go
+              by two different names on one screen. */}
           <p className="state__body">
             {labelledThisSession} reviewed since this page loaded, {queue.labelled_count}{' '}
-            recorded in total.
+            recorded in the database.
           </p>
         </div>
       )}

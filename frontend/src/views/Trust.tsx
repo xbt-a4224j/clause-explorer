@@ -32,36 +32,111 @@ import { IngestStatus, LogViewer } from '../components/operator'
  * put a test on the Label panel forbidding `/improved|better|▲|↑/`; the same test guards this
  * tab. A loop that only ever reported improvement is a loop nobody should believe.
  */
+/**
+ * One artefact this tab reads, and what to say when it is not there.
+ *
+ * Every section here renders null when its data is null, so with none of the three artefacts
+ * produced the tab was a lead paragraph promising "every figure below" and then nothing below
+ * it. On the one tab whose job is to show the evidence, a missing artefact is the finding.
+ *
+ * The `label` is this file's; the sentence naming the command comes from the API, which
+ * already answers a 404 with the file and the command that writes it. Restating those commands
+ * here would be a second copy of them, and the copy the reader sees would be the stale one.
+ */
+interface Artefact {
+  label: string
+  /** null until the request settles; the API's own message once it fails */
+  problem: string | null
+}
+
 export function Trust() {
   const [calibration, setCalibration] = useState<CalibrationResponse | null>(null)
   const [labels, setLabels] = useState<CalibrationLabels | null>(null)
   const [selection, setSelection] = useState<MeasureSelectionSummary | null>(null)
+  const [problems, setProblems] = useState<Record<string, string>>({})
+  const [pending, setPending] = useState(3)
 
   useEffect(() => {
     const controller = new AbortController()
-    const get = <T,>(path: string, set: (v: T | null) => void) =>
+    const get = <T,>(path: string, label: string, set: (v: T | null) => void) =>
       fetch(path, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((body) => set(body as T | null))
-        .catch(ignoreAbort(() => set(null)))
+        .then(async (r) => {
+          const body = await r.json().catch(() => null)
+          if (r.ok) {
+            set(body as T)
+            return
+          }
+          set(null)
+          setProblems((prev) => ({
+            ...prev,
+            [label]: String(body?.error?.message ?? body?.detail ?? `${path} answered ${r.status}`),
+          }))
+        })
+        .catch(
+          ignoreAbort((e: Error) => {
+            set(null)
+            setProblems((prev) => ({ ...prev, [label]: e.message }))
+          }),
+        )
+        .finally(() => {
+          if (!controller.signal.aborted) setPending((n) => n - 1)
+        })
 
-    get<CalibrationResponse>('/api/admin/calibration', setCalibration)
-    get<CalibrationLabels>('/api/admin/calibration-labels', setLabels)
-    get<MeasureSelectionSummary>('/api/admin/measure-selection', setSelection)
+    get<CalibrationResponse>('/api/admin/calibration', 'calibration accuracy', setCalibration)
+    get<CalibrationLabels>('/api/admin/calibration-labels', 'the label loop', setLabels)
+    get<MeasureSelectionSummary>(
+      '/api/admin/measure-selection',
+      'measure-selection quality',
+      setSelection,
+    )
     return () => controller.abort()
   }, [])
+
+  const missing: Artefact[] = Object.entries(problems).map(([label, problem]) => ({
+    label,
+    problem,
+  }))
+  const anything = calibration !== null || labels !== null || selection !== null
 
   return (
     <div className="trust">
       {/* The tab strip already says "where the model is trusted, and where it is not"
           directly above this, and this line opened by saying it again. What it is for is the
-          half a reader cannot get anywhere else: how to check any of it. */}
-      <p className="sem__pointer">
-        Every figure below is read from a committed artefact, with the command that produced it
-        named beside it. Nothing is recomputed when the tab opens, so this page and the repo
-        cannot disagree about what ran — which is what makes any of it checkable rather than
-        asserted.
-      </p>
+          half a reader cannot get anywhere else: how to check any of it. And it is not
+          rendered when there is nothing below it to describe. */}
+      {anything && (
+        <p className="sem__pointer" data-testid="trust-lead">
+          Every figure below is read from a committed artefact, with the command that produced
+          it named beside it. Nothing is recomputed when the tab opens, so this page and the
+          repo cannot disagree about what ran — which is what makes any of it checkable rather
+          than asserted.
+        </p>
+      )}
+
+      {pending > 0 && !anything && (
+        <div className="skeleton skeleton--row" aria-label="loading the committed artefacts" />
+      )}
+
+      {pending === 0 && missing.length > 0 && (
+        <section className="state state--empty" data-testid="trust-missing">
+          <h3 className="state__title">
+            {anything ? 'Some of the evidence has not been produced yet' : 'No evidence yet'}
+          </h3>
+          <p className="state__body">
+            This tab renders committed artefacts and computes nothing on request, so an artefact
+            that has not been written is a blank rather than a zero. Each one below says what to
+            run.
+          </p>
+          <dl className="trust__missing">
+            {missing.map((artefact) => (
+              <div key={artefact.label}>
+                <dt>{artefact.label}</dt>
+                <dd>{artefact.problem}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       <CostRow calibration={calibration} />
       <AccuracyChart calibration={calibration} />

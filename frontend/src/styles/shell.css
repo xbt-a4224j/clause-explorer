@@ -1172,3 +1172,10 @@ kbd {
   color: var(--ink-subtle); font-size: 12px; line-height: 1.7;
 }
 .trust__buckets .mono { color: var(--ink); }
+
+/* Trust's missing-artefact list. Same hairline vocabulary as every other designed state; the
+   API's own sentence carries the command, so this only has to stay readable. */
+.trust__missing { margin: var(--pad-sm) 0 0; font-size: 12px; }
+.trust__missing div { margin-bottom: var(--pad-sm); }
+.trust__missing dt { color: var(--ink); font-weight: 500; }
+.trust__missing dd { margin: 2px 0 0; color: var(--ink-subtle); line-height: 1.5; }

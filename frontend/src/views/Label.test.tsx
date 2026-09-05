@@ -557,3 +557,47 @@ describe('the editor offers the answers the deal point actually takes', () => {
     expect(screen.getByTestId('label-novocabulary')).toHaveTextContent(/no recorded answers/i)
   })
 })
+
+/**
+ * What the reviewer sees when the queue does not load.
+ *
+ * Found by aborting `/api/label/queue` and looking at the page: the skeleton stayed up
+ * forever, the rejection was rethrown into an unhandled promise, and nothing on screen said
+ * anything had gone wrong. A loading state that never ends is not a loading state.
+ */
+describe('the queue failing is a state, not a permanent skeleton', () => {
+  it('says the queue could not be loaded, and why', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/label/queue')) throw new Error('Failed to fetch')
+      return { ok: false, status: 404, json: async () => ({}) } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+    render(<Label />)
+
+    const error = await screen.findByTestId('label-queue-error')
+    expect(error).toHaveTextContent(/could not be loaded/i)
+    expect(error).toHaveTextContent(/Failed to fetch/)
+    expect(screen.queryByLabelText('loading queue')).not.toBeInTheDocument()
+  })
+
+  it('reports the reason the API gave when it answers with one', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/label/queue')) {
+        return {
+          ok: false,
+          status: 404,
+          json: async () => ({
+            error: { message: 'No recorded predictions yet — run the calibration recorder.' },
+          }),
+        } as Response
+      }
+      return { ok: false, status: 404, json: async () => ({}) } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+    render(<Label />)
+
+    expect(await screen.findByTestId('label-queue-error')).toHaveTextContent(
+      /No recorded predictions yet/,
+    )
+  })
+})

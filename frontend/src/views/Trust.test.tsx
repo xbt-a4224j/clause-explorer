@@ -377,3 +377,53 @@ describe('the loop diagram states the direction the numbers show', () => {
     expect(buckets).toHaveTextContent('reviewer differed and overwrote a correct answer')
   })
 })
+
+/**
+ * What Trust looks like before its artefacts exist.
+ *
+ * Found by intercepting `/api/admin/**` and looking at the page: every section returns null
+ * when its data is null, so the tab rendered a lead paragraph promising "every figure below"
+ * and then nothing below it — no loading state, no empty state, no error. On the one tab whose
+ * job is to show the evidence, a missing artefact has to be said out loud.
+ *
+ * The API already answers with the file and the command that writes it. The tab was throwing
+ * that away with `r.ok ? r.json() : null`.
+ */
+describe('missing artefacts are stated, not hidden', () => {
+  function mockMissing() {
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        error: {
+          message: `No such artefact yet — run a command and commit it. (${String(url)})`,
+        },
+      }),
+    }))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+  }
+
+  it('names each artefact that has not been produced, and how to produce it', async () => {
+    mockMissing()
+    render(<Trust />)
+    const missing = await screen.findByTestId('trust-missing')
+    expect(missing).toHaveTextContent(/calibration/i)
+    expect(missing).toHaveTextContent(/measure-selection/i)
+    expect(missing).toHaveTextContent(/run a command and commit it/i)
+  })
+
+  it('does not promise figures below when there are none', async () => {
+    mockMissing()
+    render(<Trust />)
+    await screen.findByTestId('trust-missing')
+    expect(screen.queryByTestId('trust-lead')).not.toBeInTheDocument()
+  })
+
+  it('says nothing about missing artefacts when they are all there', async () => {
+    mockApi()
+    render(<Trust />)
+    await screen.findByTestId('trust-accuracy')
+    expect(screen.queryByTestId('trust-missing')).not.toBeInTheDocument()
+    expect(screen.getByTestId('trust-lead')).toBeInTheDocument()
+  })
+})

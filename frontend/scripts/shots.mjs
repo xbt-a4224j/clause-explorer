@@ -93,9 +93,13 @@ const SHOTS = [
     name: 'refusal',
     tab: 'Ask',
     before: async (page) => {
-      await page.locator('.qb__example', { hasText: 'refused' }).first().click()
+      // Scoped to the builder. `.qb__run` is also the class on Ask's Interpret button, which
+      // sits above the builder on this tab — an unscoped locator matches it first and waits
+      // forever for a button that is disabled until someone types a question.
+      const builder = page.locator('[data-testid="query-builder"]')
+      await builder.locator('.qb__example', { hasText: 'refused' }).first().click()
       await page.waitForTimeout(300)
-      await page.locator('.qb__run').click()
+      await builder.locator('.qb__run').first().click()
       await page.waitForSelector('[data-testid="qb-refused"]', { timeout: 10000 })
     },
     callouts: [
