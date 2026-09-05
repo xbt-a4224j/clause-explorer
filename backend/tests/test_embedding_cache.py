@@ -1,6 +1,6 @@
 """Content-addressed embedding cache (#16).
 
-The point of this file is the **no-key path**. Retrieval, facets, coverage and every table
+The point of this file is the **no-key path**. Retrieval, facets, the rollup and every table
 view have to work with `OPENAI_API_KEY` unset, or the app cannot be run by anyone who clones
 it. That means embeddings are looked up by content hash from a committed cache, and the three
 interesting cases each have a defined behaviour:

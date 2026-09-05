@@ -1,4 +1,9 @@
-"""`GET /tables/*` — browsable raw data so nobody opens psql (#31). Explicitly requested.
+"""`GET /tables/*` — raw rows, read by the app rather than browsed by a person.
+
+#31 built this so nobody had to open psql, behind a Tables tab. #48 cut that tab: browsing raw
+rows is a convenience for whoever operates the thing, not a feature for a lawyer. The routes
+stay because Admin reads ingest status and the Overview corpus strip reads its counts through
+them. `/{table}/export.csv` went with the tab — the Tables view was its only caller.
 
 Every query here is built from a whitelist, never from the caller's string. The table name and
 every sortable/filterable column are checked against `information_schema` at import-adjacent
@@ -13,13 +18,10 @@ believe it received everything when it did not, which is a worse failure than a 
 
 from __future__ import annotations
 
-import csv
-import io
 from typing import Any
 
 import psycopg
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
 
 from explorer.api.settings import settings
 
@@ -164,43 +166,6 @@ def row_detail(table: str, row_id: str) -> dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail=f"No row {row_id!r} in {table!r}.")
     return _serialize(row)
-
-
-@router.get("/{table}/export.csv")
-def export_csv(
-    table: str,
-    sort: str | None = Query(default=None),
-    dir: str = Query(default="asc"),
-    filter_column: str | None = Query(default=None),
-    filter_value: str | None = Query(default=None),
-) -> StreamingResponse:
-    """Exports the current filtered view, not the whole table blindly — same filter/sort
-    contract as `/rows`, just without the pagination ceiling, capped instead at a much higher
-    row count as a safety valve against an accidental multi-hundred-thousand-row download."""
-    _require_table(table)
-    export_ceiling = 50_000
-    with psycopg.connect(settings.database_url, row_factory=psycopg.rows.dict_row) as conn:
-        where_sql, order_sql, params = _build_query(
-            conn, table, sort, dir, filter_column, filter_value
-        )
-        page = conn.execute(
-            f'SELECT * FROM "{table}"{where_sql}{order_sql} LIMIT %s',
-            [*params, export_ceiling],
-        ).fetchall()
-
-    buffer = io.StringIO()
-    if page:
-        writer = csv.DictWriter(buffer, fieldnames=list(page[0].keys()))
-        writer.writeheader()
-        for r in page:
-            writer.writerow(_serialize(r))
-    buffer.seek(0)
-
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"content-disposition": f'attachment; filename="{table}.csv"'},
-    )
 
 
 def _serialize(row: dict[str, Any]) -> dict[str, Any]:

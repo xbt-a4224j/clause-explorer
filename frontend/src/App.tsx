@@ -2,12 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { ignoreAbort } from './abort'
 import type { Journey, JourneySeed } from './journeys'
-import { Coverage } from './views/Coverage'
 import { Admin } from './views/Admin'
+import { Ask } from './views/Ask'
 import { Label } from './views/Label'
 import { Overview } from './views/Overview'
-import { SemanticLayer } from './views/SemanticLayer'
-import { Tables } from './views/Tables'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { useKeyboard } from './useKeyboard'
@@ -24,9 +22,10 @@ export function App() {
   const [showHelp, setShowHelp] = useState(false)
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
   const [selection, setSelection] = useState<string[]>([])
-  // A Coverage cell click or an Overview journey pre-filters Explore; Explore consumes and
-  // clears it. One channel for both, because they are the same act: arrive somewhere already
-  // narrowed rather than at an empty search box.
+  // An Overview journey pre-filters Explore; Explore consumes and clears it. The journey now
+  // starts on Ask (#48), so the seed can outlive a tab switch — it is applied whenever Explore
+  // next mounts, which is the journey's second step. Arrive already narrowed rather than at an
+  // empty search box.
   const [seed, setSeed] = useState<JourneySeed | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [healthError, setHealthError] = useState(false)
@@ -131,21 +130,12 @@ export function App() {
           />
         ) : active === 'deal-terms' ? (
           <DealTerms selection={selection} />
-        ) : active === 'coverage' ? (
-          <Coverage
-            onNavigateToExplore={(filters) => {
-              setSeed({ ...filters, consideration_type: null })
-              setActive('explore')
-            }}
-          />
         ) : active === 'label' ? (
           <Label />
         ) : active === 'admin' ? (
           <Admin />
-        ) : active === 'semantic-layer' ? (
-          <SemanticLayer />
-        ) : active === 'tables' ? (
-          <Tables />
+        ) : active === 'ask' ? (
+          <Ask />
         ) : (
           <p className="shell__pending">
             This view lands in its own issue. The shell, keyboard contract and health strip are

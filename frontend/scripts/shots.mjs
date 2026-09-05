@@ -72,17 +72,11 @@ const SHOTS = [
       { sel: '.dp__span', text: 'the file and the character range it came from' },
     ],
   },
-  {
-    name: 'coverage',
-    tab: 'Coverage',
-    callouts: [
-      { sel: '.cov__cell--thin', text: 'below threshold: shown, not smoothed. The gap is the finding' },
-      { sel: '.cov__note', text: 'deal size empty on all 152, said up front' },
-    ],
-  },
+  // The 'coverage' shot went with the Coverage tab in #48. Its argument — a gap is shown, not
+  // smoothed — is called out on the Explore shot above, which is now the only surface making it.
   {
     name: 'semantic-layer',
-    tab: 'Semantic Layer',
+    tab: 'Ask',
     callouts: [
       { sel: '.cat__list', text: 'the vocabulary the model may select from, read live from Cube' },
       { sel: '.qb__json', text: 'its output: a selection, never SQL. Gradeable offline' },
@@ -90,7 +84,7 @@ const SHOTS = [
   },
   {
     name: 'refusal',
-    tab: 'Semantic Layer',
+    tab: 'Ask',
     before: async (page) => {
       await page.locator('.qb__example', { hasText: 'refused' }).first().click()
       await page.waitForTimeout(300)

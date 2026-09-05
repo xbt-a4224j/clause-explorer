@@ -36,3 +36,18 @@ def test_healthz_status_is_degraded_when_a_dependency_is_down() -> None:
 def test_root_serves_the_app_shell() -> None:
     resp = client.get("/")
     assert resp.status_code == 200
+
+
+def test_no_route_outlives_the_surface_that_called_it() -> None:
+    """#48 cut the Coverage tab and the Tables tab from the UI.
+
+    `/coverage` had exactly one caller, the Coverage view, so the route goes with it.
+    `/tables/{table}/export.csv` had exactly one caller, `Tables.tsx:102`, so it goes too —
+    the rest of `/tables/*` stays, because Admin reads ingest status and the Overview corpus
+    strip reads its counts through that path. Asserted against the app's own route table so
+    it holds with no database.
+    """
+    paths = {getattr(route, "path", "") for route in app.routes}
+    assert not any(p == "/coverage" or p.startswith("/coverage/") for p in paths)
+    assert not any(p.endswith("export.csv") for p in paths)
+    assert "/tables/{table}/rows" in paths

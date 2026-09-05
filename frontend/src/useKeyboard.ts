@@ -4,8 +4,8 @@ import { useEffect } from 'react'
  * Global shortcut handling.
  *
  * The one rule that matters: shortcuts must not fire while the user is typing. Without the
- * editable-target guard, typing "3" into the search box jumps to the Coverage tab and the
- * demo dies on camera.
+ * editable-target guard, typing "3" into the search box jumps to another tab and the demo
+ * dies on camera.
  */
 function isEditable(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null

@@ -8,11 +8,17 @@ import { Term } from '../components/Term'
 import { Grading } from '../components/Grading'
 
 /**
- * Semantic Layer (#36).
+ * Ask (#36, renamed from Semantic Layer in #48).
  *
  * The product's central engineering claim lived only in the README: an agent answering
  * analytical questions has two independent ways to be wrong — the number, and the
  * *definition* of the number. This tab makes that inspectable.
+ *
+ * The old name described the mechanism rather than the act. This is where a question becomes
+ * a governed selection you can confirm, so it is named for what happens here and sits second
+ * in the bar. The semantic-layer argument is unchanged and still on the tab — it moved below
+ * the demonstration, which is where an argument belongs once the thing it argues for is on
+ * screen.
  *
  * The vocabulary is read live from Cube rather than checked in. A stale copy could disagree
  * with `cube/model/*.yml`, and then any selection failure becomes an unfalsifiable argument
@@ -37,7 +43,7 @@ function EntryList({ entries, testId }: { entries: CatalogEntry[]; testId: strin
   )
 }
 
-export function SemanticLayer() {
+export function Ask() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -75,32 +81,10 @@ export function SemanticLayer() {
   return (
     <div className="sem">
       <p className="sem__pointer">
-        This tab is the argument for why the figures on <strong>Deal Terms</strong> are
-        defensible. If you came to find comparable deals, that is <strong>Explore</strong>.
+        Assemble a question here and run it: a measure and a slice from the governed vocabulary,
+        the exact selection that will be sent, and a number with its sample size — or a refusal.
+        If you came to find comparable deals, that is <strong>Explore</strong>.
       </p>
-
-      <ExplainerPanel
-        id="semantic-layer"
-        title="What the semantic layer is for"
-        diagram={<RoutingDiagram />}
-      >
-        <p>
-          <strong>What this tab is for.</strong> Showing what the language model is and is not
-          allowed to do. It is a <em>router</em>, not a calculator: it picks a measure and
-          filters from the published vocabulary below, and Postgres computes every number on
-          this screen. Correctness is then one discrete question — did it pick the right
-          measure and filters — gradeable offline with no database and no model. It also gives{' '}
-          <Term>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
-          assembled it. <span data-testid="keyless-note">No API key is needed for any of that.</span>
-        </p>
-        <p data-testid="relocated-risk">
-          <strong>The limit.</strong> The risk moves, it does not disappear: a{' '}
-          <em>wrong selection returns a real number for the wrong question</em>, which is harder
-          to spot than an obvious error. The only mitigation is the resolved query line shown
-          above every answer, which puts the interpretation in front of the one person qualified
-          to catch it.
-        </p>
-      </ExplainerPanel>
 
       <section className="sem__pane" data-testid="catalog">
         <h3 className="sem__h">The vocabulary a selection may draw from</h3>
@@ -177,6 +161,34 @@ WHERE deal_point_name =
           </div>
         </div>
       </section>
+
+      {/*
+        #48: the argument, verbatim, below the demonstration rather than in front of it. The
+        panel id is the localStorage key and deliberately unchanged by the rename — a reader
+        who opened this explainer keeps it open.
+      */}
+      <ExplainerPanel
+        id="semantic-layer"
+        title="What the semantic layer is for"
+        diagram={<RoutingDiagram />}
+      >
+        <p>
+          <strong>What this tab is for.</strong> Showing what the language model is and is not
+          allowed to do. It is a <em>router</em>, not a calculator: it picks a measure and
+          filters from the published vocabulary above, and Postgres computes every number on
+          this screen. Correctness is then one discrete question — did it pick the right
+          measure and filters — gradeable offline with no database and no model. It also gives{' '}
+          <Term>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
+          assembled it. <span data-testid="keyless-note">No API key is needed for any of that.</span>
+        </p>
+        <p data-testid="relocated-risk">
+          <strong>The limit.</strong> The risk moves, it does not disappear: a{' '}
+          <em>wrong selection returns a real number for the wrong question</em>, which is harder
+          to spot than an obvious error. The only mitigation is the resolved query line shown
+          above every answer, which puts the interpretation in front of the one person qualified
+          to catch it.
+        </p>
+      </ExplainerPanel>
     </div>
   )
 }

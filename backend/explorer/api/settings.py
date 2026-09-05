@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     excerpt_chars: int = 1200
 
     # Present only so generation and fresh embeddings can work. The app must boot and
-    # serve retrieval, facets, coverage and every table view without it.
+    # serve retrieval, facets, the rollup and every table view without it.
     openai_api_key: str | None = None
 
     @property

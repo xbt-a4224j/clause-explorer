@@ -1,24 +1,24 @@
 /**
- * The eight tabs, in demo order. Overview is first and is the landing tab (#39): every
+ * The six tabs, in demo order. Overview is first and is the landing tab (#39): every
  * other view assumes you already know what the system is, and a visitor who starts on
  * Explore sees a faceted search without ever learning that retrieval is hybrid or that
  * aggregate figures come from a governed semantic layer rather than from generation.
  *
- * Explore remains the entry point for demo script 1 — a partner who knows the product
- * should still land one key away from it.
+ * #48 cut two. Coverage answered "where is our experience thick or thin", a knowledge-
+ * management question rather than "what is market", and its one durable idea — that a gap
+ * is a finding — is demonstrated on Explore, where zero-count facet values stay visible and
+ * disabled with the reason stated. Tables existed so nobody had to open psql, which is a
+ * convenience for whoever operates the thing and the surface most likely to make a reader
+ * conclude this is a database browser with extra steps.
+ *
+ * Ask sits second, behind Overview. It was called Semantic Layer, which named the mechanism
+ * rather than the act; the semantic-layer argument still lives inside it, below the
+ * demonstration rather than in front of it.
  *
  * Order is load-bearing: the number-key shortcut is the index, so reordering this array
  * silently rebinds every shortcut.
  */
-export type TabId =
-  | 'overview'
-  | 'explore'
-  | 'deal-terms'
-  | 'coverage'
-  | 'semantic-layer'
-  | 'tables'
-  | 'admin'
-  | 'label'
+export type TabId = 'overview' | 'ask' | 'explore' | 'deal-terms' | 'admin' | 'label'
 
 export interface Tab {
   id: TabId
@@ -43,6 +43,13 @@ export const TABS: readonly Tab[] = [
     group: 'work',
   },
   {
+    id: 'ask',
+    label: 'Ask',
+    hint: 'a question becomes a governed number, or a refusal',
+    audience: 'partner',
+    group: 'work',
+  },
+  {
     id: 'explore',
     label: 'Explore',
     hint: 'find comparable deals',
@@ -55,27 +62,6 @@ export const TABS: readonly Tab[] = [
     hint: 'what was negotiated across a set',
     audience: 'partner',
     group: 'work',
-  },
-  {
-    id: 'coverage',
-    label: 'Coverage',
-    hint: 'where experience is thick or thin',
-    audience: 'km',
-    group: 'work',
-  },
-  {
-    id: 'semantic-layer',
-    label: 'Semantic Layer',
-    hint: 'how a question becomes a number',
-    audience: 'engineer',
-    group: 'under-the-hood',
-  },
-  {
-    id: 'tables',
-    label: 'Tables',
-    hint: 'browse the raw data',
-    audience: 'operator',
-    group: 'under-the-hood',
   },
   {
     id: 'admin',
@@ -94,7 +80,7 @@ export const TABS: readonly Tab[] = [
 ] as const
 
 export const SHORTCUTS: ReadonlyArray<[string, string]> = [
-  ['1 – 8', 'switch tab'],
+  ['1 – 6', 'switch tab'],
   ['/', 'focus search'],
   ['j / k', 'move through results'],
   ['Enter', 'open the focused result'],

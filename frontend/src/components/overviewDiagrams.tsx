@@ -2,7 +2,7 @@
  * The two Overview diagrams (#39, trimmed in #45).
  *
  * Deliberately NOT another drawing of the routing argument — that lives in `RoutingDiagram`
- * under Semantic Layer, and two diagrams making the same claim would invite the reader to
+ * under Ask, and two diagrams making the same claim would invite the reader to
  * look for a difference that is not there. These answer the two questions the other tabs
  * assume you have already asked: what is the shape of the system, and where does a displayed
  * figure come from.
@@ -54,8 +54,8 @@ export function SystemDiagram() {
         Postgres. Two independent read paths run off that store. The retrieval path combines keyword
         and vector search to find comparable matters and clauses. The semantic layer path answers
         aggregate questions: a model selects from a fixed catalog of named measures and Postgres
-        computes the figure. The Explore and Tables views sit on the retrieval path; Deal Terms and
-        Coverage sit on the semantic layer path. Nothing generates a number from free text.
+        computes the figure. Explore sits on the retrieval path; Ask and Deal Terms sit on the
+        semantic layer path. Nothing generates a number from free text.
       </desc>
 
       <defs>
@@ -104,10 +104,10 @@ export function SystemDiagram() {
           semantic layer
         </text>
         <text x="502" y="42">
-          Explore · Tables
+          Explore
         </text>
         <text x="502" y="122">
-          Deal Terms · Coverage
+          Ask · Deal Terms
         </text>
       </g>
 

@@ -16,8 +16,9 @@ identical once the row is gone, and only one of them is useful.
 selected matters with a labelled answer for that deal point — which is not the size of the
 selection, because MAUD does not answer every deal point for every agreement.
 
-Numbers come from Cube, never from SQL written here: the facet count, the rollup and the
-coverage grid have to mean the same thing, and that only holds if there is one definition.
+Numbers come from Cube, never from SQL written here: the facet count, the rollup and anything a
+selection on Ask computes have to mean the same thing, and that only holds if there is one
+definition.
 
 **`min_n` refusal (#23) — the single most important behavior in the product.** Below
 `settings.min_n` selected matters, both endpoints refuse before running any query. This is not
@@ -436,9 +437,9 @@ def drill(request: DrillRequest) -> DrillResponse:
     the associate this view exists to replace would still have to open eight agreements. So the
     text comes back with the source file and the character range it was taken from.
 
-    This reads Postgres rather than Cube deliberately. Cube's footprint is facet counts, the
-    rollup and the coverage grid; fetching individual records and their source spans is outside
-    it, and going through Cube for row-level text would put document text in the aggregate layer.
+    This reads Postgres rather than Cube deliberately. Cube's footprint is facet counts and the
+    rollup; fetching individual records and their source spans is outside it, and going through
+    Cube for row-level text would put document text in the aggregate layer.
 
     This is the sharper of the two k-anonymity risks: unlike the rollup, it returns a named
     matter's actual clause text. If the rollup refuses at n=3 but this did not, the gate would

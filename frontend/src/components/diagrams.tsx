@@ -8,8 +8,10 @@
  * There were five. #45 cut the explainer prose to what a tab is for plus its one honest limit,
  * and deleted the two diagrams whose argument no longer had prose beside it:
  * `ExploreDiagram` drew the FOLIO hierarchy roll-up, and `AdminDiagram` drew the
- * `MAX(updated_at)` freshness chain. Both paragraphs moved to `docs/walkthrough.md`. The three
- * below survive because the claims they draw are still stated in the explainer beside them.
+ * `MAX(updated_at)` freshness chain. Both paragraphs moved to `docs/walkthrough.md`. #48 then
+ * cut the Coverage and Tables tabs, and `CoverageDiagram` and `TablesDiagram` went with them —
+ * a diagram outlives its tab only if some other tab still makes its claim. One is left, and it
+ * survives because the claim it draws is still stated in the explainer beside it.
  *
  * Shared classes live in shell.css under the explainer section: .loop__edges, .loop__node,
  * .loop__label, .loop__sub, .loop__note.
@@ -97,156 +99,6 @@ export function DealTermsDiagram() {
       </text>
       <text className="loop__note" x="300" y="196">
         a missing row would read as “not asked”, which is a different and false claim
-      </text>
-    </svg>
-  )
-}
-
-/** Coverage — the grid, and the gate. */
-export function CoverageDiagram() {
-  return (
-    <svg
-      className="loop"
-      viewBox="0 0 600 214"
-      role="img"
-      aria-labelledby="cv-t cv-d"
-      preserveAspectRatio="xMinYMin meet"
-    >
-      <title id="cv-t">How the coverage grid decides what it will not answer</title>
-      <desc id="cv-d">
-        Every deal is placed in a cell by industry and period, producing a fifteen by three grid
-        of forty-five cells. Each cell is counted. Cells holding fewer than five deals are marked
-        insufficient to characterize and will refuse rather than report a figure. On the current
-        corpus thirty-three of forty-five cells refuse and only twelve are reportable. The
-        threshold is enforced on the server, so a direct API call is refused too.
-      </desc>
-      <Arrow id="cv-a" />
-
-      <g className="loop__edges" markerEnd="url(#cv-a)">
-        <path d="M120,44 H156" />
-        <path d="M282,44 H318" />
-        <path d="M444,44 H480" />
-      </g>
-
-      <g className="loop__node">
-        <rect x="12" y="24" width="108" height="40" rx="6" />
-        <rect x="156" y="24" width="126" height="40" rx="6" />
-        <rect x="318" y="24" width="126" height="40" rx="6" />
-        <rect x="480" y="24" width="108" height="40" rx="6" />
-      </g>
-
-      <g className="loop__label">
-        <text x="66" y="42">every deal</text>
-        <text x="219" y="42">industry × period</text>
-        <text x="381" y="42">count each cell</text>
-        <text x="534" y="42">n &lt; 5 ?</text>
-      </g>
-      <g className="loop__sub">
-        <text x="66" y="56">152 matters</text>
-        <text x="219" y="56">15 × 3 = 45 cells</text>
-        <text x="381" y="56">live, not precomputed</text>
-        <text x="534" y="56">the gate</text>
-      </g>
-
-      {/* the grid, with thin cells marked by pattern not colour alone */}
-      <g className="loop__node">
-        {[0, 1, 2].map((r) =>
-          [0, 1, 2, 3, 4, 5, 6, 7].map((c) => (
-            <rect key={`${r}-${c}`} x={130 + c * 42} y={100 + r * 26} width={38} height={22} rx={3} />
-          )),
-        )}
-      </g>
-      <g className="loop__node loop__node--out">
-        {[
-          [0, 1],
-          [0, 4],
-          [0, 6],
-          [1, 0],
-          [1, 3],
-          [1, 5],
-          [1, 7],
-          [2, 0],
-          [2, 2],
-          [2, 3],
-          [2, 5],
-          [2, 6],
-          [2, 7],
-        ].map(([r, c]) => (
-          <rect key={`x-${r}-${c}`} x={130 + c * 42} y={100 + r * 26} width={38} height={22} rx={3} />
-        ))}
-      </g>
-      <text className="loop__sub" x="60" y="140" textAnchor="middle">
-        the grid
-      </text>
-      <text className="loop__note" x="500" y="128">
-        dashed = refuses
-      </text>
-      <text className="loop__note" x="500" y="142">
-        33 of 45
-      </text>
-
-      <text className="loop__note" x="300" y="190">
-        a gap is more actionable than a strength you already know about — thin cells are styled
-        loudly, not faded
-      </text>
-      <text className="loop__note" x="300" y="204">
-        and the same threshold is k-anonymity: filter to n=1 and you have one client’s term
-      </text>
-    </svg>
-  )
-}
-
-/** Tables — the five tables and why this tab exists. */
-export function TablesDiagram() {
-  return (
-    <svg
-      className="loop"
-      viewBox="0 0 600 200"
-      role="img"
-      aria-labelledby="tb-t tb-d"
-      preserveAspectRatio="xMinYMin meet"
-    >
-      <title id="tb-t">The five tables and how they connect</title>
-      <desc id="tb-d">
-        Matters is the universe of comparable deals. Each matter has many deal points, one per
-        ABA question. FOLIO concepts supply the industry vocabulary that matters reference.
-        Labels record human review decisions. Ingest runs record what was loaded, when, and with
-        what checksum.
-      </desc>
-      <Arrow id="tb-a" />
-
-      <g className="loop__edges" markerEnd="url(#tb-a)">
-        <path d="M232,50 H196" />
-        <path d="M368,50 H404" />
-      </g>
-
-      <g className="loop__node loop__node--key">
-        <rect x="232" y="30" width="136" height="40" rx="6" />
-      </g>
-      <g className="loop__node">
-        <rect x="60" y="30" width="136" height="40" rx="6" />
-        <rect x="404" y="30" width="136" height="40" rx="6" />
-        <rect x="140" y="104" width="136" height="40" rx="6" />
-        <rect x="324" y="104" width="136" height="40" rx="6" />
-      </g>
-
-      <g className="loop__label">
-        <text x="300" y="48">matters</text>
-        <text x="128" y="48">deal_points</text>
-        <text x="472" y="48">folio_concepts</text>
-        <text x="208" y="122">labels</text>
-        <text x="392" y="122">ingest_runs</text>
-      </g>
-      <g className="loop__sub">
-        <text x="300" y="62">152 · the deal universe</text>
-        <text x="128" y="62">12,937 · one per question</text>
-        <text x="472" y="62">18,259 · the vocabulary</text>
-        <text x="208" y="136">your review decisions</text>
-        <text x="392" y="136">what loaded, when, sha256</text>
-      </g>
-
-      <text className="loop__note" x="300" y="172">
-        this tab exists so nobody has to open psql to check a number the app just showed them
       </text>
     </svg>
   )

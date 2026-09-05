@@ -28,9 +28,9 @@ interface Props {
   /** Reports the matters currently on screen — the set Deal Terms rolls up (#21). */
   onSelectionChange?: (matterIds: string[]) => void
   /**
-   * Arrive already narrowed: a Coverage cell click (#22) or an Overview journey. Every field is
-   * nullable because the two callers narrow on different axes — Coverage on industry and year,
-   * a journey on industry and consideration.
+   * Arrive already narrowed, from an Overview journey. Every field is nullable because a
+   * journey narrows on whichever axes its question names — industry and consideration for the
+   * comparables one. A Coverage cell click was the other caller until #48 cut that tab.
    */
   seedFilters?: JourneySeed | null
   onSeedConsumed?: () => void
@@ -66,7 +66,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
 
   const activeCount = Object.values(filters).filter(Boolean).length
 
-  // consume a Coverage seed exactly once: applying it and clearing it are the same act, so a
+  // consume a journey seed exactly once: applying it and clearing it are the same act, so a
   // second render of the same seed (e.g. a parent re-render) cannot re-apply stale filters
   useEffect(() => {
     if (!seedFilters) return

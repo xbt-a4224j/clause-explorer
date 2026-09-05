@@ -152,33 +152,6 @@ export interface DrillMatter {
   is_excerpt: boolean
 }
 
-export interface CoverageCell {
-  column: string
-  n: number
-  reportable: boolean
-  note: string | null
-  folio_industry_code: string | null
-}
-
-export interface CoverageRow {
-  label: string
-  folio_industry_code: string | null
-  cells: CoverageCell[]
-  total_n: number
-}
-
-export interface CoverageResponse {
-  rows: CoverageRow[]
-  columns: string[]
-  column_axis: string
-  column_note: string
-  column_totals: Record<string, number>
-  total_n: number
-  min_n: number
-  thin_cell_count: number
-  empty_cell_count: number
-}
-
 export interface Refusal {
   reason: string
   n: number
@@ -272,19 +245,6 @@ export interface LogLine {
   event?: string
   duration_ms?: number
   [key: string]: unknown
-}
-
-export interface TableColumn {
-  name: string
-  type: string
-  null_count: number
-  is_inferred_flag: boolean
-}
-
-export interface TableSchema {
-  table: string
-  row_count: number
-  columns: TableColumn[]
 }
 
 export interface TableRowsResponse {

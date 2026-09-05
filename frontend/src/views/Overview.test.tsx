@@ -97,7 +97,15 @@ describe('Overview', () => {
   })
 })
 
-describe('the three journeys (#40)', () => {
+describe('the two journeys (#40, cut to two in #48)', () => {
+  it('renders two cards, not three — one product, not a suite', () => {
+    render(<Overview onStartJourney={() => {}} />)
+    expect(JOURNEYS).toHaveLength(2)
+    expect(screen.getAllByTestId(/^journey-/)).toHaveLength(2)
+    // the Coverage-adjacent journey went with the Coverage tab
+    expect(screen.queryByTestId('journey-is-it-market')).not.toBeInTheDocument()
+  })
+
   it('renders one card per journey, each naming who asks and what they leave with', async () => {
     render(<Overview onStartJourney={() => {}} />)
     expect(screen.getByTestId('journeys')).toBeInTheDocument()
@@ -117,8 +125,10 @@ describe('the three journeys (#40)', () => {
 
     expect(onStart).toHaveBeenCalledTimes(1)
     const journey = onStart.mock.calls[0][0]
-    expect(journey.tab).toBe('explore')
-    // the point of the button: arrive already narrowed, not at an empty search box
+    // #48: the journey starts where the question is asked, not at the facet rail
+    expect(journey.tab).toBe('ask')
+    expect(journey.steps[0]).toMatch(/^Ask/)
+    // the seed still travels, so the Explore step of this journey arrives already narrowed
     expect(journey.seed).toMatchObject({
       folio_industry_label: 'Health Care Industry',
       consideration_type: 'All Cash',

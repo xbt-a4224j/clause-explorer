@@ -101,7 +101,7 @@ cubes:
         sql: "to_char({CUBE}.signing_date, 'YYYY')"
         type: string
         description: >-
-          Signing year, for the coverage grid's time axis. Only 2020 and 2021 exist in this
+          Signing year, the Explore rail's time facet. Only 2020 and 2021 exist in this
           corpus; a year facet therefore has exactly two non-empty values.
 
       - name: sic_code

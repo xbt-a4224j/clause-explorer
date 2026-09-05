@@ -10,8 +10,8 @@ range in the source is a bug).
 The corpus is gitignored, so text can be legitimately absent on a fresh checkout. That is
 reported per deal point, never faked and never silently blank.
 
-This does not go through Cube. Cube's footprint is facet counts, rollups and the coverage grid;
-individual record fetch is explicitly outside it.
+This does not go through Cube. Cube's footprint is facet counts and rollups; individual record
+fetch is explicitly outside it.
 """
 
 from __future__ import annotations

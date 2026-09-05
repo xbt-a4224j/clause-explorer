@@ -19,7 +19,6 @@ from explorer import __version__
 from explorer.api.admin import router as admin_router
 from explorer.api.catalog import router as catalog_router
 from explorer.api.comparables import router as comparables_router
-from explorer.api.coverage import router as coverage_router
 from explorer.api.deal_terms import router as deal_terms_router
 from explorer.api.errors import install_error_handlers
 from explorer.api.facets import router as facets_router
@@ -38,8 +37,9 @@ app = FastAPI(
     title="Clause Explorer",
     version=__version__,
     description=(
-        "Comparable-deals workbench. Find deals like the one in front of you, see what "
-        "was negotiated across them, and know where experience is thin."
+        "Comparable-deals workbench. Ask a question in the governed vocabulary, find deals "
+        "like the one in front of you, and see what was negotiated across them — with the "
+        "sample size, or a refusal."
     ),
 )
 
@@ -48,7 +48,6 @@ app.include_router(comparables_router)
 app.include_router(facets_router)
 app.include_router(matters_router)
 app.include_router(deal_terms_router)
-app.include_router(coverage_router)
 app.include_router(admin_router)
 app.include_router(label_router)
 app.include_router(tables_router)
