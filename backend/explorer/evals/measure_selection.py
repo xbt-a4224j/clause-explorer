@@ -15,12 +15,20 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[3]
 EVAL_SET = ROOT / "docs" / "eval" / "measure_selection.json"
 RECORDED = ROOT / "docs" / "eval" / "recorded_outputs.json"
+#: The machine-readable twin of `docs/results/measure-selection.md` (#54).
+#:
+#: The scores existed only as prose in the markdown and as a dict printed to a terminal, so
+#: the only way to chart them was to grade at request time. A number recomputed per request can
+#: drift from the report committed beside it, and then the tab and the repo disagree with no
+#: way to tell which one ran — on a tab whose entire argument is that a sceptic can check it.
+SUMMARY_FILE = ROOT / "docs" / "results" / "measure-selection.json"
 
 
 @dataclass(frozen=True)
@@ -138,6 +146,27 @@ def run(eval_set_path: Path = EVAL_SET, recorded_path: Path = RECORDED) -> dict[
         ),
         "results": results,
     }
+
+
+#: how the summary was produced, recorded in the file — a number with no command beside it is
+#: unfalsifiable, and this one is charted on Trust
+SUMMARY_COMMAND = "PYTHONPATH=backend python -m explorer.evals --only measure-selection"
+
+
+def write_summary(summary: dict[str, Any], out_path: Path = SUMMARY_FILE) -> Path:
+    """Write the aggregate scores as JSON, for the Trust tab to read (#54).
+
+    Drops `results`: the per-case rows are already served by `/agent/grading` from the same two
+    committed fixtures, and a second copy is a second thing to keep in sync.
+    """
+    payload = {
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "command": SUMMARY_COMMAND,
+        **{key: value for key, value in summary.items() if key != "results"},
+    }
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2) + "\n")
+    return out_path
 
 
 def grade_corrections(corrections: list[dict[str, Any]]) -> dict[str, Any]:

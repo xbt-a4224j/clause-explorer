@@ -81,7 +81,7 @@ export const JOURNEYS: readonly Journey[] = [
     question: '“Before this runs over our own precedents, where is the extractor weak?”',
     today: 'Take the vendor’s accuracy claim, or annotate a sample by hand to check it.',
     steps: [
-      'Admin · accuracy per deal point',
+      'Trust · accuracy per deal point',
       'Label · disagreements first',
       'accept, correct, edit or skip',
       'Label · the panel says it went down',
@@ -89,8 +89,8 @@ export const JOURNEYS: readonly Journey[] = [
     outcome:
       'Which questions the extractor may answer on un-annotated documents, and which it must decline — with the reviewer’s decisions graded into that number rather than filed away.',
     limit: null,
-    tab: 'admin',
+    tab: 'trust',
     seed: null,
-    cta: 'Open Admin',
+    cta: 'Open Trust',
   },
 ] as const

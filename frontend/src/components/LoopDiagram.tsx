@@ -9,7 +9,26 @@
  * the palette, and it stays legible at any zoom. `role="img"` with a title and description
  * because a diagram that only works visually is not an explanation for everyone.
  */
-export function LoopDiagram() {
+export interface LoopCounts {
+  /** model predictions recorded to disk */
+  predictions: number
+  /** decisions a reviewer actually made */
+  decisions: number
+  /** of those, how many differed from the model */
+  differing: number
+  correctBefore: number
+  correctAfter: number
+}
+
+/**
+ * #54 puts real counts on the edges. Before this the diagram drew a mechanism that might never
+ * have run; a cycle with 1,701 predictions and 6 decisions on it is a cycle that has turned.
+ *
+ * The regrade number goes DOWN — 569 correct to 565 — and the copy says so. A loop that only
+ * ever reported improvement would be a loop nobody should believe.
+ */
+export function LoopDiagram({ counts }: { counts?: LoopCounts } = {}) {
+  const n = (v: number) => v.toLocaleString('en-US')
   return (
     <svg
       className="loop"
@@ -76,21 +95,34 @@ export function LoopDiagram() {
       </g>
 
       <g className="loop__sub">
-        <text x="74" y="56">recorded to disk</text>
+        <text x="74" y="56">
+          {counts ? `${n(counts.predictions)} recorded` : 'recorded to disk'}
+        </text>
         <text x="74" y="108">no API call</text>
         <text x="207" y="82">same contract</text>
         <text x="352" y="82">disagreements first</text>
         {/* four buttons, not four keys (#52) — spelled out in the body copy; at 9px
             monospace the four words themselves overrun the 120px node */}
-        <text x="504" y="82">four buttons</text>
-        <text x="504" y="176">one row each</text>
-        <text x="353" y="176">reads them, prefers them</text>
+        <text x="504" y="82">
+          {counts ? `${counts.decisions} decisions` : 'four buttons'}
+        </text>
+        <text x="504" y="176">
+          {counts ? `${counts.differing} differed` : 'one row each'}
+        </text>
+        <text x="353" y="176">
+          {counts ? `${counts.correctBefore} → ${counts.correctAfter} correct` : 'reads them, prefers them'}
+        </text>
         <text x="189" y="176">where it is weak</text>
       </g>
 
       {/* the arc closing the loop is the whole point: labels change the next measurement */}
-      <text className="loop__note" x="46" y="112">
-        loop closed (#41)
+      {/* Anchored middle at x, so the string's own width decides whether it clears the viewBox
+          and the "no API call" sub-label above it. "the score went DOWN" measured 98px at 9px
+          italic and ran off the left edge to x=-3, colliding with that label. Kept short and
+          moved into the clear band between the baseline node (ends y=116) and the bottom row
+          (starts y=144). Caught by the screenshot pass, not by any unit test. */}
+      <text className="loop__note" x="52" y="132">
+        {counts ? 'score went down' : 'loop closed (#41)'}
       </text>
     </svg>
   )

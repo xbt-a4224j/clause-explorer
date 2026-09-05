@@ -1,0 +1,429 @@
+import { useEffect, useState } from 'react'
+import type {
+  CalibrationLabels,
+  CalibrationResponse,
+  MeasureSelectionSummary,
+} from '../types'
+import { ignoreAbort } from '../abort'
+import { BarChart, ChartFrame, Legend, StackedBar, StatTiles } from '../components/charts'
+import { LoopDiagram } from '../components/LoopDiagram'
+import { IngestStatus, LogViewer } from '../components/operator'
+
+/**
+ * Trust (#54) — where the model is trusted, where it is not, and what the humans changed.
+ *
+ * The two loops that make this an AI system rather than a query tool used to be invisible:
+ * calibration was a preformatted text dump on Admin, the label loop's outcome was a second
+ * section, measure-selection a third. A reader had to assemble the argument out of three
+ * report blocks and a JSON file. This is that argument on one screen.
+ *
+ * **Trust absorbs Admin rather than adding a tab.** Admin split along a real line — the
+ * evidence is this tab; the operator surface (ingest status, the log viewer) folds into a
+ * collapsed section at the bottom. Six tabs before, six after.
+ *
+ * **Every figure is read from a committed artefact.** Nothing here is recomputed when the tab
+ * opens. `calibration_accuracy.json`, `calibration-labels.json` and `measure-selection.json`
+ * were each written by a command that ran, and the command is named beside the numbers. A
+ * figure recomputed per request can drift from the report committed next to it, and then the
+ * tab and the repo disagree with no way to say which one ran — on the one tab whose entire
+ * purpose is that a sceptic can check it.
+ *
+ * **The copy states direction.** The label loop *lowered* the score, 569 correct to 565. #52
+ * put a test on the Label panel forbidding `/improved|better|▲|↑/`; the same test guards this
+ * tab. A loop that only ever reported improvement is a loop nobody should believe.
+ */
+export function Trust() {
+  const [calibration, setCalibration] = useState<CalibrationResponse | null>(null)
+  const [labels, setLabels] = useState<CalibrationLabels | null>(null)
+  const [selection, setSelection] = useState<MeasureSelectionSummary | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const get = <T,>(path: string, set: (v: T | null) => void) =>
+      fetch(path, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => set(body as T | null))
+        .catch(ignoreAbort(() => set(null)))
+
+    get<CalibrationResponse>('/api/admin/calibration', setCalibration)
+    get<CalibrationLabels>('/api/admin/calibration-labels', setLabels)
+    get<MeasureSelectionSummary>('/api/admin/measure-selection', setSelection)
+    return () => controller.abort()
+  }, [])
+
+  return (
+    <div className="trust">
+      <p className="sem__pointer">
+        Where the model is trusted, where it is not, and what the humans changed. Every figure
+        below is read from a committed artefact — the command that produced it is named beside
+        it, so none of this is a claim you have to take from us.
+      </p>
+
+      <CostRow calibration={calibration} />
+      <AccuracyChart calibration={calibration} />
+      <LoopSection labels={labels} />
+      <DisagreementChart labels={labels} />
+      <SelectionQualityChart summary={selection} />
+      <OperatorSection />
+    </div>
+  )
+}
+
+/**
+ * Cost is a stat-tile row, not a chart (#54). Four unrelated magnitudes — calls, dollars,
+ * tokens in, tokens out — have no shared scale, and a bar chart over them would invent one.
+ */
+function CostRow({ calibration }: { calibration: CalibrationResponse | null }) {
+  const cost = calibration?.cost
+  if (!cost) return null
+  return (
+    <section className="trust__section">
+      <h2 className="admin__heading">What the calibration run cost</h2>
+      <StatTiles
+        testId="trust-cost"
+        tiles={[
+          { label: 'model calls', value: cost.call_count.toLocaleString('en-US') },
+          {
+            label: 'measured cost',
+            value: `$${cost.cost_usd.toFixed(6)}`,
+            sub: 'priced from the committed table',
+          },
+          {
+            label: 'tokens in',
+            value: (cost.prompt_tokens ?? 0).toLocaleString('en-US'),
+          },
+          {
+            label: 'tokens out',
+            value: (cost.completion_tokens ?? 0).toLocaleString('en-US'),
+          },
+        ]}
+      />
+    </section>
+  )
+}
+
+/**
+ * 1 — accuracy across the deal-point vocabulary, worst first. The headline.
+ *
+ * One hue for every bar. #54 asked for a sequential ramp by accuracy, and colouring nominal
+ * categories darker-where-bigger is a named anti-pattern: it re-encodes bar length as hue and
+ * spends the identity channel on information the chart already shows. Sorting worst-first is
+ * what carries the ranking.
+ */
+function AccuracyChart({ calibration }: { calibration: CalibrationResponse | null }) {
+  if (!calibration || calibration.results.length === 0) return null
+  const rows = calibration.results
+  const measured = rows.filter((r) => r.measured)
+  const gate = calibration.min_extraction_confidence
+  const clearingGate = measured.filter((r) => (r.accuracy ?? 0) >= gate).length
+  const belowGate = measured.length - clearingGate
+  const zeros = measured.filter((r) => r.accuracy === 0).length
+  const unmeasured = rows.length - measured.length
+  const worst = measured[0]
+
+  const data = rows.map((r) => ({
+    label: r.deal_point_name,
+    value: r.measured ? r.accuracy : null,
+    detail: r.measured
+      ? `${r.correct} of ${r.n} · 95% CI [${r.ci_low?.toFixed(2)}, ${r.ci_high?.toFixed(2)}]`
+      : 'the run never reached this deal point',
+    // selective: only the worst row is labelled, so the label still means something
+    directLabel: r === worst && r.accuracy !== null ? `worst · ${r.accuracy.toFixed(2)}` : undefined,
+  }))
+
+  return (
+    <section className="trust__section">
+      <ChartFrame
+        testId="trust-accuracy"
+        title="Accuracy across the deal-point vocabulary"
+        note={
+          <>
+            {measured.length} of {rows.length} deal points measured on the held-out slice,
+            worst first. <strong>{belowGate} sit below the {gate.toFixed(2)} rule</strong> and{' '}
+            {clearingGate} reach it on the point estimate — though only{' '}
+            {calibration.reportable_count} clear the gate the product actually enforces, which
+            tests the Wilson <em>lower bound</em> rather than the point estimate, so a deal
+            point cannot be flattered by a sample too small to tell it from a coin flip.{' '}
+            {zeros} score exactly 0.00. {unmeasured} render “not measured”: the run never
+            reached them, which is a coverage gap and not a failed extraction.
+          </>
+        }
+        table={
+          <table className="admin__table">
+            <thead>
+              <tr>
+                <th>deal point</th>
+                <th>n</th>
+                <th>correct</th>
+                <th>accuracy</th>
+                <th>95% CI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.deal_point_name}>
+                  <td>{r.deal_point_name}</td>
+                  <td className="mono">{r.n}</td>
+                  <td className="mono">{r.measured ? r.correct : '—'}</td>
+                  <td className="mono">
+                    {r.measured && r.accuracy !== null ? (
+                      r.accuracy.toFixed(2)
+                    ) : (
+                      <span className="admin__unmeasured">not measured</span>
+                    )}
+                  </td>
+                  <td className="mono">
+                    {r.measured && r.ci_low !== null && r.ci_high !== null
+                      ? `[${r.ci_low.toFixed(2)}, ${r.ci_high.toFixed(2)}]`
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      >
+        <BarChart
+          testId="trust-accuracy-bars"
+          data={data}
+          max={1}
+          rule={gate}
+          ruleLabel={`${gate.toFixed(2)} gate`}
+        />
+      </ChartFrame>
+    </section>
+  )
+}
+
+/** 2 — the loop, with real counts on its edges, and the caveat that qualifies them. */
+function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
+  if (!labels) return null
+  return (
+    <section className="trust__section">
+      <h2 className="admin__heading">The loop, with what actually went round it</h2>
+      <LoopDiagram
+        counts={{
+          predictions: labels.prediction_count,
+          decisions: labels.labels_applied,
+          differing: labels.labels_differing,
+          correctBefore: labels.correct_before,
+          correctAfter: labels.correct_after,
+        }}
+      />
+      <p className="admin__note" data-testid="trust-loop-direction">
+        {labels.labels_applied} decisions were graded into the next calibration run, and the
+        score <strong>went down</strong>: {labels.correct_before} correct of{' '}
+        {labels.prediction_count.toLocaleString('en-US')} before, {labels.correct_after} after.
+        That is the loop working, not failing — a reviewer&rsquo;s answer is preferred over the
+        model&rsquo;s and then graded against MAUD like any other, so a mistyped label lowers
+        the number instead of being quietly discarded.
+      </p>
+      <p className="admin__note" data-testid="trust-corpus-caveat">
+        <strong>The caveat this corpus forces.</strong> Every item in the queue already has a
+        lawyer&rsquo;s answer behind it, so a reviewer here is being scored against a gold label
+        rather than supplying one. On un-annotated firm documents there would be no such
+        comparison, and the loop&rsquo;s value would be the label rather than the grade.
+      </p>
+      <p className="admin__note">
+        Produced <span className="mono">{labels.generated_at.slice(0, 10)}</span> by{' '}
+        <code>{labels.command}</code>.
+      </p>
+    </section>
+  )
+}
+
+/**
+ * 3 — where the reviewer disagreed with the model.
+ *
+ * #54 described three buckets and put four of six in the last one. The committed file says
+ * something sharper, and the file wins: of six decisions, one agreed with the model, **none**
+ * corrected a wrong model answer, four overwrote an answer that was right, and one replaced a
+ * wrong answer with another wrong one. Not one of the six matched MAUD's gold label.
+ *
+ * The bar carries the two non-empty outcomes in the two validated hues; the empty bucket is
+ * the finding, so it is stated in the copy and kept in the table rather than drawn as a
+ * zero-width segment nobody can see.
+ */
+function DisagreementChart({ labels }: { labels: CalibrationLabels | null }) {
+  if (!labels) return null
+  const agreed = labels.labels_applied - labels.labels_differing
+  const differed = labels.labels_differing
+  const overwroteCorrect = labels.correct_before - labels.correct_after
+
+  return (
+    <section className="trust__section">
+      <ChartFrame
+        testId="trust-disagreement"
+        title="Where the reviewer disagreed with the model"
+        note={
+          <>
+            All {labels.labels_applied} recorded decisions. {differed} differed from the model
+            and <strong>none of them was right against MAUD&rsquo;s gold label</strong> —{' '}
+            {overwroteCorrect} of those overwrote an answer that had been correct, and the
+            remaining one swapped a wrong answer for another wrong one. That is the honest and
+            interesting finding here, and it is why the reviewer&rsquo;s decision is graded
+            rather than trusted.
+          </>
+        }
+        table={
+          <table className="admin__table">
+            <thead>
+              <tr>
+                <th>outcome</th>
+                <th>decisions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>reviewer agreed with the model</td>
+                <td className="mono">{agreed}</td>
+              </tr>
+              <tr>
+                <td>reviewer corrected a wrong model answer</td>
+                <td className="mono">0</td>
+              </tr>
+              <tr>
+                <td>reviewer differed and overwrote a correct answer</td>
+                <td className="mono">{overwroteCorrect}</td>
+              </tr>
+              <tr>
+                <td>reviewer differed, and was wrong either way</td>
+                <td className="mono">{differed - overwroteCorrect}</td>
+              </tr>
+            </tbody>
+          </table>
+        }
+      >
+        <StackedBar
+          testId="trust-disagreement-bar"
+          total={labels.labels_applied}
+          segments={[
+            { label: 'agreed with the model', value: agreed, slot: 1 },
+            { label: 'differed, and was wrong against gold', value: differed, slot: 2 },
+          ]}
+        />
+        <Legend
+          items={[
+            { label: `agreed with the model — ${agreed}`, slot: 1 },
+            { label: `differed, and was wrong against gold — ${differed}`, slot: 2 },
+          ]}
+        />
+      </ChartFrame>
+    </section>
+  )
+}
+
+/**
+ * 4 — selection quality, by what the model was asked to get right.
+ *
+ * The point is the shape, not the average. Decent at the measure, mediocre at the filter
+ * value, bad at declining — and each of those lands on a different part of the design, which
+ * is why the numbers sit here rather than in a README.
+ *
+ * Refusal accuracy carries a direct label naming it the weak one. No red and no alarm styling:
+ * it is a measurement, not an incident.
+ */
+function SelectionQualityChart({ summary }: { summary: MeasureSelectionSummary | null }) {
+  if (!summary) return null
+  const data = [
+    {
+      label: 'measure precision',
+      value: summary.measure_precision,
+      detail: `${summary.answerable_count} answerable cases`,
+    },
+    {
+      label: 'dimension precision',
+      value: summary.dimension_precision,
+      detail: `${summary.answerable_count} answerable cases`,
+    },
+    {
+      label: 'filter exact-match',
+      value: summary.filter_exact_match_rate,
+      detail: `${summary.answerable_count} answerable cases`,
+    },
+    {
+      label: 'refusal accuracy',
+      value: summary.refusal_accuracy,
+      detail: `${summary.refusal_count} refusal cases`,
+      directLabel: 'the weak one — knowing when to decline',
+    },
+  ]
+
+  return (
+    <section className="trust__section">
+      <ChartFrame
+        testId="trust-selection"
+        title="Selection quality, by what the model was asked to get right"
+        note={
+          <>
+            {summary.case_count} authored cases. Read the shape, not the average: the model is
+            decent at picking the <strong>measure</strong>, mediocre at the{' '}
+            <strong>filter value</strong>, and bad at knowing when to{' '}
+            <strong>decline</strong>. Each lands somewhere different — the measure is enum-locked
+            so its mistakes are visible in the chip; the filter value cannot be, so it goes down
+            a resolution ladder that fails loudly; and refusal at{' '}
+            {summary.refusal_accuracy.toFixed(2)} is why <code>min_n</code> lives in the server
+            rather than in the model&rsquo;s judgment. It is also why a human confirms the chips
+            on Ask.
+          </>
+        }
+        table={
+          <table className="admin__table">
+            <thead>
+              <tr>
+                <th>metric</th>
+                <th>value</th>
+                <th>n</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((d) => (
+                <tr key={d.label}>
+                  <td>{d.label}</td>
+                  <td className="mono">{d.value.toFixed(3)}</td>
+                  <td className="mono">{d.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      >
+        <BarChart testId="trust-selection-bars" data={data} max={1} labelWidth={180} rowHeight={34} />
+      </ChartFrame>
+      <p className="admin__note">
+        Produced <span className="mono">{summary.generated_at.slice(0, 10)}</span> by{' '}
+        <code>{summary.command}</code>.
+      </p>
+    </section>
+  )
+}
+
+/**
+ * The operator surface, collapsed (#54).
+ *
+ * Ingest status and the log viewer are how you tell whether the data landed and what the
+ * server did. They are not evidence about the model, so they sit at the bottom behind a
+ * disclosure rather than competing with the argument above them.
+ */
+function OperatorSection() {
+  const [open, setOpen] = useState(false)
+  return (
+    <section className="trust__section trust__operator">
+      <button
+        type="button"
+        className="viz__toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-testid="trust-operator-toggle"
+      >
+        {open ? 'hide' : 'show'} operator surface — ingest status and logs
+      </button>
+      {open && (
+        <div data-testid="trust-operator">
+          <IngestStatus />
+          <LogViewer />
+        </div>
+      )}
+    </section>
+  )
+}

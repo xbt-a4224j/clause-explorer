@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
-import { Admin } from './views/Admin'
+import { Trust } from './views/Trust'
 import { Ask } from './views/Ask'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
@@ -100,8 +100,9 @@ describe('every fetching view aborts on unmount', () => {
     expectAbortedOnUnmount(render(<Label />).unmount)
   })
 
-  it('Admin', () => {
-    expectAbortedOnUnmount(render(<Admin />).unmount)
+  // #54 folded Admin into Trust; the fetches moved with it and still abort on teardown
+  it('Trust', () => {
+    expectAbortedOnUnmount(render(<Trust />).unmount)
   })
 
   it('Ask', () => {

@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-09-05T21:06:25+00:00",
+  "command": "PYTHONPATH=backend python -m explorer.evals --only measure-selection",
+  "case_count": 25,
+  "answerable_count": 20,
+  "refusal_count": 5,
+  "measure_precision": 0.8,
+  "measure_recall": 0.775,
+  "dimension_precision": 0.692,
+  "dimension_recall": 0.725,
+  "filter_exact_match_rate": 0.5,
+  "refusal_accuracy": 0.2
+}

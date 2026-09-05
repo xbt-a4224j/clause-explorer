@@ -343,6 +343,31 @@ export interface CalibrationCost {
   call_count: number
   total_tokens: number
   cost_usd: number
+  prompt_tokens?: number
+  completion_tokens?: number
+}
+
+/**
+ * `GET /admin/measure-selection` (#54) — the committed aggregate scores behind Trust's
+ * selection-quality chart.
+ *
+ * Read from `docs/results/measure-selection.json`, written by a command that ran, never graded
+ * at request time. The grade is deterministic over two committed fixtures, so recomputing it
+ * would usually agree — and "usually" is the problem: the moment it did not, the chart and the
+ * report committed beside it would disagree with nothing to say which one ran.
+ */
+export interface MeasureSelectionSummary {
+  generated_at: string
+  command: string
+  case_count: number
+  answerable_count: number
+  refusal_count: number
+  measure_precision: number
+  measure_recall: number
+  dimension_precision: number
+  dimension_recall: number
+  filter_exact_match_rate: number
+  refusal_accuracy: number
 }
 
 export interface CalibrationResponse {

@@ -26,6 +26,7 @@ CALIBRATION_REPORT = ROOT / "docs" / "results" / "calibration.md"
 CALIBRATION_LABELS = ROOT / "docs" / "results" / "calibration-labels.json"
 CALIBRATION_ACCURACY = ROOT / "docs" / "eval" / "calibration_accuracy.json"
 MEASURE_SELECTION_REPORT = ROOT / "docs" / "results" / "measure-selection.md"
+MEASURE_SELECTION_SUMMARY = ROOT / "docs" / "results" / "measure-selection.json"
 LOG_FILE = ROOT / "logs" / "explorer.jsonl"
 
 # Module-level so tests can monkeypatch each target independently rather than the whole module.
@@ -110,6 +111,26 @@ def calibration_labels() -> dict[str, Any]:
             "docs/results/calibration-labels.json.",
         )
     payload: dict[str, Any] = json.loads(CALIBRATION_LABELS.read_text(encoding="utf-8"))
+    return payload
+
+
+@router.get("/measure-selection")
+def measure_selection_summary() -> dict[str, Any]:
+    """The committed aggregate scores behind Trust's selection-quality chart (#54).
+
+    Served from `docs/results/measure-selection.json` rather than graded on request. The grade
+    is deterministic over two committed files, so recomputing it would usually agree — and
+    "usually" is the problem: the moment it did not, the chart and the report committed beside
+    it would disagree with nothing to say which one ran.
+    """
+    if not MEASURE_SELECTION_SUMMARY.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="No measure-selection summary yet — run "
+            "`PYTHONPATH=backend python -m explorer.evals --only measure-selection` "
+            "and commit docs/results/measure-selection.json.",
+        )
+    payload: dict[str, Any] = json.loads(MEASURE_SELECTION_SUMMARY.read_text(encoding="utf-8"))
     return payload
 
 

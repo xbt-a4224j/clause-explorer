@@ -1005,3 +1005,119 @@ kbd {
   font-size: 11px;
   color: var(--ink-tertiary);
 }
+
+/* #54 — Trust's charts.
+   ---------------------------------------------------------------------------------------
+   The series colours are the ONLY hardcoded hex in a component surface, and they are here
+   rather than in tokens.css deliberately: tokens.css is the app's GitHub Primer palette and
+   these are a validated categorical set from a different system, chosen by the data-viz
+   procedure rather than by the design system. Keeping them scoped to `.viz` means a chart
+   colour can never leak into the chrome.
+
+   Validated with `node scripts/validate_palette.js`, not eyeballed:
+     light  "#2a78d6,#eb6834" on #ffffff → all six checks PASS,
+            worst adjacent CVD ΔE 24.7 (protan), normal-vision 33.6
+     dark   "#3987e5,#d95926" on #1a1a19 → all six checks PASS,
+            worst adjacent CVD ΔE 26.8 (protan), normal-vision 31.8
+
+   Dark values are declared under BOTH the media query and the data-theme scope, so the OS
+   setting and an explicit toggle each win in the right direction. The app itself ships light
+   only (CLAUDE.md: do not restore the dark palette) — this is the chart layer keeping its own
+   contract so it stays correct if the app ever gains a toggle. */
+.viz {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --viz-surface: var(--surface-1);
+  margin-bottom: var(--pad-lg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .viz {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --viz-surface: #1a1a19;
+  }
+}
+:root[data-theme='dark'] .viz {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --viz-surface: #1a1a19;
+}
+
+.viz__head { display: flex; align-items: baseline; gap: var(--pad-md); }
+.viz__title { margin: 0 0 var(--pad-sm); font-size: 13px; font-weight: 600; color: var(--ink); }
+.viz__toggle {
+  padding: 2px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--ink-subtle);
+  font-size: 11px;
+  cursor: pointer;
+}
+.viz__toggle:hover { background: var(--surface-3); color: var(--ink); }
+.viz__note {
+  margin: 0 0 var(--pad-md);
+  max-width: 78ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-subtle);
+}
+.viz__scroll { overflow-x: auto; overflow-y: visible; }
+.viz__svg { display: block; max-width: 100%; height: auto; }
+
+/* Marks. Thin, one hue, 4px rounded data-end — the path does the rounding so the square
+   baseline end stays square. */
+.viz__bar { fill: var(--series-1); }
+.viz__seg--1 { fill: var(--series-1); }
+.viz__seg--2 { fill: var(--series-2); }
+.viz__row:hover .viz__bar { fill: var(--series-1); filter: brightness(0.92); }
+.viz__row:hover .viz__cat { fill: var(--ink); }
+
+/* Axes and the gate rule: solid hairlines, one step off the surface. Never dashed — a dashed
+   rule reads as "projection" when it is a threshold. The rule is 2px and carries a direct
+   label; it is a line, not a colour change. */
+.viz__axis { stroke: var(--hairline); }
+.viz__rule { stroke: var(--ink-tertiary); }
+.viz__rulelbl { fill: var(--ink-subtle); font-size: 10px; font-family: var(--font-mono); }
+
+/* Text wears ink tokens, never a series colour. */
+.viz__cat { fill: var(--ink-subtle); font-size: 10px; }
+.viz__value { fill: var(--ink-subtle); font-size: 10px; font-family: var(--font-mono); }
+.viz__unmeasured { fill: var(--ink-tertiary); font-size: 10px; font-style: italic; }
+/* the one exception: a label inside a filled segment, painted to clear the fill */
+.viz__seglbl { fill: #ffffff; font-size: 11px; font-family: var(--font-mono); font-weight: 600; }
+
+.viz__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pad-md);
+  margin: var(--pad-sm) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--ink-subtle);
+}
+.viz__legend li { display: flex; align-items: center; gap: 6px; }
+.viz__swatch { width: 10px; height: 10px; border-radius: 2px; }
+.viz__swatch--1 { background: var(--series-1); }
+.viz__swatch--2 { background: var(--series-2); }
+
+/* Cost is a stat-tile row, not a chart: four unrelated magnitudes have no shared scale. */
+.viz__tiles { display: flex; flex-wrap: wrap; gap: var(--pad-md); }
+.viz__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  padding: var(--pad-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+.viz__tilelbl { font-size: 11px; color: var(--ink-tertiary); }
+/* proportional figures, not tabular: equal-width digits make a big number look loose */
+.viz__tileval { font-size: 20px; font-weight: 600; color: var(--ink); }
+.viz__tilesub { font-size: 10px; color: var(--ink-tertiary); }
+
+.trust__section { margin-bottom: var(--pad-lg); }
+.trust__operator { padding-top: var(--pad-md); border-top: 1px solid var(--hairline); }

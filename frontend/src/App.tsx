@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
 import { ignoreAbort } from './abort'
 import type { Journey, JourneySeed } from './journeys'
-import { Admin } from './views/Admin'
+import { Trust } from './views/Trust'
 import { Ask } from './views/Ask'
 import { Label } from './views/Label'
 import { Overview } from './views/Overview'
@@ -132,8 +132,8 @@ export function App() {
           <DealTerms selection={selection} />
         ) : active === 'label' ? (
           <Label />
-        ) : active === 'admin' ? (
-          <Admin />
+        ) : active === 'trust' ? (
+          <Trust />
         ) : active === 'ask' ? (
           <Ask />
         ) : (

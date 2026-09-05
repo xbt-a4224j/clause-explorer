@@ -52,9 +52,16 @@ def run_calibration(out: Path) -> None:
 
 
 def run_measure_selection(out: Path) -> None:
-    """Pure and offline — both inputs are committed files, so there is nothing to write."""
+    """Pure and offline — both inputs are committed files.
+
+    It used to write nothing, on the grounds that a deterministic grade over committed inputs
+    is reproducible on demand. #54 needed the scores on a chart, and "reproducible on demand"
+    turns into "recomputed per request", which can drift from the report committed beside it.
+    So the aggregate is written as JSON too, next to the markdown it already produced.
+    """
     summary = measure_selection.run()
     print({key: value for key, value in summary.items() if key != "results"})
+    print("wrote", measure_selection.write_summary(summary))
 
 
 HARNESSES: dict[str, Callable[[Path], None]] = {

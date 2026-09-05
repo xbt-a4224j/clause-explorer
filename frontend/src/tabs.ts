@@ -11,6 +11,11 @@
  * convenience for whoever operates the thing and the surface most likely to make a reader
  * conclude this is a database browser with extra steps.
  *
+ * #54 replaced Admin with Trust rather than adding a seventh tab. Admin split along a real
+ * line: the evidence — calibration, the label loop, selection quality — is what a reader
+ * comes for and became Trust; the operator surface (ingest status, the log viewer) folds
+ * into a collapsed section at the bottom of it. Six tabs before, six after.
+ *
  * Ask sits second, behind Overview. It was called Semantic Layer, which named the mechanism
  * rather than the act; the semantic-layer argument still lives inside it, below the
  * demonstration rather than in front of it.
@@ -18,7 +23,7 @@
  * Order is load-bearing: the number-key shortcut is the index, so reordering this array
  * silently rebinds every shortcut.
  */
-export type TabId = 'overview' | 'ask' | 'explore' | 'deal-terms' | 'admin' | 'label'
+export type TabId = 'overview' | 'ask' | 'explore' | 'deal-terms' | 'trust' | 'label'
 
 export interface Tab {
   id: TabId
@@ -64,10 +69,10 @@ export const TABS: readonly Tab[] = [
     group: 'work',
   },
   {
-    id: 'admin',
-    label: 'Admin',
-    hint: 'ingest, calibration, evals, logs',
-    audience: 'operator',
+    id: 'trust',
+    label: 'Trust',
+    hint: 'where the model is trusted, and where it is not',
+    audience: 'km',
     group: 'under-the-hood',
   },
   {
