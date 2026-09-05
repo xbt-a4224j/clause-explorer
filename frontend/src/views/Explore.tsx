@@ -77,6 +77,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       deal_size_band: null,
       consideration_type: seedFilters.consideration_type,
     })
+    if (seedFilters.description !== undefined) setDescription(seedFilters.description ?? '')
     onSeedConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedFilters])

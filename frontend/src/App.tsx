@@ -29,6 +29,11 @@ export function App() {
   const [seed, setSeed] = useState<JourneySeed | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [healthError, setHealthError] = useState(false)
+  // What is typed in the header box on any tab but Explore. It had no state and no handler:
+  // `?` advertised "/ focus search", the box rendered on five of six tabs, and typing into it
+  // did nothing at all. A prominent control that does nothing costs a first-time user their
+  // first attempt.
+  const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -97,8 +102,25 @@ export function App() {
             ref={searchRef}
             type="search"
             className="shell__search"
-            placeholder="search  /"
+            placeholder="search Explore  /"
             aria-label="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || !search.trim()) return
+              // Explore is where searching this corpus happens, so the box goes there rather
+              // than growing a second search of its own. The seed is the existing way one tab
+              // hands a starting point to another.
+              setSeed({
+                folio_industry_code: null,
+                folio_industry_label: null,
+                signing_year: null,
+                consideration_type: null,
+                description: search,
+              })
+              setActive('explore')
+              setSearch('')
+            }}
           />
         )}
       </header>

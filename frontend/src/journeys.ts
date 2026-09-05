@@ -20,6 +20,15 @@ export interface JourneySeed {
   folio_industry_label: string | null
   signing_year: string | null
   consideration_type: string | null
+  /**
+   * Free text for Explore's own search box.
+   *
+   * Carried here because the shell's header search had no destination: it rendered on every
+   * tab but Explore, `?` advertised "/ focus search", and it had no handler at all. The seed
+   * was already the way one tab hands a starting point to another, so it is the way this one
+   * arrives too. Null on every journey — those start from structured filters.
+   */
+  description?: string | null
 }
 
 export interface Journey {

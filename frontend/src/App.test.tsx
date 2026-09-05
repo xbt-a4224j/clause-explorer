@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { TABS } from './tabs'
@@ -170,5 +170,51 @@ describe('stack health', () => {
     mockHealth('degraded', 'unreachable')
     render(<App />)
     expect(await screen.findByText(/degraded/i)).toBeInTheDocument()
+  })
+})
+
+/**
+ * The header search box was decoration on five of six tabs.
+ *
+ * It rendered everywhere except Explore, `?` advertised "/ focus search", and it had no
+ * handler at all: you could focus it, type into it, press Enter, and nothing happened. A
+ * prominent control in the header that does nothing is worse than no control, because a
+ * first-time user spends their first attempt on it.
+ *
+ * It carries what you typed to Explore now, which is where searching this corpus happens.
+ */
+describe('the header search goes somewhere', () => {
+  beforeEach(() => mockHealth())
+
+  it('takes what you typed to Explore', async () => {
+    render(<App />)
+    const search = screen.getByRole('searchbox', { name: 'search' })
+    fireEvent.change(search, { target: { value: 'healthcare all cash' } })
+    fireEvent.keyDown(search, { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /^Explore/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('describe the deal')).toHaveValue('healthcare all cash'),
+    )
+  })
+
+  it('does nothing on an empty box rather than jumping tabs', () => {
+    render(<App />)
+    const search = screen.getByRole('searchbox', { name: 'search' })
+    fireEvent.keyDown(search, { key: 'Enter' })
+    expect(screen.getByRole('tab', { name: /^Overview/ })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('says where it goes, so the box is not a mystery', () => {
+    render(<App />)
+    expect(screen.getByRole('searchbox', { name: 'search' })).toHaveAttribute(
+      'placeholder',
+      expect.stringContaining('Explore'),
+    )
   })
 })

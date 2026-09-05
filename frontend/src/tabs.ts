@@ -86,7 +86,9 @@ export const TABS: readonly Tab[] = [
 
 export const SHORTCUTS: ReadonlyArray<[string, string]> = [
   ['1 – 6', 'switch tab'],
-  ['/', 'focus search'],
+  // On Explore this is Explore's own box; on every other tab it is the header box, which now
+  // carries what you type to Explore rather than swallowing it.
+  ['/', 'focus search — Enter searches Explore'],
   ['j / k', 'move through results'],
   ['Enter', 'open the focused result'],
   ['?', 'show this help'],
