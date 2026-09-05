@@ -44,10 +44,15 @@ def cached_query() -> str:
     Free-text ranking needs the query embedded. With no key, only cached text can be ranked —
     that is the deliberate contract (#16), not a limitation to work around, so the no-key tests
     use a query warm_cache embedded and TestUncachedQuery asserts what happens otherwise.
-    """
-    from explorer.evals.retrieval_set import build_eval_set
 
-    return next(q.query for q in build_eval_set(DSN) if q.template == "industry_year")
+    Built from `warm_cache`'s own probe set rather than restated here, so a change to what the
+    cache holds fails this fixture instead of silently ranking an uncached string.
+    """
+    from explorer.retrieval.warm_cache import ranking_probe_texts
+
+    # index 1 of each matter's three phrasings is the industry/year wording: no proper nouns,
+    # so ranking it has to do real work rather than matching the target name verbatim.
+    return ranking_probe_texts(DSN)[1]
 
 
 @needs_corpus

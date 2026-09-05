@@ -35,8 +35,8 @@ CACHE_FILE = ROOT / "data" / "embeddings" / "vectors.npz"
 
 # text-embedding-3-small, shortened to 256 dimensions via the API's `dimensions` parameter and
 # stored float16. Full 1536-dim float32 vectors for this corpus would be a ~86 MB file in a
-# public repo; measured, this is 9.5 MB — and the ablation in #17 measures what, if anything,
-# the shortening costs in retrieval quality.
+# public repo; measured, this is 9.5 MB. What the shortening costs in retrieval quality is not
+# measured — the ablation that would have measured it was removed in #53.
 EMBED_MODEL = "text-embedding-3-small"
 EMBED_DIMENSIONS = 256
 EMBED_DTYPE = np.float16

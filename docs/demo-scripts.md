@@ -72,11 +72,17 @@ contract_88   MAGELLAN HEALTH, INC.            2021-01-04   0.623
 contract_12   BIOTELEMETRY, INC.               2020-12-18   0.600
 ```
 
-> "Keyword matching blended with semantic similarity — hybrid, weight 0.5. I ran the ablation:
-> hybrid beats pure vector 0.785 to 0.744 on mean reciprocal rank. Though two of my three query
-> templates saturate, so that rests on thirty queries, not ninety."
+> "Keyword matching blended with semantic similarity — hybrid, weight 0.5, and the weight is
+> configuration, not a constant. The part I would defend is that both score distributions are
+> min-max normalised per query before they are blended. BM25 is unbounded, cosine sits in
+> roughly [0, 1]; add them raw and BM25 swamps the vector term, `alpha` silently stops meaning
+> what it says, and the results are still plausibly ordered — just not by the weighting anyone
+> chose. `backend/tests/test_hybrid_retrieval.py` asserts it."
 
-*Volunteering the weakness of your own benchmark is worth more than the benchmark.*
+*Which of the three methods wins is **not measured**. #53 removed the ablation that tried:
+two of its three query phrasings named the parties verbatim and saturated at 1.000 recall@1,
+so the aggregate was dominated by a task nothing could fail. Say that rather than quoting a
+number the eval did not support.*
 
 ### Beat 4 — the rollup (60 s)
 

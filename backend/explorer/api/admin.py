@@ -26,7 +26,6 @@ CALIBRATION_REPORT = ROOT / "docs" / "results" / "calibration.md"
 CALIBRATION_LABELS = ROOT / "docs" / "results" / "calibration-labels.json"
 CALIBRATION_ACCURACY = ROOT / "docs" / "eval" / "calibration_accuracy.json"
 MEASURE_SELECTION_REPORT = ROOT / "docs" / "results" / "measure-selection.md"
-RETRIEVAL_ABLATION_REPORT = ROOT / "docs" / "results" / "retrieval-ablation.md"
 LOG_FILE = ROOT / "logs" / "explorer.jsonl"
 
 # Module-level so tests can monkeypatch each target independently rather than the whole module.
@@ -140,11 +139,6 @@ def evals() -> dict[str, Any]:
         "measure_selection": (
             MEASURE_SELECTION_REPORT.read_text(encoding="utf-8")
             if MEASURE_SELECTION_REPORT.is_file()
-            else None
-        ),
-        "retrieval_ablation": (
-            RETRIEVAL_ABLATION_REPORT.read_text(encoding="utf-8")
-            if RETRIEVAL_ABLATION_REPORT.is_file()
             else None
         ),
     }

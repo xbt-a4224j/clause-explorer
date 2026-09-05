@@ -6,8 +6,8 @@ similarities sit in roughly [0, 1]. Adding them raw is not a weighted blend at a
 scale swamps the vector term and `alpha` silently stops meaning anything. Both sides are
 min-max normalized **per query** before combining, and a test asserts it.
 
-`alpha` is configuration, not a constant: `HYBRID_ALPHA`, overridable per request, so the
-ablation can sweep it and the API can expose it.
+`alpha` is configuration, not a constant: `HYBRID_ALPHA`, overridable per request, so the API
+can expose it and a caller can compare weightings without a redeploy.
 """
 
 from __future__ import annotations

@@ -10,6 +10,9 @@ What gets embedded:
 
 * one summary line per matter — title, parties, industry, year — which is what comparable-deal
   ranking scores against (#18)
+* a deterministic set of free-text descriptions of real matters, so `/comparables` free-text
+  ranking is exercisable with no key — with no key only cached text can be ranked (#16)
+* the filter-value terms #25's exact/alias/embedding resolution ladder is matched against
 
 Requires `OPENAI_API_KEY`. Everything downstream then runs without one.
 """
@@ -38,6 +41,30 @@ LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
 ORDER BY m.id
 """
 
+# Free-text descriptions of real matters. A description the caller types has to be embedded
+# before it can be ranked, and with no API key only cached text can be ranked (#16) — so these
+# are what makes `/comparables` free-text ranking demonstrable and testable keyless.
+#
+# These templates lived in `evals/retrieval_set.py`, which #53 deleted along with the retrieval
+# ablation. The sampling and the wording are reproduced here **unchanged and deliberately**: the
+# vector file is committed, so any drift in the text would make a re-run of this module add
+# entries and rewrite a version-controlled artefact.
+RANKING_PROBE_SQL = """
+SELECT m.target_name,
+       m.acquirer_name,
+       f.label AS industry,
+       to_char(m.signing_date, 'YYYY') AS year
+FROM matters m
+LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+WHERE m.target_name IS NOT NULL
+  AND m.acquirer_name IS NOT NULL
+  AND m.signing_date IS NOT NULL
+  AND f.label IS NOT NULL
+ORDER BY m.id
+"""
+
+PROBE_SAMPLE_SIZE = 30  # every nth qualifying matter, so the set is stable across machines
+
 # The distinct industry labels actually used on matters — not the 18k-concept ontology
 # (CLAUDE.md: map five or six dimensions, do not attempt the ontology). This is the closed
 # vocabulary #25's embedding-resolution tier matches a free-text filter value against.
@@ -64,17 +91,31 @@ FILTER_VALUE_EVAL_TERMS = [
 ]
 
 
-def gather_texts(dsn: str | None = None) -> dict[str, str]:
-    """Everything the product needs a vector for, keyed by a readable source id.
+def ranking_probe_texts(dsn: str | None = None) -> list[str]:
+    """Three phrasings each of a deterministic sample of matters.
 
-    Eval queries are included deliberately: the retrieval ablation (#17) must run with no API
-    key, and it cannot if the queries it issues are uncached.
+    The phrasings differ in how much wording they share with the indexed summary: `parties`
+    repeats the company names verbatim, `paraphrase` avoids them. Deterministic sampling —
+    every nth qualifying row — so the set is identical on every machine and the committed
+    vector file stays reproducible.
     """
-    from explorer.evals.retrieval_set import eval_query_texts
+    with psycopg.connect(dsn or settings.database_url) as conn:
+        rows = conn.execute(RANKING_PROBE_SQL).fetchall()
 
+    step = max(1, len(rows) // PROBE_SAMPLE_SIZE)
+    texts: list[str] = []
+    for target, acquirer, industry, year in rows[::step][:PROBE_SAMPLE_SIZE]:
+        texts.append(f"{target} acquired by {acquirer}")
+        texts.append(f"{industry} merger agreement signed in {year}")
+        texts.append(f"take-private of a {industry.lower()} company by {acquirer}")
+    return texts
+
+
+def gather_texts(dsn: str | None = None) -> dict[str, str]:
+    """Everything the product needs a vector for, keyed by a readable source id."""
     texts: dict[str, str] = {}
-    for index, query in enumerate(eval_query_texts(dsn)):
-        texts[f"evalquery:{index}"] = query
+    for index, query in enumerate(ranking_probe_texts(dsn)):
+        texts[f"rankingprobe:{index}"] = query
     for index, term in enumerate(FILTER_VALUE_EVAL_TERMS):
         texts[f"filterterm:{index}"] = term
     with psycopg.connect(dsn or settings.database_url) as conn:

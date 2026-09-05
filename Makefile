@@ -20,8 +20,8 @@ check:         ## what CI enforces
 	cd frontend && npx tsc --noEmit
 	$(MAKE) test
 
-eval:          ## the eval harnesses; writes docs/results/
-	python -m explorer.evals --all --out docs/results
+eval:          ## calibration + measure-selection harnesses; writes docs/results/
+	PYTHONPATH=backend python -m explorer.evals --all --out docs/results
 
 logs:
 	tail -f logs/explorer.jsonl
