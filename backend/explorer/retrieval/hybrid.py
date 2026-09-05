@@ -30,11 +30,11 @@ SELECT m.id,
        concat_ws(' · ',
            m.source_contract_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
-           f.label,
+           i.label,
            to_char(m.signing_date, 'YYYY')
        ) AS summary
 FROM matters m
-LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+LEFT JOIN industries i ON i.code = m.industry_code
 ORDER BY m.id
 """
 

@@ -31,14 +31,14 @@ QUERY_SQL = """
 SELECT m.id,
        m.target_name,
        m.acquirer_name,
-       f.label AS industry,
+       i.label AS industry,
        to_char(m.signing_date, 'YYYY') AS year
 FROM matters m
-LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+LEFT JOIN industries i ON i.code = m.industry_code
 WHERE m.target_name IS NOT NULL
   AND m.acquirer_name IS NOT NULL
   AND m.signing_date IS NOT NULL
-  AND f.label IS NOT NULL
+  AND i.label IS NOT NULL
 ORDER BY m.id
 """
 

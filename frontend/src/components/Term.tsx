@@ -4,7 +4,7 @@ import { useState } from 'react'
  * Inline jargon definition (#35).
  *
  * The app was operable by someone who already knew the domain and unlearnable by anyone else:
- * MAUD, FOLIO, deal point, public target and min_n all appeared as bare words. A reader
+ * MAUD, deal point, public target and min_n all appeared as bare words. A reader
  * should never have to leave the screen to find out what a word means.
  *
  * Definitions live in one module rather than being retyped per view, because the failure mode
@@ -17,9 +17,9 @@ export const GLOSSARY: Record<string, { short: string; long: string }> = {
     short: 'Merger Agreement Understanding Dataset',
     long: '152 public-target merger agreements from SEC filings, annotated by lawyers against the 92 ABA deal points. Public filings — not any firm’s own matter history. CC BY 4.0.',
   },
-  FOLIO: {
-    short: 'Federated Open Legal Information Ontology',
-    long: 'An open ontology of legal concepts — industries, services, areas of law — with hierarchy and synonyms. 18,259 concepts loaded. Filtering joins on its codes, not display labels.',
+  'SIC crosswalk': {
+    short: 'SEC industry code → our industry grouping',
+    long: 'A checked-in table mapping SIC prefixes to 20 industries, longest prefix first. Filtering joins on its codes, not display labels, so a label retitled from “Health Care Industry” to “Healthcare” cannot silently return zero rows.',
   },
   EDGAR: {
     short: 'the SEC’s public filing system',

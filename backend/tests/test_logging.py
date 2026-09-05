@@ -39,7 +39,7 @@ class TestRedaction:
         assert "***" in out
 
     def test_ordinary_text_is_untouched(self) -> None:
-        msg = "retrieved 8 matters for folio_industry=Healthcare"
+        msg = "retrieved 8 matters for industry=Healthcare"
         assert redact(msg) == msg
 
 

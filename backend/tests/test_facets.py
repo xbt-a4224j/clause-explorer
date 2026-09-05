@@ -47,7 +47,7 @@ INDUSTRY_ROWS = [
         CODE_DIMENSION: "REduPlaceholder00000001",
         COUNT_MEASURE: 0,
     },
-    # 18 matters have no FOLIO industry: a real bucket with no concept behind it
+    # 18 matters have no industry: a real bucket with no code behind it
     {INDUSTRY_DIMENSION: None, CODE_DIMENSION: None, COUNT_MEASURE: 18},
 ]
 YEAR_ROWS = [
@@ -132,14 +132,14 @@ class TestSelfFiltering:
 
 
 class TestIndustryCarriesItsCode:
-    """The rail hands /comparables a FOLIO code, never a display label.
+    """The rail hands /comparables an industry code, never a display label.
 
     Filtering by the string a human reads is the failure mode #25 exists for: "Health Care"
     against "Health Care Industry" returns zero rows that look exactly like "no comparable
     deals". The code is the join key and cannot drift, so it travels with the label.
     """
 
-    def test_each_industry_value_carries_its_folio_code(
+    def test_each_industry_value_carries_its_industry_code(
         self, client: TestClient, cube: StubCube
     ) -> None:
         body = client.post("/facets", json={}).json()
@@ -147,7 +147,7 @@ class TestIndustryCarriesItsCode:
         assert codes["Health Care Industry"] == "RCSG4k3ah1Pu5YgPexPgOmL"
 
     def test_the_unclassified_bucket_has_no_code(self, client: TestClient, cube: StubCube) -> None:
-        """Matters with no industry are a real bucket, but there is no concept to filter by —
+        """Matters with no industry are a real bucket, but there is no code to filter by —
         a fabricated code here would silently return nothing."""
         body = client.post("/facets", json={}).json()
         codes = {v["value"]: v["code"] for v in _group(body, "industry")["values"]}
@@ -189,7 +189,7 @@ class TestZeroCounts:
     def test_a_null_dimension_value_is_labelled_not_discarded(
         self, client: TestClient, cube: StubCube
     ) -> None:
-        """18 matters have no FOLIO industry. Dropping them makes the group totals lie."""
+        """18 matters have no industry. Dropping them makes the group totals lie."""
         body = client.post("/facets", json={}).json()
         values = {v["value"]: v["n"] for v in _group(body, "industry")["values"]}
         assert values["unclassified"] == 18

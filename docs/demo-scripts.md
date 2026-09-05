@@ -31,7 +31,8 @@ Land on **Explore**. Read the line under the title:
 Then point at the provenance line beneath it and say the honest part **first**:
 
 > "Matters and deal points are MAUD — the Merger Agreement Understanding Dataset, 152 public
-> merger agreements that lawyers annotated. Industries come from FOLIO via SEC EDGAR and are
+> merger agreements that lawyers annotated. Industries come from a SIC crosswalk over SEC
+> EDGAR codes and are
 > **inferred**, not labelled. And the corpus is twenty months, March 2020 to November 2021 — so
 > nothing I show you is a claim about the last five years."
 

@@ -24,9 +24,9 @@ export function ExploreExplainer() {
         you. Faceted search over 152 real merger agreements from <strong><Term>MAUD</Term></strong>{' '}
         — public SEC filings, not any firm&rsquo;s own matter history. Type a description or press{' '}
         <code>/</code> for the search box, narrow with the rail, and the counts recompute against
-        whatever is left. Industry filtering joins on a <strong><Term>FOLIO</Term></strong> concept
-        code rather than a display label, so a near-miss cannot return zero rows that read as
-        &ldquo;no comparable deals&rdquo;.
+        whatever is left. Industry filtering joins on a{' '}
+        <strong><Term>SIC crosswalk</Term></strong> code rather than a display label, so a
+        near-miss cannot return zero rows that read as &ldquo;no comparable deals&rdquo;.
       </p>
       <p>
         <strong>The limit.</strong> The corpus spans 20 months (March 2020 – November 2021), not
@@ -87,7 +87,7 @@ export function TablesExplainer() {
       <p>
         <strong>What this tab is for.</strong> Checking the app&rsquo;s homework without opening{' '}
         <code>psql</code>. Five tables — <code>matters</code> (152), <code>deal_points</code>{' '}
-        (12,937), <code>folio_concepts</code> (18,259), <code>labels</code>,{' '}
+        (12,937), <code>industries</code> (20), <code>labels</code>,{' '}
         <code>ingest_runs</code> — sorted and filtered on the
         server, with the state mirrored into the URL so a row you found is a link you can send.
         Every table marks which columns are <em>inferred</em> rather than expert-labelled.
@@ -95,8 +95,8 @@ export function TablesExplainer() {
       <p>
         <strong>What the five tables are.</strong> <code>matters</code> is the universe of
         comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
-        agreement per ABA question, 12,937 of them. <code>folio_concepts</code> is the
-        18,259-concept legal ontology supplying the industry vocabulary. <code>labels</code>
+        agreement per ABA question, 12,937 of them. <code>industries</code> is the 20-row
+        vocabulary the SIC crosswalk supplies. <code>labels</code>
         records human review decisions. <code>ingest_runs</code> records what was loaded, when,
         how long it took and with what checksum.
       </p>

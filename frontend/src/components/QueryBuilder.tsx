@@ -95,7 +95,7 @@ const EXAMPLES: Example[] = [
   {
     question: 'How many deals do we have in each industry?',
     explains:
-      'Industry comes from FOLIO, an open legal ontology, resolved from the SEC’s own code. Note the row with no label: 18 of 152 agreements could not be resolved to an industry at all, and they are shown rather than dropped.',
+      'Industry comes from a checked-in SIC crosswalk, resolved from the SEC’s own code. Note the row with no label: 13 of 152 agreements could not be resolved to an industry at all, and they are shown rather than dropped.',
     expect: 'Health Care 25 · Finance 25 · Manufacturing 22',
     measures: ['comparable_deals.n'],
     dimensions: ['comparable_deals.label'],

@@ -37,9 +37,9 @@ FAKE_META = {
         },
         # not agent-selectable — dimension metadata, not a fact table
         {
-            "name": "folio_concepts",
+            "name": "industries",
             "measures": [],
-            "dimensions": [{"name": "folio_concepts.label"}],
+            "dimensions": [{"name": "industries.label"}],
         },
     ]
 }
@@ -78,9 +78,9 @@ class TestVocabularyIsReadFromMeta:
         assert "deal_points.median_numeric_value" in vocab.measures
 
     def test_non_selectable_cubes_are_excluded(self) -> None:
-        """folio_concepts is dimension metadata, not a fact table an agent aggregates over."""
+        """industries is dimension metadata, not a fact table an agent aggregates over."""
         vocab = fetch_vocabulary(cube_meta=FAKE_META)
-        assert "folio_concepts.label" not in vocab.dimensions
+        assert "industries.label" not in vocab.dimensions
 
     def test_a_meta_change_changes_the_vocabulary_with_no_code_change(self) -> None:
         """The vocabulary is never hardcoded — a new measure in Cube's model is immediately

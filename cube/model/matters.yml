@@ -3,18 +3,20 @@
 # THIS FILE IS AN API — see the header of deal_points.yml. Measure and dimension names here are
 # what the agent selects from and what the eval scores against.
 #
-# ## Hierarchy: denormalized levels. Native hierarchies tested and rejected.
+# ## No industry hierarchy. Measured, then removed.
 #
-# **Cube version in use: 1.7.15** (`@cubejs-backend/server-core`, read from the running
-# container). Tested directly, not assumed: a `hierarchies:` block was added to the
-# `comparable_deals` view and the model compiled without error — but `/cubejs-api/v1/meta`
-# returns `"hierarchies": []` for every cube and view. The key is accepted and not surfaced by
-# the REST API this product uses, so a native hierarchy would be dead configuration that reads
-# as a working feature. It was removed.
+# This model carried three denormalized ancestry dimensions until #49. They came from a legal
+# ontology that loaded 18,259 concepts, of which this corpus used 14 — all at the same level,
+# so a roll-up to a parent returned exactly what an equality match returned. The ontology, the
+# level columns and the roll-up are gone; `industries` below is the vocabulary that remains.
 #
-# The product therefore drills down on the **denormalized** `level_1_code`/`level_2_code`/
-# `level_3_code` columns written at ingest (#6) — three plain dimensions the frontend steps
-# through. Not a recursive CTE: correct, slow, and with no clean expression as a Cube dimension.
+# What survives is the property the ontology was actually earning: `industries.code` is the
+# join key, never `label`. A label retitled from "Health Care Industry" to "Healthcare" would
+# otherwise return zero rows, which reads as "we have no comparable deals" (#25).
+#
+# (Native Cube hierarchies were tested at 1.7.15 before that and also rejected: a `hierarchies:`
+# block compiles, but `/cubejs-api/v1/meta` returns `"hierarchies": []` for every cube and view,
+# so it would be dead configuration that reads as a working feature.)
 #
 # ## Deal-size bands are defined HERE and nowhere else
 #
@@ -63,9 +65,9 @@ cubes:
         relationship: one_to_many
         sql: "{CUBE}.id = {deal_points}.matter_id"
 
-      - name: folio_concepts
+      - name: industries
         relationship: many_to_one
-        sql: "{CUBE}.folio_industry_code = {folio_concepts}.code"
+        sql: "{CUBE}.industry_code = {industries}.code"
 
     dimensions:
       - name: id
@@ -110,13 +112,13 @@ cubes:
         description: >-
           The SEC's own four-digit industry code for the identified registrant, from EDGAR.
           Populated for 139 of 152. This is the raw code, not our grouping — see
-          folio_industry_label for what the product actually facets on.
+          industries.label for what the product actually facets on.
 
-      - name: folio_industry_code
-        sql: folio_industry_code
+      - name: industry_code
+        sql: industry_code
         type: string
-        description: FOLIO concept code for the matter's industry. Prefer folio_industry_label
-          for anything user-facing; codes are opaque IRI suffixes.
+        description: The matter's industry code, from the SIC crosswalk. Prefer
+          industries.label for anything user-facing; codes are opaque identifiers.
 
       - name: is_inferred_industry
         sql: is_inferred_industry
@@ -127,11 +129,11 @@ cubes:
           must flag it as inferred.
 
       - name: has_industry
-        sql: "{CUBE}.folio_industry_code IS NOT NULL"
+        sql: "{CUBE}.industry_code IS NOT NULL"
         type: boolean
         description: >-
           Whether the matter could be classified at all — TRUE for 139 of 152. Use it to state
-          coverage honestly instead of letting 18 unclassified matters vanish from a facet.
+          coverage honestly instead of letting 13 unclassified matters vanish from a facet.
 
       - name: deal_value_usd
         sql: deal_value_usd
@@ -189,15 +191,15 @@ cubes:
           THE DENOMINATOR — how many agreements are in the current selection. This is the
           number that must accompany every figure the product reports. Unfiltered it is 152.
 
-  - name: folio_concepts
-    sql_table: public.folio_concepts
+  - name: industries
+    sql_table: public.industries
     description: >-
-      The FOLIO legal-concept vocabulary, joined to matters so the product facets on labels
-      rather than opaque codes. 18,259 concepts loaded; the industry branch is the part used
-      here.
+      The industry vocabulary, joined to matters so the product facets on labels rather than
+      opaque codes. Seeded from data/mappings/sic_to_folio.csv at ingest; 14 of its rows are
+      carried by matters in this corpus.
 
     refresh_key:
-      sql: SELECT MAX(updated_at) FROM public.folio_concepts
+      sql: SELECT MAX(updated_at) FROM public.industries
 
     dimensions:
       - name: code
@@ -205,7 +207,7 @@ cubes:
         type: string
         primary_key: true
         description: >-
-          The FOLIO concept code — the stable identifier behind the label. Exposed because the
+          The industry code — the stable identifier behind the label. Exposed because the
           facet rail must hand this, not the label, to /comparables: matching a filter by its
           display string is the silent-empty-result failure (#25), and a code cannot drift from
           "Health Care" to "Healthcare". Not for display; show `label` instead.
@@ -219,24 +221,6 @@ cubes:
           files under Manufacturing. It is our definition, not a standard one, and must be
           described that way wherever it appears.
 
-      - name: level_1_code
-        sql: level_1_code
-        type: string
-        description: Top of the FOLIO branch, e.g. "Industry and Market". The coarsest
-          roll-up level.
-
-      - name: level_2_code
-        sql: level_2_code
-        type: string
-        description: Second FOLIO level, e.g. "Industry". Denormalized at ingest so facet
-          queries read a column instead of walking a recursive CTE.
-
-      - name: level_3_code
-        sql: level_3_code
-        type: string
-        description: Third FOLIO level — the sector a matter is actually tagged with, e.g.
-          "Health Care Industry".
-
       - name: updated_at
         sql: updated_at
         type: time
@@ -245,10 +229,10 @@ cubes:
 views:
   - name: comparable_deals
     description: >-
-      The Explore tab's query surface: matters with their FOLIO industry labels and levels.
-      Agents should prefer this view over the raw cubes — it is the curated selection. Drill
-      down by stepping level_1_code -> level_2_code -> label; this Cube version does not expose
-      native hierarchies over the REST API (see the file header).
+      The Explore tab's query surface: matters with their industry code and label. Agents
+      should prefer this view over the raw cubes — it is the curated selection. There is no
+      drill-down path: industry is one flat level on this corpus, which is why #49 removed the
+      hierarchy rather than leaving three dimensions that all return the same rows.
     cubes:
       - join_path: matters
         includes:
@@ -262,10 +246,7 @@ views:
           - has_industry
           - is_inferred_industry
           - n
-      - join_path: matters.folio_concepts
+      - join_path: matters.industries
         includes:
           - code
           - label
-          - level_1_code
-          - level_2_code
-          - level_3_code

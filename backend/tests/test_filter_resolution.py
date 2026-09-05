@@ -1,10 +1,13 @@
 """Filter-value resolution (#25) — the nastiest failure mode in the design.
 
 Measure and dimension *names* can be enum-locked with structured output; filter *values*
-cannot, because they come from free text. `folio_industry = "Health Care"` when the data holds
+cannot, because they come from free text. `industry = "Health Care"` when the data holds
 "Health Care Industry" returns zero rows that look exactly like "we have no comparable deals" —
 a silently wrong answer, indistinguishable from a genuinely thin corpus. The resolution ladder
-(exact -> alias -> embedding nearest) exists to make that distinction visible instead.
+(exact -> embedding nearest) exists to make that distinction visible instead.
+
+The ladder had a third rung, an alias tier reading the ontology's `skos:altLabel`s. #49 removed
+the ontology; its test went with it rather than being kept as a test of nothing.
 
 Runs with `OPENAI_API_KEY` unset — the embedding tier reads the committed cache.
 """
@@ -24,7 +27,7 @@ DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM folio_concepts").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM industries").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 
@@ -54,34 +57,32 @@ class TestExactHit:
 
 
 @needs_corpus
-class TestAliasHit:
-    def test_a_known_alias_resolves_by_the_alias_tier(self, conn, cache) -> None:  # type: ignore[no-untyped-def]
-        aliases = conn.execute("SELECT alias, code FROM folio_aliases LIMIT 1000").fetchall()
-        singly_owned = None
-        for alias, code in aliases:
-            owners = {
-                r[0]
-                for r in conn.execute(
-                    "SELECT DISTINCT code FROM folio_aliases WHERE lower(alias) = lower(%s)",
-                    (alias,),
-                ).fetchall()
-            }
-            if len(owners) == 1:
-                singly_owned = (alias, code)
-                break
-        if singly_owned is None:
-            pytest.skip("no unambiguous alias found to test against")
-        alias, code = singly_owned
-        result = resolve_filter_value(conn, cache, alias)
-        assert result.method == "alias"
-        assert result.raw == alias
+class TestTheLadderIsTwoTiers:
+    def test_only_exact_and_embedding_are_reachable(self, conn, cache) -> None:  # type: ignore[no-untyped-def]
+        """#49 removed the alias rung with the ontology that supplied it."""
+        assert resolve_filter_value(conn, cache, "Health Care Industry").method == "exact"
+        assert resolve_filter_value(conn, cache, "healthcare").method == "embedding"
+
+    def test_the_vocabulary_is_labels_the_corpus_carries_not_the_whole_table(self, conn) -> None:  # type: ignore[no-untyped-def]
+        """The crosswalk seeds every industry it can name; only some are carried by a matter.
+        Resolving to one nothing is tagged with returns zero rows — the exact failure this
+        module exists to prevent — so the closed vocabulary is the narrower set."""
+        from explorer.agent.resolve_filter_value import _industry_labels
+
+        labels = _industry_labels(conn)
+        seeded = conn.execute("SELECT count(*) FROM industries").fetchone()[0]
+        carried = conn.execute(
+            "SELECT count(DISTINCT industry_code) FROM matters WHERE industry_code IS NOT NULL"
+        ).fetchone()[0]
+        assert len(labels) == carried
+        assert carried < seeded
 
 
 @needs_corpus
 class TestEmbeddingHit:
     def test_a_near_miss_resolves_by_the_embedding_tier(self, conn, cache) -> None:  # type: ignore[no-untyped-def]
-        """ "healthcare" is neither the exact label ("Health Care Industry") nor a checked-in
-        alias — this can only succeed through embedding similarity."""
+        """ "healthcare" is not the exact label ("Health Care Industry"), so this can only
+        succeed through embedding similarity."""
         result = resolve_filter_value(conn, cache, "healthcare")
         assert result.method == "embedding"
         assert result.resolved == "Health Care Industry"
@@ -115,5 +116,5 @@ class TestResponseShape:
         result = resolve_filter_value(conn, cache, "healthcare")
         assert result.raw == "healthcare"
         assert result.resolved == "Health Care Industry"
-        assert result.method in {"exact", "alias", "embedding"}
+        assert result.method in {"exact", "embedding"}
         assert result.matter_count == 26

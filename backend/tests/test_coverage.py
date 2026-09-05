@@ -1,4 +1,4 @@
-"""`POST /coverage` — the FOLIO × period grid (#22).
+"""`POST /coverage` — the industry × period grid (#22).
 
 The KM view, and a deliberate design inversion: default BI styling emphasises the big numbers,
 but a gap is more actionable than a strength you already know about. The API's job is to make
@@ -118,7 +118,7 @@ class TestDrillTarget:
     def test_each_cell_carries_what_explore_needs_to_pre_filter(
         self, client: TestClient, cube: StubCube
     ) -> None:
-        """Clicking a cell must filter by FOLIO code, not by the display label (#25)."""
+        """Clicking a cell must filter by industry code, not by the display label (#25)."""
         body = client.post("/coverage", json={}).json()
         cell = _cell(body, "Health Care Industry", "2021")
         assert cell["folio_industry_code"] == "hc"

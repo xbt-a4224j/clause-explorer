@@ -30,27 +30,27 @@ SELECT m.id,
        concat_ws(' · ',
            m.source_contract_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
-           f.label,
+           i.label,
            to_char(m.signing_date, 'YYYY')
        ) AS summary
 FROM matters m
-LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+LEFT JOIN industries i ON i.code = m.industry_code
 ORDER BY m.id
 """
 
-# The distinct industry labels actually used on matters — not the 18k-concept ontology
-# (CLAUDE.md: map five or six dimensions, do not attempt the ontology). This is the closed
-# vocabulary #25's embedding-resolution tier matches a free-text filter value against.
+# The distinct industry labels actually used on matters — 14 of the crosswalk's rows, not
+# every row in it. This is the closed vocabulary #25's embedding-resolution tier matches a
+# free-text filter value against.
 INDUSTRY_LABEL_SQL = """
-SELECT DISTINCT f.label
+SELECT DISTINCT i.label
 FROM matters m
-JOIN folio_concepts f ON f.code = m.folio_industry_code
-WHERE f.label IS NOT NULL
+JOIN industries i ON i.code = m.industry_code
+WHERE i.label IS NOT NULL
 """
 
-# Representative free-text terms a partner or agent might type, so #25's exact/alias/embedding
+# Representative free-text terms a partner or agent might type, so #25's exact-then-embedding
 # resolution ladder is exercisable with no API key. Not exhaustive — the point is coverage of
-# the three resolution paths (case variants, spacing, a genuine near-miss), not every synonym.
+# both resolution paths (case variants, spacing, a genuine near-miss), not every synonym.
 FILTER_VALUE_EVAL_TERMS = [
     "healthcare",
     "Healthcare",

@@ -7,13 +7,15 @@ corpus — the model may emit `"Health Care"` when the data holds `"Health Care 
 mismatch returns **zero rows**, which looks exactly like "no comparable deals" and is
 indistinguishable from a genuinely thin corpus unless something resolves the value first.
 
-The ladder, in order, first match wins:
+The ladder is **two** tiers, in order, first match wins:
 
-1. **Exact** — case/whitespace-insensitive label match.
-2. **Alias** — a checked-in `folio_aliases` entry, unambiguous (see `folio.resolve`).
-3. **Embedding nearest** — cosine similarity against the corpus's actual industry labels (not
-   the 18k-concept FOLIO ontology — CLAUDE.md: map five or six dimensions), using the
+1. **Exact** — case/whitespace-insensitive match against an industry label the corpus carries.
+2. **Embedding nearest** — cosine similarity against those same labels, using the
    content-addressed cache (#16), so this runs with no API key against text already warmed.
+
+It was three until #49. The middle rung was an alias table loaded from the ontology's
+`skos:altLabel`s; the ontology is gone, and with 14 industry labels in the corpus an alias
+tier was matching nothing the embedding tier did not already reach.
 
 Below the similarity floor, or with no vectors at all, resolution **fails loudly**:
 `UnresolvedFilterValue` carrying the candidate list. A caller returning `[]` instead is the bug
@@ -29,7 +31,6 @@ import numpy as np
 from psycopg import Connection
 
 from explorer.api.logging import get_logger
-from explorer.folio.resolve import resolve as resolve_exact_or_alias
 from explorer.retrieval.embeddings import EmbeddingCache, EmbeddingUnavailable
 
 log = get_logger()
@@ -54,7 +55,7 @@ SIMILARITY_FLOOR = 0.55
 class Resolution:
     raw: str
     resolved: str
-    method: str  # "exact" | "alias" | "embedding"
+    method: str  # "exact" | "embedding"
     matter_count: int
     similarity: float | None = None
 
@@ -73,20 +74,22 @@ class UnresolvedFilterValue(RuntimeError):
 
 def _matter_count(conn: Connection, label: str) -> int:
     row = conn.execute(
-        "SELECT count(*) FROM matters m JOIN folio_concepts f ON f.code = m.folio_industry_code "
-        "WHERE f.label = %s",
+        "SELECT count(*) FROM matters m JOIN industries i ON i.code = m.industry_code "
+        "WHERE i.label = %s",
         (label,),
     ).fetchone()
     return int(row[0]) if row else 0
 
 
 def _industry_labels(conn: Connection) -> list[str]:
-    """The closed vocabulary this resolves against — labels actually used on `matters`, not
-    the full FOLIO ontology. Mirrors `warm_cache.INDUSTRY_LABEL_SQL`."""
+    """The closed vocabulary this resolves against — labels actually used on `matters`, which
+    is 14 of the crosswalk's rows, not every row in it. Mirrors `warm_cache.INDUSTRY_LABEL_SQL`;
+    an industry nothing is tagged with must not be resolvable, because filtering on it returns
+    zero rows that read as "no comparable deals"."""
     rows = conn.execute(
-        "SELECT DISTINCT f.label FROM matters m "
-        "JOIN folio_concepts f ON f.code = m.folio_industry_code "
-        "WHERE f.label IS NOT NULL ORDER BY f.label"
+        "SELECT DISTINCT i.label FROM matters m "
+        "JOIN industries i ON i.code = m.industry_code "
+        "WHERE i.label IS NOT NULL ORDER BY i.label"
     ).fetchall()
     return [str(r[0]) for r in rows]
 
@@ -104,20 +107,17 @@ def resolve_filter_value(conn: Connection, cache: EmbeddingCache, raw: str) -> R
     genuinely novel term, and a caller with none still resolves everything already warmed —
     the same content-addressed contract every other retrieval path in this app follows.
     """
-    exact_or_alias = resolve_exact_or_alias(conn, raw)
-    if exact_or_alias is not None:
-        row = conn.execute(
-            "SELECT label FROM folio_concepts WHERE code = %s", (exact_or_alias,)
-        ).fetchone()
-        label = str(row[0]) if row else raw
-        method = "exact" if raw.strip().lower() == label.strip().lower() else "alias"
+    labels = _industry_labels(conn)
+
+    needle = raw.strip().lower()
+    exact = next((label for label in labels if label.strip().lower() == needle), None)
+    if exact is not None:
         result = Resolution(
-            raw=raw, resolved=label, method=method, matter_count=_matter_count(conn, label)
+            raw=raw, resolved=exact, method="exact", matter_count=_matter_count(conn, exact)
         )
-        log.info("filter_value_resolved", raw=raw, resolved=label, method=method, similarity=None)
+        log.info("filter_value_resolved", raw=raw, resolved=exact, method="exact", similarity=None)
         return result
 
-    labels = _industry_labels(conn)
     if not labels:
         raise UnresolvedFilterValue(raw, [])
 
@@ -126,7 +126,7 @@ def resolve_filter_value(conn: Connection, cache: EmbeddingCache, raw: str) -> R
         label_vectors = cache.embed_many(labels)
     except EmbeddingUnavailable:
         # No key and this text was never warmed: cannot rank candidates, so refuse rather than
-        # silently falling back to string matching, which would be a fourth, undocumented tier.
+        # silently falling back to string matching, which would be a third, undocumented tier.
         raise UnresolvedFilterValue(raw, sorted(labels)) from None
 
     scored = sorted(
