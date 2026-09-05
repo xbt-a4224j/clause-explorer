@@ -1,12 +1,16 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Label } from './Label'
-import type { LabelQueueResponse } from '../types'
+import type { CalibrationLabels, LabelQueueResponse } from '../types'
 
 /**
- * Label (#29). Keyboard-only, under 5 seconds per item — so what earns a test is the keyboard
- * flow end to end: y/n/e/s move the queue and post a decision with no mouse involved, and the
- * progress indicator tells a KM reviewer how much is left before they start.
+ * Label (#29, #52).
+ *
+ * #52 replaced the single-letter keys with four named buttons, so what earns a test is the
+ * button flow end to end — Accept, Correct, Edit, Skip move the queue and post a decision —
+ * plus the two things the letters used to hide: that the keys are *gone* (a stray `y` must
+ * write nothing), and that the outcome of the loop is legible from the loop, with its
+ * direction stated honestly.
  */
 
 const QUEUE: LabelQueueResponse = {
@@ -37,35 +41,58 @@ const QUEUE: LabelQueueResponse = {
 }
 
 /**
- * Wait until a keypress will actually reach the view (#38).
+ * The committed artefact's real headline figures (`docs/results/calibration-labels.json`).
  *
- * The clause text appearing in the DOM does not mean React has run the passive effect that
- * installs the `keydown` listener — `findBy*` resolves off a DOM mutation, which happens at
- * commit, while effects flush afterwards. Normally the gap is invisible. Under CPU contention
- * it widened enough that the key was pressed into a window with no handler attached, and the
- * assertion failed *fast* with nothing having happened — which is exactly the shape reported
- * in #38 and was mis-attributed to the missing fetch abort.
- *
- * Awaiting an empty `waitFor` runs an async `act`, which flushes those pending effects.
+ * Deliberately the true numbers rather than round invented ones: the panel's job is to state
+ * that six decisions moved the score from 569 correct to 565, and a fixture that went *up*
+ * would let the honest-direction assertion pass against a panel that always says "improved".
  */
-async function readyForKeys() {
+const CALIBRATION: CalibrationLabels = {
+  generated_at: '2026-09-04T03:12:58+00:00',
+  command: 'PYTHONPATH=backend python -m explorer.evals.calibration',
+  prediction_count: 1701,
+  labels_applied: 6,
+  labels_differing: 5,
+  correct_before: 569,
+  correct_after: 565,
+  accuracy_before: 0.335,
+  accuracy_after: 0.332,
+  results: [],
+}
+
+/**
+ * Wait until the queue has rendered and React's passive effects have flushed (#38).
+ *
+ * `findBy*` resolves off a DOM mutation, which happens at commit, while effects flush
+ * afterwards. Awaiting an empty `waitFor` runs an async `act`, which drains them — so a click
+ * lands on a view whose handlers and fetches have actually settled.
+ */
+async function ready() {
   await screen.findByText(/a fee shall accrue/)
   await waitFor(() => {})
 }
 
-function mockApi() {
+function mockApi(calibration: CalibrationLabels | null = CALIBRATION) {
   const decisions: unknown[] = []
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (String(url).includes('/decide')) {
+    const u = String(url)
+    if (u.includes('/decide')) {
       decisions.push(JSON.parse(String(init?.body)))
       return { ok: true, json: async () => ({ ok: true }) } as Response
+    }
+    if (u.includes('calibration-labels')) {
+      if (!calibration) return { ok: false, status: 404, json: async () => ({}) } as Response
+      return { ok: true, json: async () => calibration } as Response
     }
     return { ok: true, json: async () => QUEUE } as Response
   })
   return { fetchMock, decisions }
 }
 
-beforeEach(() => {})
+function button(name: RegExp | string) {
+  return screen.getByRole('button', { name })
+}
+
 afterEach(() => vi.unstubAllGlobals())
 
 describe('the queue', () => {
@@ -90,68 +117,272 @@ describe('the queue', () => {
   })
 })
 
-describe('keyboard flow', () => {
-  it('y accepts the llm prediction and advances to the next item', async () => {
+/**
+ * #52 — buttons, not letters. These replace the y/n/e/s keyboard tests one for one.
+ */
+describe('the decision buttons (#52)', () => {
+  it('Accept posts the llm prediction and advances to the next item', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 'y' })
+    fireEvent.click(button('Accept'))
 
     await waitFor(() => expect(decisions).toHaveLength(1))
     expect(decisions[0]).toMatchObject({
       matter_id: 'contract_1',
       deal_point_name: 'Ticking fee',
       value: 'Yes',
+      prior_prediction: 'Yes',
     })
     await waitFor(() => expect(screen.getByTestId('label-item')).toHaveTextContent('contract_2'))
   })
 
-  it('n rejects and opens edit for a correction', async () => {
+  it('Correct opens the editor with the other extractor’s answer pre-filled', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 'n' })
-    // synchronous on purpose: the keydown handler sets state in the same flush, so there is
-    // nothing to await. findBy* wrapped it in a 1s poll that expired under parallel load —
-    // a flake caused entirely by asking for asynchrony that never existed.
-    expect(screen.getByLabelText('correct value')).toBeInTheDocument()
+    fireEvent.click(button('Correct'))
+
+    // the alternative, not the model's answer — Correct means "the other one was right",
+    // and pre-filling the value being rejected makes the reviewer delete it first
+    expect(screen.getByLabelText('correct value')).toHaveValue('No')
   })
 
-  it('e opens the span editor without rejecting first', async () => {
+  it('Edit opens the same editor with the model’s answer, to amend rather than replace', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 'e' })
-    expect(screen.getByLabelText('correct value')).toBeInTheDocument()
+    fireEvent.click(button('Edit'))
+    expect(screen.getByLabelText('correct value')).toHaveValue('Yes')
   })
 
-  it('s skips without posting a decision', async () => {
+  it('the editor posts the typed value on Enter', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 's' })
+    fireEvent.click(button('Correct'))
+    const input = screen.getByLabelText('correct value')
+    fireEvent.change(input, { target: { value: 'Maybe' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => expect(decisions).toHaveLength(1))
+    expect(decisions[0]).toMatchObject({ value: 'Maybe', prior_prediction: 'Yes' })
+  })
+
+  it('Skip advances without posting a decision', async () => {
+    const { fetchMock, decisions } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Skip'))
 
     await waitFor(() => expect(screen.getByTestId('label-item')).toHaveTextContent('contract_2'))
     expect(decisions).toHaveLength(0)
   })
 
-  it('? shows the shortcut help', async () => {
+  it('is reachable with Tab and Enter — real buttons, in document order, none taken out of the tab ring', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
+
+    const actions = within(screen.getByTestId('label-actions')).getAllByRole('button')
+    expect(actions.map((b) => b.textContent)).toEqual(['Accept', 'Correct', 'Edit', 'Skip'])
+    for (const el of actions) {
+      // jsdom does not synthesise a click from Enter the way a browser does for a native
+      // button, so the reachability claim is asserted structurally: a `<button>` with no
+      // negative tabindex and no disabled attribute is Tab-focusable and Enter-activatable.
+      expect(el.tagName).toBe('BUTTON')
+      expect(el).toBeEnabled()
+      expect(el).not.toHaveAttribute('tabindex')
+      el.focus()
+      expect(document.activeElement).toBe(el)
+    }
+  })
+})
+
+/**
+ * #52 — the letters are gone, not hidden. A reviewer who used to touch-type the queue now
+ * types into nothing, and that must be true rather than merely undocumented.
+ */
+describe('the keyboard shortcuts are removed (#52)', () => {
+  it('y no longer accepts, and s no longer skips', async () => {
+    const { fetchMock, decisions } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.keyDown(window, { key: 'y' })
+    fireEvent.keyDown(window, { key: 's' })
+    await waitFor(() => {})
+
+    expect(decisions).toHaveLength(0)
+    expect(screen.getByTestId('label-item')).toHaveTextContent('contract_1')
+  })
+
+  it('n and e no longer open the editor', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.keyDown(window, { key: 'n' })
+    fireEvent.keyDown(window, { key: 'e' })
+    await waitFor(() => {})
+
+    expect(screen.queryByLabelText('correct value')).not.toBeInTheDocument()
+  })
+
+  it('has no shortcut help of its own — ? belongs to the shell now', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
 
     fireEvent.keyDown(window, { key: '?' })
-    const dialog = await screen.findByRole('dialog', { name: /label shortcuts/i })
-    expect(dialog).toHaveTextContent(/accept/i)
+    await waitFor(() => {})
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('does not advertise the removed keys anywhere on the tab', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+    fireEvent.click(button(/how this queue works/i))
+
+    expect(document.body.textContent).not.toMatch(/y n e s|y\/n\/e\/s/)
+    expect(document.body.textContent).not.toMatch(/keystroke/i)
+  })
+})
+
+/**
+ * #52 — the loop's output, visible from the loop.
+ *
+ * The honesty requirement is the feature: six decisions moved the graded score from 569
+ * correct to 565. A panel that rendered that as progress would be worse than no panel.
+ */
+describe('what the decisions changed (#52)', () => {
+  it('states decisions recorded and how many differed from the model', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    expect(panel).toHaveTextContent(/6 decisions/)
+    expect(panel).toHaveTextContent(/5 .*differed/)
+  })
+
+  it('gives accuracy before and after, each with its n', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    expect(panel).toHaveTextContent(/569 of 1701/)
+    expect(panel).toHaveTextContent(/565 of 1701/)
+    expect(panel).toHaveTextContent(/33\.5%/)
+    expect(panel).toHaveTextContent(/33\.2%/)
+  })
+
+  it('says the score went down, and never dresses it as an improvement', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    expect(panel).toHaveTextContent(/went down/i)
+    expect(panel).toHaveTextContent(/4 fewer/)
+    expect(panel).not.toHaveTextContent(/improved|better|▲|↑/i)
+  })
+
+  it('keeps the corpus caveat: every queued item already has a lawyer’s answer', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    expect(panel).toHaveTextContent(/already has a lawyer/i)
+    expect(panel).toHaveTextContent(/un-annotated/i)
+  })
+
+  it('names the command that produced the figures', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    expect(panel).toHaveTextContent(/explorer\.evals\.calibration/)
+  })
+
+  it('says so plainly when calibration has not been run', async () => {
+    const { fetchMock } = mockApi(null)
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    const panel = await screen.findByTestId('label-outcome')
+    await waitFor(() => expect(panel).toHaveTextContent(/not run yet/i))
+  })
+
+  it('sits above the queue, where a decision is made', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+    const panel = screen.getByTestId('label-outcome')
+    const item = screen.getByTestId('label-item')
+    // DOCUMENT_POSITION_FOLLOWING: the queue item comes after the panel in document order
+    expect(panel.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+/**
+ * #52 — the reviewer's own hit rate against the model, one item at a time. Aggregate
+ * before/after is the loop's output; this is the feedback the decision itself earns.
+ */
+describe('whether the model agreed (#52)', () => {
+  it('says the model agreed when the reviewer accepted its answer', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Accept'))
+
+    const verdict = await screen.findByTestId('label-agreement')
+    expect(verdict).toHaveTextContent(/Ticking fee/)
+    expect(verdict).toHaveTextContent(/agreed with you/i)
+    expect(verdict).not.toHaveTextContent(/did not agree/i)
+  })
+
+  it('says the model did not agree when the reviewer corrected it', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Correct'))
+    fireEvent.keyDown(screen.getByLabelText('correct value'), { key: 'Enter' })
+
+    const verdict = await screen.findByTestId('label-agreement')
+    expect(verdict).toHaveTextContent(/did not agree/i)
+    expect(verdict).toHaveTextContent(/Yes/)
+  })
+
+  it('says nothing before a decision, and nothing after a skip', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    expect(screen.queryByTestId('label-agreement')).not.toBeInTheDocument()
+    fireEvent.click(button('Skip'))
+    await waitFor(() => expect(screen.getByTestId('label-item')).toHaveTextContent('contract_2'))
+    expect(screen.queryByTestId('label-agreement')).not.toBeInTheDocument()
   })
 })
 
@@ -209,9 +440,9 @@ describe('explaining the loop (#33)', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 's' })
+    fireEvent.click(button('Skip'))
 
     const why = await screen.findByTestId('label-why')
     await waitFor(() => expect(why).toHaveTextContent(/agree/i))
@@ -222,37 +453,35 @@ describe('explaining the loop (#33)', () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    await readyForKeys()
+    await ready()
 
-    fireEvent.keyDown(window, { key: 's' })
+    fireEvent.click(button('Skip'))
 
     const missing = await screen.findByTestId('label-nospan')
     expect(missing).toHaveTextContent(/whole agreement|not a failure|expected/i)
   })
 
-  it('leaves the keyboard loop alone — the toggle does not capture y/n/e/s', async () => {
-    const { fetchMock, decisions } = mockApi()
+  it('describes the buttons the tab actually has', async () => {
+    const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-
-    const toggle = await screen.findByRole('button', { name: /how this queue works/i })
-    await waitFor(() => {})
-    toggle.focus()
-    fireEvent.keyDown(window, { key: 'y' })
-
-    await waitFor(() => expect(decisions).toHaveLength(1))
+    fireEvent.click(await screen.findByRole('button', { name: /how this queue works/i }))
+    const explainer = await screen.findByText(/What your decision does/i)
+    expect(explainer.parentElement).toHaveTextContent(/decision/i)
   })
 })
 
 describe('designed states', () => {
   it('shows a designed empty state once the queue is exhausted', async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({ ...QUEUE, items: [], queue_size: 0 }),
-        }) as Response,
-    )
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('calibration-labels')) {
+        return { ok: true, json: async () => CALIBRATION } as Response
+      }
+      return {
+        ok: true,
+        json: async () => ({ ...QUEUE, items: [], queue_size: 0 }),
+      } as Response
+    })
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
     expect(await screen.findByText(/queue is empty/i)).toBeInTheDocument()

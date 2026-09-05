@@ -203,6 +203,11 @@ function CalibrationReport() {
  *
  * Counts, not percentages: n is 20 per deal point, well under the threshold where a percentage
  * would imply precision the sample does not support.
+ *
+ * #52 moved the headline (decisions recorded, how many differed, graded correct before and
+ * after) to the top of the Label tab, where the decisions are made. The two used to say the
+ * same thing in two places, and the copy that mattered was two tabs from the queue. What is
+ * left here is the per-deal-point breakdown, which Label does not show.
  */
 function LabelLoopCalibration() {
   const [data, setData] = useState<CalibrationLabels | null>(null)
@@ -227,15 +232,14 @@ function LabelLoopCalibration() {
     <section className="admin__section">
       <h2 className="admin__heading">Calibration — what human labels changed</h2>
 
-      <p className="admin__note" data-testid="calibration-labels-caveat">
+      <p className="admin__note" data-testid="calibration-labels-pointer">
         Grading prefers a Label-tab decision over the model&rsquo;s answer for the same matter and
         deal point, then scores it against MAUD like any other answer — so a mistyped label lowers
-        the number rather than being quietly discarded. Read that against what this corpus is:
-        every item in the queue is a held-out matter that <strong>already has a lawyer&rsquo;s
-        answer</strong>, so reviewing one teaches the system nothing gold did not. The loop closing
-        means calibration <em>can</em> prefer a human label; it does not mean this corpus needs one.
-        The mechanism earns its keep on <strong>un-annotated</strong> documents, where the
-        reviewer&rsquo;s decision is the only answer there is.
+        the number rather than being quietly discarded. The headline — how many decisions were
+        recorded, how many differed from the model, and the graded count before and after — is on
+        the <strong>Label</strong> tab, at the top of the queue that produces it, together with the
+        caveat about a corpus that already has a lawyer&rsquo;s answer for every queued item. It is
+        not repeated here (#52). What follows is the breakdown behind it, deal point by deal point.
       </p>
 
       {missing && <p className="admin__missing">Not run yet.</p>}
@@ -245,18 +249,8 @@ function LabelLoopCalibration() {
 
       {data && (
         <>
-          <p className="admin__note" data-testid="calibration-labels-summary">
-            <span className="mono">{data.labels_applied}</span> labels applied, of which{' '}
-            <span className="mono">{data.labels_differing}</span> differed from the model&rsquo;s
-            answer. Graded correct{' '}
-            <span className="mono">
-              {data.correct_before} of {data.prediction_count}
-            </span>{' '}
-            before,{' '}
-            <span className="mono">
-              {data.correct_after} of {data.prediction_count}
-            </span>{' '}
-            after. Produced <span className="mono">{data.generated_at.slice(0, 10)}</span> by{' '}
+          <p className="admin__note" data-testid="calibration-labels-provenance">
+            Produced <span className="mono">{data.generated_at.slice(0, 10)}</span> by{' '}
             <code>{data.command}</code>.
           </p>
 

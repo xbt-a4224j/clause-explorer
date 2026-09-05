@@ -3,7 +3,7 @@
  *
  * The Label tab's mechanism is not self-evident from the card: a reviewer sees two
  * predictions and a verdict, with no indication of where either came from or what their
- * keystroke changes. This is that mechanism as a picture.
+ * decision changes. This is that mechanism as a picture.
  *
  * Inline SVG rather than an asset: it inherits the design tokens, so it cannot drift from
  * the palette, and it stays legible at any zoom. `role="img"` with a title and description
@@ -23,7 +23,7 @@ export function LoopDiagram() {
         Two extractors run over the same contract: a language model, whose predictions are
         recorded to disk, and a keyword baseline that costs nothing. Their answers are
         compared. Items where they disagree are ranked to the top of the review queue. Your
-        keystroke writes one row to the labels table. The next calibration run reads that table
+        decision writes one row to the labels table. The next calibration run reads that table
         and grades your answer in place of the model's, which moves the accuracy figure for that
         deal point — up if you were right, down if you were not.
       </desc>
@@ -80,7 +80,9 @@ export function LoopDiagram() {
         <text x="74" y="108">no API call</text>
         <text x="207" y="82">same contract</text>
         <text x="352" y="82">disagreements first</text>
-        <text x="504" y="82">y · n · e · s</text>
+        {/* four buttons, not four keys (#52) — spelled out in the body copy; at 9px
+            monospace the four words themselves overrun the 120px node */}
+        <text x="504" y="82">four buttons</text>
         <text x="504" y="176">one row each</text>
         <text x="353" y="176">reads them, prefers them</text>
         <text x="189" y="176">where it is weak</text>
