@@ -336,3 +336,53 @@ export interface CalibrationResponse {
   reportable_count: number | null
   cost: CalibrationCost | null
 }
+
+/**
+ * `POST /agent/ask` (#47) — free text in, a *selection* out.
+ *
+ * There is deliberately no result field on this shape. The model selects; the figure comes
+ * from `/agent/run-selection` after a person has confirmed the chips, which is where the
+ * `min_n` gate has always lived.
+ */
+export interface FilterResolution {
+  raw: string
+  /** "exact" | "embedding" | "verbatim" | "unresolved" */
+  method: string
+  resolved: string | null
+  similarity: number | null
+  matter_count: number | null
+  /** near misses, populated only when `method` is "unresolved" */
+  candidates: string[]
+  note: string | null
+}
+
+export interface AskFilter {
+  member: string
+  operator: string
+  values: string[]
+  resolutions: FilterResolution[]
+}
+
+/** What one question cost, measured (#50). Never estimated, never hardcoded. */
+export interface AskUsage {
+  model: string
+  prompt_tokens: number
+  completion_tokens: number
+  latency_ms: number
+  cost_usd: number
+  price_checked_on: string
+  price_source: string
+}
+
+export interface AskResponse {
+  question: string
+  measures: string[]
+  dimensions: string[]
+  filters: AskFilter[]
+  time_dimensions: Array<Record<string, unknown>>
+  /** the model's output verbatim, so what it said can be diffed against what will run */
+  model_selection: Record<string, unknown>
+  runnable: boolean
+  blocked_reason: string | null
+  usage: AskUsage
+}

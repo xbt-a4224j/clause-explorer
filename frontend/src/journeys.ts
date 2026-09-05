@@ -55,16 +55,18 @@ export const JOURNEYS: readonly Journey[] = [
     today:
       'Search the document system by keyword, open eight agreements, read each no-shop section, build a table by hand.',
     steps: [
+      'Ask · the measure and the slice',
       'Explore · healthcare, all cash',
       'Deal Terms · roll the set up',
       'the clause, in the filing',
     ],
     outcome: 'Counts with their denominator, and the two deals that went the other way.',
     limit: null,
-    // The journey begins where the question is put, but Ask has no free-text box until #47
-    // lands one. Until then "Run this" goes to Explore, where every step is performable; #47
-    // moves it to 'ask' in the same commit that gives Ask something to type into.
-    tab: 'explore',
+    // #47 landed the free-text box, so the journey now starts where the question is actually
+    // put. It used to drop the reader on Explore because step one could not be performed on
+    // Ask — an honest workaround for a missing feature, and stale the moment the feature
+    // arrived. The seed still travels: the Explore step arrives already narrowed.
+    tab: 'ask',
     seed: {
       folio_industry_code: HEALTH_CARE,
       folio_industry_label: 'Health Care Industry',

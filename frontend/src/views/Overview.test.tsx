@@ -125,11 +125,11 @@ describe('the two journeys (#40, cut to two in #48)', () => {
 
     expect(onStart).toHaveBeenCalledTimes(1)
     const journey = onStart.mock.calls[0][0]
-    // The journey belongs on Ask, but Ask has no free-text box until #47 lands one, and a
-    // "Run this" that drops someone on a tab where step one cannot be performed is worse than
-    // one extra click. #47 moves both of these to 'ask' in the commit that adds the box.
-    expect(journey.tab).toBe('explore')
-    expect(journey.steps[0]).toMatch(/^Explore/)
+    // #47 gave Ask a free-text box, so the journey starts where the question is put. Before
+    // that it landed on Explore, because dropping someone on a tab where step one cannot be
+    // performed is worse than one extra click.
+    expect(journey.tab).toBe('ask')
+    expect(journey.steps[0]).toMatch(/^Ask/)
     // the seed still travels, so the Explore step of this journey arrives already narrowed
     expect(journey.seed).toMatchObject({
       folio_industry_label: 'Health Care Industry',

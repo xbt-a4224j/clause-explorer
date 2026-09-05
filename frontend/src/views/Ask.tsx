@@ -4,6 +4,7 @@ import { ignoreAbort } from '../abort'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
 import { QueryBuilder } from '../components/QueryBuilder'
+import { AskBox } from '../components/AskBox'
 import { Term } from '../components/Term'
 import { Grading } from '../components/Grading'
 
@@ -24,9 +25,12 @@ import { Grading } from '../components/Grading'
  * with `cube/model/*.yml`, and then any selection failure becomes an unfalsifiable argument
  * about which list was authoritative.
  *
- * Keyless by design: the catalog, the routing argument and the refusal behaviour are all
- * database-and-model-free. Only live selection needs a key, and its absence is a designed
- * state rather than a broken tab.
+ * #47 put the model on this tab. Free text goes to `select_via_llm`, which returns a
+ * selection — never an answer, never a number — rendered as chips a person confirms before
+ * `/agent/run-selection` computes anything. Until that landed, nothing a user could touch
+ * called a model at all, and the repo's central claim was reachable only from the eval
+ * harness. The catalog, the builder and the offline grade below it still need no key; the
+ * question box does, and 7bc47ee dropped the guarantee that it would not.
  */
 
 function EntryList({ entries, testId }: { entries: CatalogEntry[]; testId: string }) {
@@ -113,6 +117,13 @@ export function Ask() {
         </div>
       </section>
 
+      {/* #47: the free-text path sits above the click-built one. A reader who lands here should
+          meet the model first — it is the thing the repo claims and the thing that was, until
+          now, reachable only from the eval harness. The builder below is the contrast. */}
+      <section className="sem__pane">
+        <AskBox />
+      </section>
+
       <section className="sem__pane">
         <QueryBuilder measures={catalog.measures} dimensions={catalog.dimensions} />
       </section>
@@ -179,7 +190,11 @@ WHERE deal_point_name =
           this screen. Correctness is then one discrete question — did it pick the right
           measure and filters — gradeable offline with no database and no model. It also gives{' '}
           <Term>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
-          assembled it. <span data-testid="keyless-note">No API key is needed for any of that.</span>
+          assembled it.{' '}
+          <span data-testid="keyless-note">
+            The catalog, the builder and the grade need no API key. The question box above does
+            — it is the one thing here that calls a model, which is the point of it.
+          </span>
         </p>
         <p data-testid="relocated-risk">
           <strong>The limit.</strong> The risk moves, it does not disappear: a{' '}

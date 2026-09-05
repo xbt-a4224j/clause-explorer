@@ -913,3 +913,79 @@ kbd {
 }
 .dp__clause--excerpt { max-height: 12em; overflow: auto; }
 .drill__text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* #47 — ask in words, confirm the reading, then run.
+   The chips are the confirmation step made visible, so they are sized to be read and edited
+   rather than to be compact: a row of tight tokens is a summary, and a summary is exactly
+   what a reader would skim past on the one screen where skimming is the failure. */
+.ask__row { display: flex; gap: var(--pad-sm); margin-bottom: var(--pad-md); }
+.ask__input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+.ask__input::placeholder { color: var(--ink-tertiary); }
+
+.ask__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--pad-md); }
+.ask__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 12px;
+}
+/* An unresolved value is a designed state, not an error: dashed rather than coloured, because
+   the corpus not carrying a name is a fact about the corpus, not a fault. */
+.ask__chip.is-unresolved { border-style: dashed; border-color: var(--hairline-strong); }
+.ask__chiprole {
+  color: var(--ink-tertiary);
+  font-size: 11px;
+  text-transform: lowercase;
+}
+.ask__chipname { font-family: var(--font-mono); color: var(--ink); }
+.ask__chipedit {
+  min-width: 12ch;
+  max-width: 28ch;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--hairline-strong);
+  border-radius: 3px;
+  background: var(--surface-1);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.ask__chipedit:hover { border-color: var(--hairline-strong); }
+.ask__method { color: var(--ink-tertiary); font-family: var(--font-mono); font-size: 11px; }
+.ask__method--unresolved { color: var(--ink-subtle); font-weight: 600; }
+.ask__near { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ask__nearbtn {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  background: var(--surface-1);
+  color: var(--ink-subtle);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ask__nearbtn:hover { background: var(--surface-3); color: var(--ink); }
+.ask__x {
+  padding: 0 3px;
+  border: 0;
+  background: none;
+  color: var(--ink-tertiary);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ask__x:hover { color: var(--ink); }
+.ask__confirm { display: flex; align-items: center; gap: var(--pad-md); flex-wrap: wrap; }
