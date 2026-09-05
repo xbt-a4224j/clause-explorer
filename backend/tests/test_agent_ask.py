@@ -28,6 +28,7 @@ import pytest
 from explorer.agent.select import Vocabulary
 from explorer.api import ask as ask_module
 from explorer.api.main import app
+from explorer.evals.pricing import PRICE_CHECKED_ON, PRICE_SOURCE, cost_usd
 from fastapi.testclient import TestClient
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
@@ -434,6 +435,57 @@ class TestAMissingKeyIsAClearError:
         detail = response.json()["error"]["message"]
         assert "OPENAI_API_KEY" in detail
         assert "sk-" not in detail
+
+
+class TestWhatTheQuestionCost:
+    """#50. Every field measured: the token counts come off the response, the dollars off the
+    committed price table with its checked-on date. Nothing here is a remembered rate."""
+
+    def test_the_response_carries_every_usage_field(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        stub_model(
+            monkeypatch,
+            {"measures": ["deal_points.n"], "dimensions": [], "filters": [], "timeDimensions": []},
+        )
+        usage = client.post("/agent/ask", json={"question": "how many"}).json()["usage"]
+        assert usage["model"] == "gpt-4o-mini"
+        assert usage["prompt_tokens"] == 2104
+        assert usage["completion_tokens"] == 61
+        assert usage["latency_ms"] == 1412.0
+        assert usage["price_checked_on"] == PRICE_CHECKED_ON
+        assert usage["price_source"] == PRICE_SOURCE
+
+    def test_cost_is_priced_from_the_committed_table_not_hardcoded(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        """Asserted against `cost_usd` rather than a literal: a literal here would be a second
+        copy of the price table, and the one that goes stale silently."""
+        stub_model(
+            monkeypatch,
+            {"measures": ["deal_points.n"], "dimensions": [], "filters": [], "timeDimensions": []},
+        )
+        usage = client.post("/agent/ask", json={"question": "how many"}).json()["usage"]
+        assert usage["cost_usd"] == cost_usd("gpt-4o-mini", 2104, 61)
+
+    def test_an_unpriced_model_raises_rather_than_reporting_zero(self) -> None:
+        """A "$0.00 measured cost" in the UI would be a fabricated number, which CLAUDE.md
+        ranks as worse than a blank."""
+        with pytest.raises(KeyError):
+            cost_usd("gpt-5-imaginary", 10, 10)
+
+    def test_the_cost_is_reported_even_though_nothing_was_executed(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        """The dollars were spent at the question, not at the run — so they are reported by
+        the endpoint that spent them, whether or not a selection is ever executed."""
+        stub_model(
+            monkeypatch,
+            {"measures": [], "dimensions": [], "filters": [], "timeDimensions": []},
+        )
+        body = client.post("/agent/ask", json={"question": "unanswerable"}).json()
+        assert body["measures"] == []
+        assert body["usage"]["cost_usd"] > 0
 
 
 class TestTheCallIsLogged:

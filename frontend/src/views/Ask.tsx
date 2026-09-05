@@ -5,6 +5,7 @@ import { ExplainerPanel } from '../components/ExplainerPanel'
 import { RoutingDiagram } from '../components/RoutingDiagram'
 import { QueryBuilder } from '../components/QueryBuilder'
 import { AskBox } from '../components/AskBox'
+import { SessionCost } from '../components/SessionCost'
 import { Term } from '../components/Term'
 import { Grading } from '../components/Grading'
 
@@ -50,6 +51,11 @@ function EntryList({ entries, testId }: { entries: CatalogEntry[]; testId: strin
 export function Ask() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // #50: the running total lives on the tab rather than inside the box, so it stays put while
+  // the box is cleared and re-asked. Accumulated from the same measured `usage` payloads the
+  // per-question line renders.
+  const [questions, setQuestions] = useState(0)
+  const [sessionCost, setSessionCost] = useState(0)
 
   useEffect(() => {
     // #38
@@ -121,7 +127,12 @@ export function Ask() {
           meet the model first — it is the thing the repo claims and the thing that was, until
           now, reachable only from the eval harness. The builder below is the contrast. */}
       <section className="sem__pane">
-        <AskBox />
+        <AskBox
+          onAsked={(costUsd) => {
+            setQuestions((n) => n + 1)
+            setSessionCost((total) => total + costUsd)
+          }}
+        />
       </section>
 
       <section className="sem__pane">
@@ -204,6 +215,10 @@ WHERE deal_point_name =
           to catch it.
         </p>
       </ExplainerPanel>
+
+      {/* #50: the foot of the tab, so it accumulates behind everything else rather than
+          competing with the answer for attention. */}
+      <SessionCost questions={questions} costUsd={sessionCost} />
     </div>
   )
 }

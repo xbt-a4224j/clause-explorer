@@ -277,6 +277,51 @@ describe('an unresolved value fails loudly rather than returning zero rows', () 
   })
 })
 
+/**
+ * #50 — what the question cost.
+ *
+ * A firm paying per seat notices a tool that shows the price of the question the moment it was
+ * asked. Every field is measured: tokens off the response, dollars off the committed price
+ * table. The issue's own example line reads `$0.0006` for 2,104 in / 61 out, which prices at
+ * $0.000352 — so the rendered figure is computed here rather than copied from the ticket.
+ */
+describe('the cost line', () => {
+  it('renders model, tokens in and out, latency and dollars', async () => {
+    mockApi(ASKED)
+    render(<AskBox />)
+    await ask()
+
+    const usage = screen.getByTestId('ask-usage')
+    expect(usage).toHaveTextContent('gpt-4o-mini')
+    expect(usage).toHaveTextContent('726 in')
+    expect(usage).toHaveTextContent('64 out')
+    expect(usage).toHaveTextContent('2.7s')
+    expect(usage).toHaveTextContent('$0.000147')
+  })
+
+  it('separates thousands, because these are read as evidence', async () => {
+    mockApi({ ...ASKED, usage: { ...ASKED.usage, prompt_tokens: 2104 } })
+    render(<AskBox />)
+    await ask()
+    expect(screen.getByTestId('ask-usage')).toHaveTextContent('2,104 in')
+  })
+
+  it('appears before any run, because the cost was incurred at the question', async () => {
+    const calls = mockApi(ASKED)
+    render(<AskBox />)
+    await ask()
+    expect(screen.getByTestId('ask-usage')).toBeInTheDocument()
+    expect(calls.some((c) => c.includes('run-selection'))).toBe(false)
+  })
+
+  it('states the date the price table was checked, so the dollars are falsifiable', async () => {
+    mockApi(ASKED)
+    render(<AskBox />)
+    await ask()
+    expect(screen.getByTestId('ask-usage')).toHaveTextContent('2026-09-03')
+  })
+})
+
 describe('designed states', () => {
   it('reports a failed interpretation rather than an empty selection', async () => {
     mockApi({ error: { message: 'OPENAI_API_KEY is not set.' } }, 503)

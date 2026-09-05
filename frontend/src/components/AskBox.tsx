@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { AskFilter, AskResponse, RunSelectionResponse } from '../types'
 import { isAbortError, useAbortOnUnmount } from '../abort'
+import { formatLatency, formatTokens, formatUsd } from './usage'
 
 /**
  * Ask in words, confirm the reading, then run (#47).
@@ -68,7 +69,7 @@ function Resolution({ filter }: { filter: EditableFilter }) {
   )
 }
 
-export function AskBox() {
+export function AskBox({ onAsked }: { onAsked?: (costUsd: number) => void } = {}) {
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
   const [asked, setAsked] = useState<AskResponse | null>(null)
@@ -114,6 +115,7 @@ export function AskBox() {
       const response = body as AskResponse
       setAsked(response)
       setConfirmed(toConfirmed(response))
+      onAsked?.(response.usage.cost_usd)
     } catch (e) {
       if (isAbortError(e)) return
       setAskError((e as Error).message)
@@ -226,6 +228,18 @@ export function AskBox() {
 
       {confirmed && asked && (
         <>
+          {/* #50: under the chips, and rendered whether or not anyone goes on to run the
+              selection — the dollars were spent at the question, not at the run. */}
+          <p className="ask__usage mono" data-testid="ask-usage">
+            {asked.usage.model} · {formatTokens(asked.usage.prompt_tokens)} in /{' '}
+            {formatTokens(asked.usage.completion_tokens)} out ·{' '}
+            {formatLatency(asked.usage.latency_ms)} · {formatUsd(asked.usage.cost_usd)}
+            <span className="ask__priced">
+              {' '}
+              priced from the committed table, checked {asked.usage.price_checked_on}
+            </span>
+          </p>
+
           <div className="ask__chips" data-testid="ask-chips">
             {nothingSelected && (
               <p className="qb__blocked" data-testid="ask-empty">

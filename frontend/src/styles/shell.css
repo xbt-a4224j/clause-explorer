@@ -989,3 +989,19 @@ kbd {
 }
 .ask__x:hover { color: var(--ink); }
 .ask__confirm { display: flex; align-items: center; gap: var(--pad-md); flex-wrap: wrap; }
+
+/* #50 — what the question cost. Quiet by design: it is evidence a reader can check, not a
+   headline, so it sits at the tertiary ink floor and never competes with the chips. */
+.ask__usage {
+  margin: 0 0 var(--pad-sm);
+  font-size: 11px;
+  color: var(--ink-tertiary);
+}
+.ask__priced { color: var(--ink-tertiary); }
+.ask__session {
+  margin: var(--pad-lg) 0 0;
+  padding-top: var(--pad-sm);
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  color: var(--ink-tertiary);
+}

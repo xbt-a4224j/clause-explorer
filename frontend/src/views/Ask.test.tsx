@@ -277,6 +277,72 @@ describe('inline jargon (#35)', () => {
   })
 })
 
+/**
+ * #47/#50 — the free-text path is on the tab, and its cost accumulates at the foot of it.
+ *
+ * The component tests cover the chips and the formatting; what is only checkable here is the
+ * wiring: asking a question through the box moves the tab's running total.
+ */
+describe('the question box and its running cost', () => {
+  const ASK_RESPONSE = {
+    question: 'healthcare deals',
+    measures: ['comparable_deals.n'],
+    dimensions: [],
+    filters: [],
+    time_dimensions: [],
+    model_selection: { measures: ['comparable_deals.n'], dimensions: [], filters: [], timeDimensions: [] },
+    runnable: true,
+    blocked_reason: null,
+    usage: {
+      model: 'gpt-4o-mini',
+      prompt_tokens: 726,
+      completion_tokens: 64,
+      latency_ms: 2734,
+      cost_usd: 0.0001473,
+      price_checked_on: '2026-09-03',
+      price_source: 'https://developers.openai.com/api/docs/pricing',
+    },
+  }
+
+  function mockWithAsk() {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/grading')) {
+        return { ok: true, status: 200, json: async () => GRADING } as Response
+      }
+      if (String(url).includes('/agent/ask')) {
+        return { ok: true, status: 200, json: async () => ASK_RESPONSE } as Response
+      }
+      return { ok: true, status: 200, json: async () => CATALOG } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock)
+  }
+
+  it('puts a free-text box on the tab — until #47 there was none', async () => {
+    mockCatalog()
+    render(<Ask />)
+    expect(await screen.findByTestId('ask-question')).toBeInTheDocument()
+  })
+
+  it('shows no session total before anything is asked', async () => {
+    mockCatalog()
+    render(<Ask />)
+    await screen.findByTestId('query-builder')
+    expect(screen.queryByTestId('ask-session')).not.toBeInTheDocument()
+  })
+
+  it('accumulates the measured cost at the foot of the tab once a question is asked', async () => {
+    mockWithAsk()
+    render(<Ask />)
+    const box = await screen.findByTestId('ask-question')
+    fireEvent.change(box, { target: { value: 'healthcare deals' } })
+    fireEvent.click(screen.getByRole('button', { name: /interpret/i }))
+
+    const total = await screen.findByTestId('ask-session')
+    expect(total).toHaveTextContent('1 question')
+    expect(total).toHaveTextContent('$0.000147')
+  })
+})
+
 describe('the offline grade (#36)', () => {
   it('shows the grade computed from committed fixtures', async () => {
     mockCatalog()
