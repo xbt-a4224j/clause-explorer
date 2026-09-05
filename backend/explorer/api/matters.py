@@ -185,10 +185,10 @@ def matter_detail(matter_id: str) -> MatterDetail:
     with psycopg.connect(settings.database_url) as conn:
         row = conn.execute(
             """
-            SELECT m.id, m.target_name, m.acquirer_name, f.label, m.is_inferred_industry,
+            SELECT m.id, m.target_name, m.acquirer_name, i.label, m.is_inferred_industry,
                    m.signing_date, m.deal_value_usd, m.source_file, m.source_contract_title
               FROM matters m
-              LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+              LEFT JOIN industries i ON i.code = m.industry_code
              WHERE m.id = %(id)s
             """,
             {"id": matter_id},

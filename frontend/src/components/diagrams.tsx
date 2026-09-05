@@ -7,7 +7,7 @@
  *
  * There were five. #45 cut the explainer prose to what a tab is for plus its one honest limit,
  * and deleted the two diagrams whose argument no longer had prose beside it:
- * `ExploreDiagram` drew the FOLIO hierarchy roll-up, and `AdminDiagram` drew the
+ * `ExploreDiagram` drew an industry hierarchy roll-up, and `AdminDiagram` drew the
  * `MAX(updated_at)` freshness chain. Both paragraphs moved to `docs/walkthrough.md`. The three
  * below survive because the claims they draw are still stated in the explainer beside them.
  *
@@ -209,7 +209,7 @@ export function TablesDiagram() {
       <title id="tb-t">The five tables and how they connect</title>
       <desc id="tb-d">
         Matters is the universe of comparable deals. Each matter has many deal points, one per
-        ABA question. FOLIO concepts supply the industry vocabulary that matters reference.
+        ABA question. Industries supply the vocabulary that matters reference.
         Labels record human review decisions. Ingest runs record what was loaded, when, and with
         what checksum.
       </desc>
@@ -233,14 +233,14 @@ export function TablesDiagram() {
       <g className="loop__label">
         <text x="300" y="48">matters</text>
         <text x="128" y="48">deal_points</text>
-        <text x="472" y="48">folio_concepts</text>
+        <text x="472" y="48">industries</text>
         <text x="208" y="122">labels</text>
         <text x="392" y="122">ingest_runs</text>
       </g>
       <g className="loop__sub">
         <text x="300" y="62">152 · the deal universe</text>
         <text x="128" y="62">12,937 · one per question</text>
-        <text x="472" y="62">18,259 · the vocabulary</text>
+        <text x="472" y="62">20 · the vocabulary</text>
         <text x="208" y="136">your review decisions</text>
         <text x="392" y="136">what loaded, when, sha256</text>
       </g>

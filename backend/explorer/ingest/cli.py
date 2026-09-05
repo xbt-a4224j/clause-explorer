@@ -1,9 +1,10 @@
 """One re-runnable entry point for every corpus (#11).
 
-`python -m explorer.ingest --source {folio,maud,edgar,all}`
+`python -m explorer.ingest --source {maud,edgar,all}`
 
-Order matters and is not alphabetical: FOLIO first because `matters.folio_industry_code` is a
-foreign key into it, and MAUD before EDGAR because enrichment updates rows MAUD creates.
+Order matters and is not alphabetical: MAUD before EDGAR because enrichment updates rows MAUD
+creates, and the EDGAR step seeds `industries` from the checked-in crosswalk before writing the
+`matters.industry_code` foreign key into it (#49).
 
 Every step is idempotent by natural key and every step writes an `ingest_runs` row, so the
 Admin tab (#30) can show status without parsing the log file.
@@ -18,11 +19,10 @@ from collections.abc import Callable
 
 from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings
-from explorer.ingest import edgar, folio, maud
+from explorer.ingest import edgar, maud
 
 # dependency order, not alphabetical — see module docstring
 SOURCES: dict[str, Callable[..., dict[str, object]]] = {
-    "folio": folio.run,
     "maud": maud.run,
     "edgar": edgar.run,
 }

@@ -27,7 +27,6 @@ dist/
 data/raw/
 data/maud/
 data/cuad/
-data/folio/
 logs/
 !**/.gitkeep
 

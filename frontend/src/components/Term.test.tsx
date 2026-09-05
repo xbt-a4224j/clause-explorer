@@ -23,7 +23,7 @@ describe('inline glossary', () => {
   it('covers every term the product puts in front of a user', () => {
     for (const t of [
       'MAUD',
-      'FOLIO',
+      'SIC crosswalk',
       'EDGAR',
       'deal point',
       'public target',

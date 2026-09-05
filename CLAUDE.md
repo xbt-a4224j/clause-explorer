@@ -35,11 +35,11 @@ measurable offline.
 
 ```
 MAUD (152 merger agreements · 47k expert labels · 92 ABA deal points · CC BY 4.0)
-FOLIO (18k legal concepts, OWL)
 EDGAR (SIC industry · deal value · dates · parties, for the same 152)
+SIC crosswalk (data/mappings/sic_to_folio.csv — SIC prefix -> industry code + label)
    │
    ▼  idempotent ingest, provenance recorded
-Postgres ──► Cube Core (measures + FOLIO dimensions, defined once in YAML)
+Postgres ──► Cube Core (measures + industry dimensions, defined once in YAML)
    │              │
    │         ┌────┴────┐
    │         ▼         ▼
@@ -58,14 +58,14 @@ and the coverage grid. It does **not** do retrieval, ranking, individual record 
 |---|---|---|
 | **Explore** | partner | faceted comparable-deal search, live facet counts, matter cards |
 | **Deal Terms** | partner | rollup over the selected set — "6 of 8", drill-through to clause text |
-| **Coverage** | KM | FOLIO × deal-size grid; **thin cells are the signal, style them prominently** |
+| **Coverage** | KM | industry × deal-size grid; **thin cells are the signal, style them prominently** |
 | **Tables** | you | browsable raw tables, sort/filter/paginate — so nobody opens psql |
 | **Admin** | you | ingest status, calibration table, eval results, **live log viewer** |
 | **Label** | KM | keyboard-driven labeling that feeds the review queue and re-calibration |
 
 ## Hard constraints
 
-- **Everything open source.** Postgres, Cube Core (Apache-2.0), FastAPI, React/Vite, rdflib,
+- **Everything open source.** Postgres, Cube Core (Apache-2.0), FastAPI, React/Vite,
   rank-bm25, structlog. The OpenAI API is used for embeddings/generation and is **pluggable**;
   the app must boot and serve retrieval, facets, and all table views with no key.
 - **`.env` is gitignored and this repo is public.** Never commit a key, never log one, never echo
@@ -125,14 +125,20 @@ the labels directly. Extraction is a *separate calibration experiment*: run our 
 held-out MAUD slice, compare to labels, publish the accuracy table. That is what makes the
 generalization claim testable instead of asserted.
 
-**FOLIO industry codes are INFERRED.** Neither MAUD nor EDGAR ships a FOLIO code, so every one
-is classifier output. Label inferred fields as inferred in the schema, the Cube `description`, and
-the UI. Never present them as ground truth. This is the largest source of quiet error.
+**Industry codes are INFERRED.** Neither MAUD nor EDGAR ships one; every code comes from the SIC
+crosswalk, so it is classifier output. Label inferred fields as inferred in the schema, the Cube
+`description`, and the UI. Never present them as ground truth. This is the largest source of quiet
+error.
+
+**Filter on the code, never the display label.** `industries.code` is opaque and stable; the label
+is display text. A label drifting from "Health Care Industry" to "Healthcare" returns zero rows,
+which reads as *we have no comparable deals*. This is the one property the ontology was earning and
+the crosswalk delivers it (#49).
 
 **Filter *values* are not enum-constrained.** Measure and dimension *names* can be locked with
 structured-output enums. Values cannot — the model may emit `"Health Care"` when the data holds
 `"Healthcare"`, returning zero rows that look exactly like "no comparable deals". Resolve every
-filter value against the dimension's actual distinct values (exact → alias → embedding nearest) and
+filter value against the dimension's actual distinct values (exact → embedding nearest) and
 **fail loudly** rather than returning empty. This is the nastiest failure mode in the design.
 
 **Never `count_distinct_approx`.** HyperLogLog is approximate. Fatal for a tool whose claim is
@@ -147,8 +153,6 @@ an attorney who can filter until n=1 has extracted one client's negotiated term 
 analytics layer, around the ethical wall, without retrieving a document. Treat it as a
 confidentiality control, not a nicety.
 
-**FOLIO is 18,000+ concepts.** Map five or six dimensions. Do not attempt the ontology.
-
 ## Logging
 
 structlog, JSON lines to `logs/explorer.jsonl` and stdout. Every request gets a bound `request_id`.
@@ -160,8 +164,7 @@ log secrets or full document text. The Admin tab tails this file — that's why 
 
 ```
 backend/explorer/
-  ingest/     FOLIO loader, MAUD parser, EDGAR enrichment, CLI
-  folio/      ontology queries, hierarchy, code resolution
+  ingest/     MAUD parser, EDGAR enrichment + industry seed, CLI
   retrieval/  embeddings + cache, BM25, hybrid, comparable ranking
   agent/      NL -> Cube selection (enum-constrained), filter-value resolution
   evals/      harnesses + metrics + calibration experiment
@@ -189,8 +192,8 @@ Every dataset records the exact download command, filename, byte size, and `shas
 `char_start`, `char_end`. A row whose text cannot be traced to a byte range in the downloaded
 source is a bug.
 
-MAUD is CC BY 4.0; FOLIO is CC BY. Attribution belongs in `docs/provenance.md` and the
-README.
+MAUD is CC BY 4.0. The industry codes in `data/mappings/sic_to_folio.csv` came from FOLIO
+(CC BY) before #49 removed the ontology; the attribution stays in `docs/provenance.md`.
 
 ---
 

@@ -30,7 +30,7 @@ router = APIRouter(prefix="/tables")
 ALLOWED_TABLES = {
     "matters",
     "deal_points",
-    "folio_concepts",
+    "industries",
     "labels",
     "ingest_runs",
 }

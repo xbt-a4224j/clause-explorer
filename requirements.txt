@@ -7,7 +7,6 @@ sqlalchemy==2.0.36
 alembic==1.14.0
 openai==1.54.0
 numpy==1.26.4
-rdflib==7.1.1            # parse FOLIO.owl (OWL/RDF); no heavier ontology stack needed
 rank-bm25==0.2.2         # lexical half of hybrid retrieval
 httpx==0.27.2
 structlog==24.4.0        # structured JSON logs with bound request context

@@ -29,7 +29,7 @@ from explorer.api.settings import settings
 
 log = get_logger()
 
-# Only these two cubes/views are agent-selectable. `folio_concepts` is dimension metadata, not
+# Only these two cubes/views are agent-selectable. `industries` is dimension metadata, not
 # a fact table an agent should aggregate over.
 SELECTABLE = {"comparable_deals", "deal_points"}
 

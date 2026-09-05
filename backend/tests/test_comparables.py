@@ -18,7 +18,6 @@ from fastapi.testclient import TestClient
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 HEALTH_CARE = "RCSG4k3ah1Pu5YgPexPgOmL"
-INDUSTRY_LEVEL_2 = "RDIwFaFcH4KY0gwEY0QlMTp"  # "Industry", parent of the sector codes
 
 
 def _corpus_ready() -> bool:
@@ -78,11 +77,21 @@ class TestFiltering:
         assert body["matters"], "filtering must not empty the result"
         assert all(m["industry"] == "Health Care Industry" for m in body["matters"])
 
-    def test_hierarchy_rolls_up(self, client: TestClient) -> None:
-        """Filtering on the level-2 'Industry' concept matches every sector beneath it."""
-        body = client.post("/comparables", json={"folio_industry_code": INDUSTRY_LEVEL_2}).json()
-        assert body["candidate_count"] == 139  # every classified matter
-        assert body["applied_filters"]["rolled_up_to_descendants"] > 0
+    def test_the_filter_matches_a_code_not_a_display_label(self, client: TestClient) -> None:
+        """The property the ontology was earning, kept after #49 removed it: a filter carries
+        an opaque code, so a label retitled from "Health Care Industry" to "Healthcare" cannot
+        silently return zero rows and read as "we have no comparable deals"."""
+        by_code = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE})
+        by_label = client.post("/comparables", json={"folio_industry_code": "Health Care Industry"})
+        assert by_code.json()["candidate_count"] == 26
+        # a label in the code slot is refused loudly, never answered with an empty list
+        assert by_label.status_code == 400
+
+    def test_the_hierarchy_roll_up_is_gone(self, client: TestClient) -> None:
+        """#49: 18,259 concepts loaded, 14 used, all at one level — the descendant walk
+        returned exactly what equality returns, so the response no longer claims a roll-up."""
+        body = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE}).json()
+        assert "rolled_up_to_descendants" not in body["applied_filters"]
 
     def test_date_range_filters(self, client: TestClient) -> None:
         body = client.post(
@@ -126,7 +135,7 @@ class TestFiltering:
         ).json()
         assert body["candidate_count"] == cash_facet["n"]
 
-    def test_unknown_folio_code_is_a_loud_error_not_an_empty_list(self, client: TestClient) -> None:
+    def test_unknown_code_is_a_loud_error_not_an_empty_list(self, client: TestClient) -> None:
         """Zero results and a bad code look identical to a reader — the nastiest failure mode
         in the design (CLAUDE.md)."""
         response = client.post("/comparables", json={"folio_industry_code": "R_NOT_A_CODE"})

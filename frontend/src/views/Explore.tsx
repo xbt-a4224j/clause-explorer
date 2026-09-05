@@ -38,7 +38,7 @@ interface Props {
 
 export interface Filters {
   folio_industry_label: string | null
-  /** The FOLIO code behind the selected label. This, not the label, is what /comparables gets. */
+  /** The industry code behind the selected label. This, not the label, is what /comparables gets. */
   folio_industry_code: string | null
   signing_year: string | null
   deal_size_band: string | null
@@ -206,7 +206,8 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
               different corpus, and one of them is inferred rather than labelled. */}
           <span className="explore__prov">
             matters and deal points from <Term>MAUD</Term> (expert-labelled) · industries from{' '}
-            <Term>FOLIO</Term> via <Term>EDGAR</Term> (<Term>inferred</Term>) · 2020-03-13 to
+            the <Term>SIC crosswalk</Term> via <Term>EDGAR</Term> (<Term>inferred</Term>) ·
+            2020-03-13 to
             2021-11-21
           </span>
         </p>

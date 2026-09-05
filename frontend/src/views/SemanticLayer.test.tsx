@@ -36,11 +36,11 @@ const CATALOG: CatalogResponse = {
   ],
   dimensions: [
     {
-      name: 'matters.folio_industry_code',
+      name: 'matters.industry_code',
       title: 'Industry',
       type: 'string',
       cube: 'matters',
-      description: 'FOLIO code, not the display label',
+      description: 'industry code, not the display label',
     },
   ],
 }
@@ -86,7 +86,7 @@ describe('the vocabulary', () => {
     render(<SemanticLayer />)
     const catalog = await screen.findByTestId('catalog')
     expect(within(catalog).getByText('deal_points.median_numeric_value')).toBeInTheDocument()
-    expect(within(catalog).getByText('matters.folio_industry_code')).toBeInTheDocument()
+    expect(within(catalog).getByText('matters.industry_code')).toBeInTheDocument()
   })
 
   it('shows each entry description — an opaque identifier cannot be reviewed', async () => {
@@ -107,7 +107,7 @@ describe('the vocabulary', () => {
     mockCatalog()
     render(<SemanticLayer />)
     const measures = await screen.findByTestId('catalog-measures')
-    expect(within(measures).queryByText('matters.folio_industry_code')).not.toBeInTheDocument()
+    expect(within(measures).queryByText('matters.industry_code')).not.toBeInTheDocument()
   })
 })
 

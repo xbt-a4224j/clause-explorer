@@ -69,7 +69,7 @@ contract_136   TRANSLATE BIO, INC.          2021-08-02  inferred=True
 **What must be true, verified:** `candidate_count=25` matches the facet count exactly — the same
 25 either way, because `/comparables` filters in Postgres first and ranks only the survivors
 (#18), never the other way round. Every matter here carries `inferred=True` on its industry
-label, because the FOLIO code comes from a SIC crosswalk, not a MAUD expert annotation — and the
+label, because the industry code comes from the SIC crosswalk, not a MAUD expert annotation — and the
 card renders that badge, never silently.
 
 **Note on scope, stated plainly rather than glossed over:** the corpus spans 20 months
@@ -237,11 +237,11 @@ Industry" versus "Healthcare" — and a near-miss returns zero results, which re
 *"we have no comparable deals"*. That is the most dangerous failure this product can have,
 because it is a wrong answer that looks like a finding. A code cannot drift.
 
-FOLIO's hierarchy is loaded and the query walks it, but on this corpus every matter sits at the
-same level, so the walk currently returns exactly what an equality match would. The
-pharma-and-devices grouping happens in a checked-in SIC crosswalk, not in the ontology. This
-paragraph is why `ExploreDiagram` — whose subject was that hierarchy roll-up — was deleted
-rather than left sitting above two paragraphs that no longer mention it.
+The code comes from a checked-in SIC crosswalk, which is also where the pharma-and-devices
+grouping happens. There is no hierarchy behind it any more: an ontology of 18,259 concepts was
+loaded and walked until #49, and the walk returned exactly what an equality match returned
+because all 14 concepts this corpus uses sit at the same level. Measuring that is what got it
+removed; the code-not-a-label property above is what was kept.
 
 Facet values with nothing behind them stay visible but disabled: what the corpus *lacks* is
 information too.

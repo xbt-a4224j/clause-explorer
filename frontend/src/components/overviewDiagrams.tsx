@@ -116,7 +116,7 @@ export function SystemDiagram() {
           + expert labels
         </text>
         <text x="64" y="96">
-          FOLIO concepts
+          SIC crosswalk
         </text>
         <text x="204" y="72">
           one store, versioned ingest

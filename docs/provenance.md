@@ -40,25 +40,26 @@ NULL `matter_id`, excluded from every facet by design and reachable only through
 Tables view. The ingest step, the table and the download script are gone. If clause-level
 data comes back it comes back with a consumer, and its provenance block returns here with it.
 
-## FOLIO — Federated Open Legal Information Ontology
+## FOLIO — evaluated 2026-07-30, removed 2026-09-05 (#49)
 
-- Source: https://github.com/alea-institute/FOLIO
-- License: CC BY
-- Contents: 18,000+ legal concepts, OWL
-- Attribution: FOLIO is published by the ALEA Institute under CC BY 4.0.
-- Command (run 2026-07-30):
-  ```
-  curl -sL -o data/folio/FOLIO.owl \
-    https://raw.githubusercontent.com/alea-institute/FOLIO/main/FOLIO.owl
-  ```
-- File: `data/folio/FOLIO.owl`
-- Bytes: 18,335,854 (`ls -l`)
-- sha256: `44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239`
-  (`shasum -a 256 data/folio/FOLIO.owl`)
-- Loaded by `python -m explorer.ingest.folio` → 18,259 concepts, 47,523 aliases. The file
-  declares 18,327 `owl:Class` nodes; the difference is unlabelled classes and the
-  DEPRECATED / SANDBOX subtrees, which are excluded deliberately (see
-  `backend/explorer/folio/loader.py`).
+FOLIO (Federated Open Legal Information Ontology, ALEA Institute, CC BY) was downloaded from
+`https://github.com/alea-institute/FOLIO` — `FOLIO.owl`, 18,335,854 bytes, sha256
+`44657b4ed844f5f9c9c48869184606b4fc671471a8263d79d241de87809fa239` — parsed with rdflib and
+loaded whole: **18,259 concepts and 47,523 aliases**, hierarchy denormalized into three
+ancestry columns. Measured against this corpus, **14 of those 18,259 concepts were used**, and
+all 14 sit at the same level, so the descendant roll-up returned exactly what an equality match
+returned. The hierarchy earned nothing here.
+
+What the ontology *was* earning is one property: a stable code to join on instead of a display
+label, so that "Health Care Industry" retitled to "Healthcare" cannot silently return zero rows
+and read as *we have no comparable deals*. That property is delivered in full by
+`data/mappings/sic_to_folio.csv` below, so #49 replaced the ontology with a 20-row
+`industries(code, label)` table seeded from that file and dropped the loader, the two tables,
+the `rdflib` dependency and the OWL parse on every ingest.
+
+The industry codes still in the crosswalk are FOLIO IRI suffixes — that is where the vocabulary
+came from, and the attribution stands: FOLIO is published by the ALEA Institute under CC BY 4.0.
+This paragraph is the only place FOLIO is named as a thing that existed here.
 
 ## SEC EDGAR
 
@@ -85,24 +86,27 @@ data comes back it comes back with a consumer, and its provenance block returns 
 - **Fetch date: 2026-07-30.** Filings get amended, so every submissions response is cached
   under `data/edgar/cache/` and never re-fetched; refreshing is an explicit `rm -rf` of that
   directory. 142 company-submission responses cached on this run.
-- Derived file, checked in: `data/mappings/sic_to_folio.csv` — the SIC → FOLIO crosswalk,
-  **99 data rows** (`grep -c '^[0-9]' data/mappings/sic_to_folio.csv`), curated from the SIC
-  division structure against FOLIO's NAICS-aligned Industry concepts.
+- Derived file, checked in: `data/mappings/sic_to_folio.csv` — the SIC → industry crosswalk,
+  **99 data rows** (`grep -c '^[0-9]' data/mappings/sic_to_folio.csv`) resolving to **20
+  distinct industries**, curated from the SIC division structure against a set of
+  NAICS-aligned industry concepts. Since #49 this file is also the seed for the `industries`
+  table, written by the EDGAR ingest step before it assigns any code.
 
 ### Crosswalk coverage (#9)
 
-Of the 152 matters, 134 resolved to an SEC-assigned SIC code, spanning **61 distinct SIC
-codes**. The crosswalk resolves **61 of 61 — 100%** of the codes actually present, so every
-matter that got an SIC also got a FOLIO industry. Coverage of SIC space as a whole is *not*
-100% and is not claimed to be: the file maps the codes this corpus contains, longest-prefix
-first, and a code it does not cover produces `NULL`, never a default bucket.
+Of the 152 matters, 139 resolved to an SEC-assigned SIC code, spanning **63 distinct SIC
+codes**. The crosswalk resolves **63 of 63 — 100%** of the codes actually present, so every
+matter that got an SIC also got an industry. Coverage of SIC space as a whole is *not* 100% and
+is not claimed to be: the file maps the codes this corpus contains, longest-prefix first, and a
+code it does not cover produces `NULL`, never a default bucket.
 
 ### Enrichment coverage (#9) — measured, not estimated
 
-Counted against the `explorer` database on 2026-09-04:
+Re-counted on 2026-09-05 against a full re-ingest under the #49 schema, in an isolated
+`explorer_49` database:
 
 ```sql
-SELECT count(*), count(folio_industry_code), count(signing_date),
+SELECT count(*), count(industry_code), count(signing_date),
        count(target_name), count(acquirer_name), count(sic_code), count(deal_value_usd)
 FROM matters;
 ```
@@ -110,15 +114,16 @@ FROM matters;
 | field | resolved | of |
 |---|---|---|
 | `signing_date` | 149 | 152 |
-| `target_name` | 144 | 152 |
-| `sic_code` | 134 | 152 |
-| `folio_industry_code` | 134 | 152 |
+| `target_name` | 143 | 152 |
+| `sic_code` | 139 | 152 |
+| `industry_code` | 139 | 152 |
 | `acquirer_name` | 125 | 152 |
 | `deal_value_usd` | **0** | 152 |
 
-`is_inferred_industry` is TRUE on exactly the 134 rows that have a FOLIO industry and FALSE on
-the 18 that do not — no row carries an industry without the inference flag, and none carries
-the flag without an industry.
+`is_inferred_industry` is TRUE on exactly the 139 rows that have an industry and FALSE on the
+13 that do not — no row carries an industry without the inference flag, and none carries the
+flag without an industry. The 139/13 split is unchanged by #49: the codes come from the same
+crosswalk rows they always did, only the table they point at is different.
 
 **`deal_value_usd` is unpopulated and this is a source limitation, not an oversight.** EDGAR's
 company-submissions endpoint — the only endpoint this ingest touches — carries SIC, name and

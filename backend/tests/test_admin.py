@@ -41,7 +41,7 @@ class TestIngestStatus:
     def test_returns_the_latest_run_per_source(self, client: TestClient) -> None:
         body = client.get("/admin/ingest-status").json()
         sources = {r["source"] for r in body["runs"]}
-        assert {"maud", "edgar", "folio"} <= sources
+        assert {"maud", "edgar"} <= sources
 
     def test_each_source_reports_only_its_most_recent_run(self, client: TestClient) -> None:
         body = client.get("/admin/ingest-status").json()

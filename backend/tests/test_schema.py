@@ -47,7 +47,7 @@ def _columns(conn, table: str) -> dict[str, str]:
 class TestTablesExist:
     @pytest.mark.parametrize(
         "table",
-        ["matters", "deal_points", "folio_concepts", "labels", "ingest_runs"],
+        ["matters", "deal_points", "industries", "labels", "ingest_runs"],
     )
     def test_table_exists(self, conn, table: str) -> None:
         assert _columns(conn, table), f"{table} is missing"
@@ -102,7 +102,8 @@ class TestProvenanceAndInference:
         assert {"source_file", "source_contract_title"} <= set(cols)
 
     def test_inferred_fields_are_flagged(self, conn) -> None:
-        """FOLIO industry codes are classifier output, not ground truth. The schema says so."""
+        """Industry codes come from the SIC crosswalk, so they are classifier output rather
+        than ground truth. The schema says so."""
         cols = set(_columns(conn, "matters"))
         assert any(c.startswith("is_inferred") for c in cols), (
             "no is_inferred_* column on matters; inferred data would be indistinguishable "
@@ -113,7 +114,7 @@ class TestProvenanceAndInference:
 class TestUpdatedAt:
     """Cube's refresh_key (#14) is SELECT MAX(updated_at); every table needs one."""
 
-    @pytest.mark.parametrize("table", ["matters", "deal_points", "folio_concepts", "labels"])
+    @pytest.mark.parametrize("table", ["matters", "deal_points", "industries", "labels"])
     def test_has_updated_at(self, conn, table: str) -> None:
         assert "updated_at" in _columns(conn, table)
 

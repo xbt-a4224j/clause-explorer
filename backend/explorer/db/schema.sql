@@ -7,10 +7,10 @@
 --    Cube model edit + a UI change. Long makes it rows, and lets deal_point_name be a Cube
 --    dimension so new values appear in the product automatically.
 --
--- 2. Inferred values are marked in the schema, not just in documentation. FOLIO
---    industry/service codes are classifier output, not label data. Without an is_inferred_*
---    flag they are indistinguishable from MAUD's expert gold labels, and every downstream
---    aggregate silently mixes the two.
+-- 2. Inferred values are marked in the schema, not just in documentation. Industry codes
+--    come from the SIC crosswalk, so they are classifier output, not label data. Without an
+--    is_inferred_* flag they are indistinguishable from MAUD's expert gold labels, and every
+--    downstream aggregate silently mixes the two.
 --
 -- updated_at exists on every table because Cube's refresh_key (#14) is
 -- `SELECT MAX(updated_at)`. A table without it goes permanently stale in the semantic layer.
@@ -25,34 +25,44 @@
 -- the corpus. If clause-level storage returns it comes back as a table with a consumer.
 DROP TABLE IF EXISTS clauses CASCADE;
 
-CREATE TABLE IF NOT EXISTS folio_concepts (
-    code            TEXT PRIMARY KEY,
-    label           TEXT NOT NULL,
-    parent_code     TEXT REFERENCES folio_concepts (code) ON DELETE SET NULL,
-    level           SMALLINT NOT NULL DEFAULT 1,
-    definition      TEXT,
-    -- denormalized ancestry: Cube dimensions read these directly rather than walking a
-    -- recursive CTE per facet query (#13)
-    level_1_code    TEXT,
-    level_2_code    TEXT,
-    level_3_code    TEXT,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_folio_parent ON folio_concepts (parent_code);
-CREATE INDEX IF NOT EXISTS idx_folio_level2 ON folio_concepts (level_2_code);
--- lowercased label lookup for resolve() (#6); the ontology is loaded once and read constantly
-CREATE INDEX IF NOT EXISTS idx_folio_label_lower ON folio_concepts (lower(label));
+-- #49 dropped the ontology the same way. It loaded 18,259 concepts and the corpus used 14,
+-- all of them at the same level, so the hierarchy walk returned exactly what an equality
+-- match returned. What it was actually earning is the one line below: a stable code to join
+-- on, so a label drifting from "Health Care Industry" to "Healthcare" cannot silently return
+-- zero rows and read as "we have no comparable deals". The crosswalk already delivers that.
+DROP TABLE IF EXISTS folio_aliases CASCADE;
+-- CASCADE on folio_concepts drops the foreign-key CONSTRAINT on matters, not the column, so
+-- the data survives the drop and the rename below re-points it at the new table.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'matters'
+          AND column_name = 'folio_industry_code'
+    ) THEN
+        ALTER TABLE matters RENAME COLUMN folio_industry_code TO industry_code;
+    END IF;
+    -- folio_service_code and is_inferred_service went with the ontology: a second FOLIO
+    -- branch was never loaded, never written and never read, and the column's foreign key
+    -- pointed at a table that no longer exists.
+    ALTER TABLE IF EXISTS matters DROP COLUMN IF EXISTS folio_service_code;
+    ALTER TABLE IF EXISTS matters DROP COLUMN IF EXISTS is_inferred_service;
+END $$;
+DROP TABLE IF EXISTS folio_concepts CASCADE;
 
--- skos:altLabel, kept out of folio_concepts because it is many-per-concept. resolve() checks
--- the exact label first and only then aliases, and refuses an alias that maps to more than one
--- concept rather than picking one (#6). FOLIO ships translated altLabels, so an alias table is
--- also where multilingual input gets resolved for free.
-CREATE TABLE IF NOT EXISTS folio_aliases (
-    alias       TEXT NOT NULL,
-    code        TEXT NOT NULL REFERENCES folio_concepts (code) ON DELETE CASCADE,
-    PRIMARY KEY (alias, code)
+-- The industry vocabulary the product actually facets on: one row per distinct code in
+-- data/mappings/sic_to_folio.csv, seeded by the EDGAR ingest step that assigns the codes.
+--
+-- `code` is opaque and stable; `label` is display text and may be retitled. Everything that
+-- filters joins on `code`. That is the whole reason this table exists rather than storing the
+-- label on `matters` directly — see #25 for what a label-keyed filter does when it drifts.
+CREATE TABLE IF NOT EXISTS industries (
+    code        TEXT PRIMARY KEY,
+    label       TEXT NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_folio_alias_lower ON folio_aliases (lower(alias));
+-- lowercased label lookup for the exact tier of filter-value resolution (#25)
+CREATE INDEX IF NOT EXISTS idx_industries_label_lower ON industries (lower(label));
 
 CREATE TABLE IF NOT EXISTS matters (
     id                      TEXT PRIMARY KEY,
@@ -62,8 +72,7 @@ CREATE TABLE IF NOT EXISTS matters (
     corpus                  TEXT NOT NULL DEFAULT 'maud',
 
     -- enrichment from EDGAR (#9); NULL where unresolved, never guessed
-    folio_industry_code     TEXT REFERENCES folio_concepts (code) ON DELETE SET NULL,
-    folio_service_code      TEXT REFERENCES folio_concepts (code) ON DELETE SET NULL,
+    industry_code           TEXT REFERENCES industries (code) ON DELETE SET NULL,
     deal_value_usd          NUMERIC(18, 2),
     deal_size_band          TEXT,
     signing_date            DATE,
@@ -73,14 +82,26 @@ CREATE TABLE IF NOT EXISTS matters (
 
     -- inference flags, one per field that can be classifier output rather than gold
     is_inferred_industry    BOOLEAN NOT NULL DEFAULT FALSE,
-    is_inferred_service     BOOLEAN NOT NULL DEFAULT FALSE,
     is_inferred_deal_value  BOOLEAN NOT NULL DEFAULT FALSE,
 
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- A database migrated before #49 already has `matters`, so CREATE TABLE IF NOT EXISTS is a
+-- no-op there and the renamed column carries no foreign key. NOT VALID: the codes already in
+-- the column are crosswalk codes and the seed writes all of them, but the seed runs at ingest
+-- and this runs at migrate, so validating here would fail on ordering rather than on data.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'matters_industry_code_fkey') THEN
+        ALTER TABLE matters ADD CONSTRAINT matters_industry_code_fkey
+            FOREIGN KEY (industry_code) REFERENCES industries (code) ON DELETE SET NULL
+            NOT VALID;
+    END IF;
+END $$;
 -- facet queries filter on these three together (#13, #19)
+DROP INDEX IF EXISTS idx_matters_facets;
 CREATE INDEX IF NOT EXISTS idx_matters_facets
-    ON matters (folio_industry_code, deal_size_band, signing_date);
+    ON matters (industry_code, deal_size_band, signing_date);
 CREATE INDEX IF NOT EXISTS idx_matters_corpus ON matters (corpus);
 
 CREATE TABLE IF NOT EXISTS deal_points (
@@ -124,7 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_dp_matter ON deal_points (matter_id);
 -- human labels from the Label tab (#29); feed re-calibration (#28)
 CREATE TABLE IF NOT EXISTS labels (
     id                  BIGSERIAL PRIMARY KEY,
-    target_kind         TEXT NOT NULL,          -- 'deal_point' | 'clause' | 'folio_industry'
+    target_kind         TEXT NOT NULL,          -- 'deal_point' | 'clause' | 'industry'
     target_id           TEXT NOT NULL,
     field               TEXT NOT NULL,
     value               TEXT NOT NULL,
@@ -165,7 +186,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['folio_concepts','matters','deal_points','labels','ingest_runs']
+    FOREACH t IN ARRAY ARRAY['industries','matters','deal_points','labels','ingest_runs']
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_touch_%1$s ON %1$s', t);
         EXECUTE format(

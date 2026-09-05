@@ -37,6 +37,8 @@ DEAL_POINT_COUNT = "deal_points.n"
 
 
 class FacetRequest(BaseModel):
+    # The wire name still says folio_; the table behind it is `industries` (#49). Renaming
+    # the field is a frontend change in files this issue does not touch — see MERGE-NOTES-49.md.
     folio_industry_label: str | None = Field(default=None)
     signing_year: int | None = Field(default=None)
     deal_size_band: str | None = Field(default=None)
@@ -114,7 +116,7 @@ UNINFORMATIVE = {"unknown", "unclassified"}
 VALUE_REASONS = {
     "industry": (
         "No industry: EDGAR did not resolve this matter's registrant to an SIC code, so the "
-        "SIC to FOLIO crosswalk had nothing to map. 139 of 152 matters resolved."
+        "SIC industry crosswalk had nothing to map. 139 of 152 matters resolved."
     ),
     "year": (
         "No signing year: no signing date was parsed from the filing header for these matters."

@@ -24,8 +24,7 @@ TABLES = [
     "labels",
     "ingest_runs",
     "matters",
-    "folio_aliases",
-    "folio_concepts",
+    "industries",
 ]
 
 

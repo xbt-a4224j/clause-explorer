@@ -1,4 +1,4 @@
-"""EDGAR enrichment: header parsing, party roles, SIC -> FOLIO (#9).
+"""EDGAR enrichment: header parsing, party roles, SIC -> industry (#9).
 
 Every test here runs **offline**. Identification is a pure function of the contract header
 plus a CIK index; the only network step is fetching a company's submissions JSON, and that is
@@ -13,7 +13,7 @@ from typing import ClassVar
 
 import pytest
 from explorer.ingest.edgar import (
-    SicFolioMap,
+    SicIndustryMap,
     deal_title_words,
     identify_registrant,
     normalize_company_name,
@@ -93,16 +93,16 @@ class TestCikResolution:
         assert resolve_cik("WHITE SANDS PARENT, INC.", self.INDEX) is None
 
 
-class TestSicToFolio:
+class TestSicToIndustry:
     @pytest.fixture(scope="class")
-    def mapping(self) -> SicFolioMap:
-        return SicFolioMap.load()
+    def mapping(self) -> SicIndustryMap:
+        return SicIndustryMap.load()
 
-    def test_major_group_maps(self, mapping: SicFolioMap) -> None:
+    def test_major_group_maps(self, mapping: SicIndustryMap) -> None:
         assert mapping.resolve("2011") == "RBOjgvcq6Z33XxMhTxWiiDS"  # meat packing -> Manufacturing
 
     def test_life_sciences_are_deliberately_grouped_with_health_care(
-        self, mapping: SicFolioMap
+        self, mapping: SicIndustryMap
     ) -> None:
         """A departure from NAICS, made on purpose and pinned here so it cannot be "fixed"
         back by someone tidying the crosswalk. Straight NAICS puts pharma under Manufacturing
@@ -115,15 +115,16 @@ class TestSicToFolio:
         assert mapping.resolve("8731") == health_care  # commercial biological research
         assert mapping.resolve("2011") != health_care  # ...but food manufacturing is not
 
-    def test_four_digit_row_overrides_its_major_group(self, mapping: SicFolioMap) -> None:
-        """SIC files software under Services; NAICS and FOLIO put it under Information."""
+    def test_four_digit_row_overrides_its_major_group(self, mapping: SicIndustryMap) -> None:
+        """SIC files software under Services; NAICS and the crosswalk put it under
+        Information."""
         assert mapping.resolve("7372") == "RHwCmZ2yKrJobzC86GC6Ep"
         assert mapping.resolve("7389") == "RN2D91ENKaHvvID40zUJvt"
 
-    def test_health_services(self, mapping: SicFolioMap) -> None:
+    def test_health_services(self, mapping: SicIndustryMap) -> None:
         assert mapping.resolve("8060") == "RCSG4k3ah1Pu5YgPexPgOmL"
 
-    def test_unmapped_sic_is_none_not_a_default_bucket(self, mapping: SicFolioMap) -> None:
+    def test_unmapped_sic_is_none_not_a_default_bucket(self, mapping: SicIndustryMap) -> None:
         assert mapping.resolve("") is None
         assert mapping.resolve("05") is None
 

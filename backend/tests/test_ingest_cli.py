@@ -15,12 +15,11 @@ import os
 import psycopg
 import pytest
 from explorer.ingest.cli import SOURCES, run_source
-from explorer.ingest.folio import DEFAULT_PATH as FOLIO_PATH
 from explorer.ingest.maud_corpus import corpus_available as maud_available
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 
-TABLES = ("folio_concepts", "matters", "deal_points")
+TABLES = ("industries", "matters", "deal_points")
 
 
 def _db_available() -> bool:
@@ -32,8 +31,8 @@ def _db_available() -> bool:
 
 
 needs_everything = pytest.mark.skipif(
-    not (_db_available() and maud_available() and FOLIO_PATH.exists()),
-    reason="needs Postgres plus the MAUD corpus and the FOLIO ontology",
+    not (_db_available() and maud_available()),
+    reason="needs Postgres plus the MAUD corpus",
 )
 
 
@@ -46,7 +45,14 @@ def _snapshot(conn) -> dict[str, tuple[int, object]]:
 
 class TestSources:
     def test_every_source_is_addressable(self) -> None:
-        assert set(SOURCES) == {"folio", "maud", "edgar"}
+        assert set(SOURCES) == {"maud", "edgar"}
+
+    def test_folio_is_no_longer_a_source(self) -> None:
+        """#49: the ontology load is gone; the industry vocabulary is seeded by the EDGAR
+        step from the checked-in crosswalk it already reads."""
+        assert "folio" not in SOURCES
+        with pytest.raises(KeyError):
+            run_source("folio")
 
     def test_cuad_is_no_longer_a_source(self) -> None:
         """#40: a corpus no endpoint queries is an ingest path to maintain for nothing."""
@@ -108,7 +114,7 @@ class TestRunTracking:
     def test_each_run_writes_an_ingest_runs_row(self) -> None:
         with psycopg.connect(DSN) as conn:
             before = conn.execute("SELECT count(*) FROM ingest_runs").fetchone()[0]
-        run_source("folio")
+        run_source("edgar")
         with psycopg.connect(DSN) as conn:
             row = conn.execute(
                 "SELECT source, rows_read, rows_upserted, duration_ms, status "
@@ -116,7 +122,7 @@ class TestRunTracking:
             ).fetchone()
             after = conn.execute("SELECT count(*) FROM ingest_runs").fetchone()[0]
         assert after == before + 1
-        assert row[0] == "folio"
+        assert row[0] == "edgar"
         assert row[1] > 0 and row[2] > 0 and row[3] > 0
         assert row[4] == "ok"
 

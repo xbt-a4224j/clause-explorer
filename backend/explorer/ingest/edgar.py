@@ -10,16 +10,20 @@ MAUD ships agreements with no metadata. EDGAR has the same filings and is free, 
 | `signing_date` | the agreement's own header text | no — it is in the document |
 | `target_name` / `acquirer_name` | agreement header, **placed by MAUD's deal name** | no |
 | `sic_code` | EDGAR company submissions for the resolved CIK | no — SEC's own code |
-| `folio_industry_code` | `data/mappings/sic_to_folio.csv` crosswalk | **yes** |
+| `industry_code` | `data/mappings/sic_to_folio.csv` crosswalk | **yes** |
 
 **The registrant is the target's, or there isn't one (#42).** MAUD names every deal
 `<Target>_<Acquirer>`, so a party's side is knowable without trusting whoever filed. A party
 we cannot place on a side is not written down: `target_name` and `acquirer_name` are NULL
 rather than the header parser's best guess, and `sic_code` is NULL rather than the buyer's.
 
+This step also seeds `industries`, because the crosswalk it already reads is the whole
+vocabulary: one row per distinct code, so `matters.industry_code` has something to point at
+and every downstream join reads a *code*, never a display label (#49).
+
 `is_inferred_industry` is TRUE for every enriched row. SIC is coarse and self-assigned, and a
-crosswalk from it to a FOLIO concept is a judgement — presenting that as gold alongside MAUD's
-expert labels is exactly the quiet error CLAUDE.md warns about.
+crosswalk from it to an industry grouping is a judgement — presenting that as gold alongside
+MAUD's expert labels is exactly the quiet error CLAUDE.md warns about.
 
 Anything that does not resolve stays NULL. There is no default industry bucket: a matter
 silently binned into "Manufacturing" pollutes every rollup that touches it.
@@ -265,19 +269,28 @@ def load_cik_index(path: Path | None = None) -> dict[str, str]:
     return index
 
 
-class SicFolioMap:
-    """The checked-in SIC -> FOLIO crosswalk. Longest prefix wins."""
+class SicIndustryMap:
+    """The checked-in SIC -> industry crosswalk. Longest prefix wins.
 
-    def __init__(self, rows: dict[str, str]) -> None:
+    The file is still named `sic_to_folio.csv` and its codes are still FOLIO IRI suffixes:
+    that is where the vocabulary came from, and the codes are the audit trail a reviewer
+    checks a row against. What is gone (#49) is the ontology behind them.
+    """
+
+    def __init__(self, rows: dict[str, str], labels: dict[str, str] | None = None) -> None:
         self.rows = rows
+        self.labels = labels or {}
 
     @classmethod
-    def load(cls, path: Path | None = None) -> SicFolioMap:
+    def load(cls, path: Path | None = None) -> SicIndustryMap:
         rows: dict[str, str] = {}
+        labels: dict[str, str] = {}
         with (path or MAPPING_FILE).open(encoding="utf-8") as handle:
             for row in csv.DictReader(line for line in handle if not line.startswith("#")):
-                rows[row["sic"].strip()] = row["folio_code"].strip()
-        return cls(rows)
+                code = row["folio_code"].strip()
+                rows[row["sic"].strip()] = code
+                labels[code] = row["folio_label"].strip()
+        return cls(rows, labels)
 
     def resolve(self, sic: str | None) -> str | None:
         if not sic:
@@ -288,6 +301,36 @@ class SicFolioMap:
             if code:
                 return code
         return None
+
+
+def industry_rows(mapping: SicIndustryMap) -> list[tuple[str, str]]:
+    """The crosswalk's distinct (code, label) pairs, code-ordered so the seed is deterministic.
+
+    Many SIC prefixes map to one industry, so this collapses ~100 crosswalk rows to the small
+    vocabulary the product facets on.
+    """
+    return sorted(mapping.labels.items())
+
+
+SEED_INDUSTRY = """
+INSERT INTO industries (code, label) VALUES (%s, %s)
+ON CONFLICT (code) DO UPDATE SET label = EXCLUDED.label
+WHERE industries.label IS DISTINCT FROM EXCLUDED.label
+"""
+
+
+def seed_industries(conn: psycopg.Connection, mapping: SicIndustryMap | None = None) -> int:
+    """Load the industry vocabulary from the checked-in crosswalk. Returns rows seen.
+
+    The `WHERE ... IS DISTINCT FROM` guard is the same one `UPDATE_MATTER` carries and for the
+    same reason: an unconditional upsert bumps `updated_at` on every row every run, and Cube's
+    refresh_key is `MAX(updated_at)`, so a no-op re-ingest would invalidate every aggregate.
+    """
+    rows = industry_rows(mapping or SicIndustryMap.load())
+    with conn.cursor() as cur:
+        cur.executemany(SEED_INDUSTRY, rows)
+    conn.commit()
+    return len(rows)
 
 
 @dataclass(frozen=True)
@@ -361,7 +404,7 @@ class Enrichment:
     acquirer_name: str | None
     signing_date: date | None
     sic_code: str | None
-    folio_industry_code: str | None
+    industry_code: str | None
 
 
 def enrich(
@@ -371,7 +414,7 @@ def enrich(
 ) -> list[Enrichment]:
     cik_index = index if index is not None else load_cik_index()
     edgar = client or EdgarClient()
-    mapping = SicFolioMap.load()
+    mapping = SicIndustryMap.load()
     deal_names = titles if titles is not None else deal_titles()
 
     results: list[Enrichment] = []
@@ -406,7 +449,7 @@ def enrich(
                 acquirer_name=acquirer_name,
                 signing_date=header.signing_date,
                 sic_code=sic,
-                folio_industry_code=mapping.resolve(sic),
+                industry_code=mapping.resolve(sic),
             )
         )
     return results
@@ -579,10 +622,10 @@ UPDATE matters SET
     acquirer_name = %s,
     signing_date = %s,
     sic_code = %s,
-    folio_industry_code = %s,
+    industry_code = %s,
     is_inferred_industry = %s
 WHERE id = %s
-  AND (target_name, acquirer_name, signing_date, sic_code, folio_industry_code,
+  AND (target_name, acquirer_name, signing_date, sic_code, industry_code,
        is_inferred_industry)
       IS DISTINCT FROM (%s, %s, %s, %s, %s, %s)
 """
@@ -598,8 +641,8 @@ def upsert_enrichment(conn: psycopg.Connection, rows: list[Enrichment]) -> int:
                     r.acquirer_name,
                     r.signing_date,
                     r.sic_code,
-                    r.folio_industry_code,
-                    r.folio_industry_code is not None,
+                    r.industry_code,
+                    r.industry_code is not None,
                     r.matter_id,
                     # repeated for the IS DISTINCT FROM guard: an unconditional UPDATE bumps
                     # updated_at on all 152 rows every run, and Cube's refresh_key is
@@ -608,8 +651,8 @@ def upsert_enrichment(conn: psycopg.Connection, rows: list[Enrichment]) -> int:
                     r.acquirer_name,
                     r.signing_date,
                     r.sic_code,
-                    r.folio_industry_code,
-                    r.folio_industry_code is not None,
+                    r.industry_code,
+                    r.industry_code is not None,
                 )
                 for r in rows
             ],
@@ -625,12 +668,21 @@ def run(dsn: str | None = None) -> dict[str, object]:
     rows = enrich(client=client)
 
     with psycopg.connect(dsn or settings.database_url) as conn:
+        # Vocabulary before the rows that reference it: matters.industry_code is a foreign key.
+        industries = seed_industries(conn)
         upsert_enrichment(conn, rows)
         duration_ms = round((time.perf_counter() - started) * 1000, 1)
         conn.execute(
             "INSERT INTO ingest_runs (source, rows_read, rows_upserted, duration_ms, status, "
             "detail) VALUES (%s, %s, %s, %s, %s, %s)",
-            ("edgar", len(rows), len(rows), duration_ms, "ok", f"{client.requests_made} fetches"),
+            (
+                "edgar",
+                len(rows),
+                len(rows),
+                duration_ms,
+                "ok",
+                f"{client.requests_made} fetches, {industries} industries seeded",
+            ),
         )
         conn.commit()
 
@@ -639,7 +691,8 @@ def run(dsn: str | None = None) -> dict[str, object]:
         "with_target_name": sum(1 for r in rows if r.target_name),
         "with_signing_date": sum(1 for r in rows if r.signing_date),
         "with_sic": sum(1 for r in rows if r.sic_code),
-        "with_folio_industry": sum(1 for r in rows if r.folio_industry_code),
+        "with_industry": sum(1 for r in rows if r.industry_code),
+        "industries_seeded": industries,
         "network_requests": client.requests_made,
         "duration_ms": duration_ms,
     }

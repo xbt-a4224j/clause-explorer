@@ -114,7 +114,7 @@ describe('the Tables prose names only tables that exist (#35, moved in #45, corr
     render(<Tables />)
     fireEvent.click(await screen.findByRole('button', { name: /what this tab is for/i }))
     const explainer = document.querySelector('.explain__prose')?.textContent ?? ''
-    for (const table of ['matters', 'deal_points', 'folio_concepts', 'labels', 'ingest_runs']) {
+    for (const table of ['matters', 'deal_points', 'industries', 'labels', 'ingest_runs']) {
       expect(explainer).toContain(table)
     }
   })

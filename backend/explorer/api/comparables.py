@@ -1,14 +1,17 @@
-"""`POST /comparables` — FOLIO filter, then hybrid rank within the filtered set (#18).
+"""`POST /comparables` — industry filter, then hybrid rank within the filtered set (#18).
 
 **Filter before rank, never after.** Ranking the whole corpus and then dropping out-of-filter
 results is the obvious implementation and it is wrong twice over: a request for ten healthcare
 comparables can return three because seven of the top ten were filtered away afterwards, and
 the scores that survive were normalized against a corpus the user did not ask about. Here the
-FOLIO/date filter runs in Postgres first and the hybrid index is built over exactly the
+industry/date filter runs in Postgres first and the hybrid index is built over exactly the
 surviving matters, so relevance is relative to the requested slice.
 
-FOLIO filtering rolls **up** the hierarchy: filtering on a level-2 concept matches matters
-tagged with any descendant, using the denormalized level columns written at ingest (#6).
+**The filter matches a code, never a display label.** `industries.code` is opaque and stable;
+the label is display text that can be retitled. Filtering on the label means a drift from
+"Health Care Industry" to "Healthcare" returns zero rows, which reads as *we have no comparable
+deals* (#25). #49 removed the hierarchy roll-up that used to sit here — every code the corpus
+carries is at the same level, so the descendant walk returned exactly what equality returns.
 
 The response carries the filters that were actually applied, not the ones that were asked
 for — they differ when a filter value cannot be resolved, and the resolved-query display (#23,
@@ -46,7 +49,11 @@ class ComparablesRequest(BaseModel):
     )
     folio_industry_code: str | None = Field(
         default=None,
-        description="FOLIO concept code. Rolls up: a level-2 code matches all descendants.",
+        description=(
+            "Industry code from the SIC crosswalk. A code, never a display label — see the "
+            "module docstring. The field name still says folio_ because it is the wire "
+            "contract the frontend reads; the table behind it is `industries` (#49)."
+        ),
     )
     deal_size_band: str | None = Field(
         default=None,
@@ -84,7 +91,6 @@ class AppliedFilters(BaseModel):
 
     folio_industry_code: str | None
     folio_industry_label: str | None
-    rolled_up_to_descendants: int
     deal_size_band: str | None
     consideration_type: str | None
     signed_from: str | None
@@ -103,20 +109,20 @@ CANDIDATE_SQL = """
 SELECT m.id,
        m.target_name,
        m.acquirer_name,
-       f.label,
+       i.label,
        m.is_inferred_industry,
        to_char(m.signing_date, 'YYYY-MM-DD'),
        concat_ws(' · ',
            m.source_contract_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
-           f.label,
+           i.label,
            to_char(m.signing_date, 'YYYY')
        )
 FROM matters m
-LEFT JOIN folio_concepts f ON f.code = m.folio_industry_code
+LEFT JOIN industries i ON i.code = m.industry_code
 -- explicit casts: Postgres cannot infer a parameter's type from `$1 IS NULL` alone and
 -- raises AmbiguousParameter. Every filter is still a bound parameter, never interpolated.
-WHERE (%(industry)s::text IS NULL OR m.folio_industry_code = ANY(%(industry_codes)s::text[]))
+WHERE (%(industry)s::text IS NULL OR m.industry_code = %(industry)s::text)
   AND (%(signed_from)s::date IS NULL OR m.signing_date >= %(signed_from)s::date)
   AND (%(signed_to)s::date IS NULL OR m.signing_date <= %(signed_to)s::date)
   AND (%(band)s::text IS NULL OR %(band)s::text = 'unknown')
@@ -132,26 +138,12 @@ WHERE (%(industry)s::text IS NULL OR m.folio_industry_code = ANY(%(industry_code
 ORDER BY m.id
 """
 
-DESCENDANTS_SQL = """
-SELECT code FROM folio_concepts
-WHERE code = %(code)s
-   OR level_1_code = %(code)s
-   OR level_2_code = %(code)s
-   OR level_3_code = %(code)s
-"""
-
-
-def _industry_codes(conn: psycopg.Connection, code: str | None) -> list[str]:
-    """The code plus every descendant, read from the denormalized level columns."""
-    if not code:
-        return []
-    return [row[0] for row in conn.execute(DESCENDANTS_SQL, {"code": code})]
-
 
 def _label_for(conn: psycopg.Connection, code: str | None) -> str | None:
+    """The display label for a code, or None when the code is not in the vocabulary."""
     if not code:
         return None
-    row = conn.execute("SELECT label FROM folio_concepts WHERE code = %s", (code,)).fetchone()
+    row = conn.execute("SELECT label FROM industries WHERE code = %s", (code,)).fetchone()
     return str(row[0]) if row else None
 
 
@@ -161,13 +153,13 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
     alpha = DEFAULT_ALPHA if request.alpha is None else request.alpha
 
     with psycopg.connect(settings.database_url) as conn:
-        codes = _industry_codes(conn, request.folio_industry_code)
-        if request.folio_industry_code and not codes:
+        industry_label = _label_for(conn, request.folio_industry_code)
+        if request.folio_industry_code and industry_label is None:
             # fail loudly rather than returning zero rows that read as "no comparable deals"
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"FOLIO code {request.folio_industry_code!r} does not exist. "
+                    f"Industry code {request.folio_industry_code!r} does not exist. "
                     "Zero results and an unknown code look identical to a reader, so this "
                     "is an error rather than an empty list."
                 ),
@@ -176,19 +168,16 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
             CANDIDATE_SQL,
             {
                 "industry": request.folio_industry_code,
-                "industry_codes": codes,
                 "signed_from": request.signed_from,
                 "signed_to": request.signed_to,
                 "band": request.deal_size_band,
                 "consideration": request.consideration_type,
             },
         ).fetchall()
-        industry_label = _label_for(conn, request.folio_industry_code)
 
     applied = AppliedFilters(
         folio_industry_code=request.folio_industry_code,
         folio_industry_label=industry_label,
-        rolled_up_to_descendants=max(0, len(codes) - 1),
         deal_size_band=request.deal_size_band,
         consideration_type=request.consideration_type,
         signed_from=request.signed_from,
@@ -232,7 +221,6 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
     log.info(
         "comparables",
         folio_industry_code=request.folio_industry_code,
-        rolled_up_to=len(codes),
         deal_size_band=request.deal_size_band,
         consideration_type=request.consideration_type,
         signed_from=request.signed_from,

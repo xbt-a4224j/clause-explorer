@@ -41,7 +41,7 @@ const SHOTS = [
     },
     callouts: [
       { sel: '.explore__input', text: 'describe the deal in plain words' },
-      { sel: '.explore__resolved', text: 'resolved to a FOLIO code, not a display label' },
+      { sel: '.explore__resolved', text: 'resolved to an industry code, not a display label' },
       { sel: '.facet__value', text: 'facet counts recompute against what is left' },
       { sel: '.facet__unavailable', text: 'empty values stay visible, disabled: absence is information' },
     ],

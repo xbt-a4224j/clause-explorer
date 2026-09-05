@@ -25,7 +25,7 @@ const FACETS: FacetsResponse = {
       total_basis: 'matters in this slice with any industry resolved',
       inferred: true,
       values: [
-        // the code travels with the label: /comparables filters by FOLIO code, and resolving a
+        // the code travels with the label: /comparables filters by industry code, and resolving a
         // label back to a code in the client is exactly the lookup #25 exists to prevent
         { value: 'Health Care Industry', code: 'RCSG4k3ah1Pu5YgPexPgOmL', n: 25, selected: false },
         { value: 'Manufacturing Industry', code: 'RBxLbTLwMitsqvA0VkYFxJf', n: 22, selected: false },
@@ -200,7 +200,7 @@ describe('filter before rank', () => {
    * "showing 3 of 25" where 25 counted matters they never asked about, and the ranking they
    * are reading was normalized against that wider corpus.
    */
-  it('sends the selected industry to /comparables as a FOLIO code', async () => {
+  it('sends the selected industry to /comparables as an industry code', async () => {
     const fetchMock = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     renderExplore()
@@ -357,7 +357,7 @@ describe('provenance at the point of display (#35)', () => {
     render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
     const corpus = await screen.findByText(/matters ·/)
     expect(corpus).toHaveTextContent(/MAUD/)
-    expect(corpus).toHaveTextContent(/FOLIO/)
+    expect(corpus).toHaveTextContent(/SIC crosswalk/)
   })
 
   it('says the industry figure is inferred, beside the figure', async () => {
