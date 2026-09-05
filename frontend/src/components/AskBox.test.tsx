@@ -322,6 +322,58 @@ describe('the cost line', () => {
   })
 })
 
+/**
+ * #51 — the confirm click is eval data.
+ *
+ * A run that differs from what the model returned is a labelled disagreement, and the eval it
+ * feeds has only 25 authored cases from July. Agreements are recorded too: an eval fed only
+ * corrections would score the model at 0.00 by construction.
+ */
+describe('confirming records the pair', () => {
+  function bodyOf(mock: ReturnType<typeof vi.fn>, fragment: string) {
+    const call = mock.mock.calls.find((c) => String(c[0]).includes(fragment))
+    return call ? JSON.parse(String((call[1] as RequestInit).body)) : null
+  }
+
+  it('records an unchanged run as an agreement', async () => {
+    mockApi(ASKED)
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
+    render(<AskBox />)
+    await ask()
+    fireEvent.click(screen.getByRole('button', { name: /run the confirmed selection/i }))
+
+    await waitFor(() => expect(bodyOf(fetchMock, 'selection-correction')).not.toBeNull())
+    const sent = bodyOf(fetchMock, 'selection-correction')
+    expect(sent.model_selection.measures).toEqual(ASKED.model_selection.measures)
+    expect(sent.confirmed_selection.measures).toEqual(ASKED.measures)
+  })
+
+  it('sends the model selection and the edited one, so the server can name the difference', async () => {
+    mockApi(ASKED)
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
+    render(<AskBox />)
+    const chips = await ask()
+
+    const filter = within(chips).getAllByTestId('chip-filter')[0]
+    fireEvent.change(within(filter).getByRole('textbox'), {
+      target: { value: 'Manufacturing Industry' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /run the confirmed selection/i }))
+
+    await waitFor(() => expect(bodyOf(fetchMock, 'selection-correction')).not.toBeNull())
+    const sent = bodyOf(fetchMock, 'selection-correction')
+    expect(sent.question).toBe(ASKED.question)
+    expect(sent.confirmed_selection.filters[0].values).toEqual(['Manufacturing Industry'])
+  })
+
+  it('records nothing before the confirm click — asking is not confirming', async () => {
+    const calls = mockApi(ASKED)
+    render(<AskBox />)
+    await ask()
+    expect(calls.some((c) => c.includes('selection-correction'))).toBe(false)
+  })
+})
+
 describe('designed states', () => {
   it('reports a failed interpretation rather than an empty selection', async () => {
     mockApi({ error: { message: 'OPENAI_API_KEY is not set.' } }, 503)

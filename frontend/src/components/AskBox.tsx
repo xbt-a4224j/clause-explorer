@@ -124,8 +124,30 @@ export function AskBox({ onAsked }: { onAsked?: (costUsd: number) => void } = {}
     }
   }
 
+  /**
+   * #51 — the confirm click is the label.
+   *
+   * Fired here and nowhere else: a person confirming or editing is what writes to
+   * `selection_corrections`, and `/agent/ask` never does. Deliberately not awaited and never
+   * surfaced as an error — recording eval data must not be able to stop someone getting their
+   * answer, and a failed write is logged server-side rather than shown to a partner mid-query.
+   */
+  function recordConfirmation() {
+    if (!asked || !query) return
+    fetch('/api/agent/selection-correction', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        question: asked.question,
+        model_selection: asked.model_selection,
+        confirmed_selection: query,
+      }),
+    }).catch(() => {})
+  }
+
   async function run() {
     if (!query) return
+    recordConfirmation()
     const signal = nextSignal()
     setRunning(true)
     setRunError(null)

@@ -10,6 +10,12 @@ Refusal cases are reported separately rather than averaged in. Refusal accuracy 
 number in this eval, and folding it into a headline would bury the finding a sceptical reader
 should hear first: the model is bad at knowing when to decline, which is exactly why `min_n` is
 enforced in FastAPI and not in a prompt.
+
+#51 added a second set — real confirmations recorded on Ask — and deliberately did **not** put
+it on this route. Those rows live in Postgres, and reading them here would cost this endpoint
+the one property a test pins: it grades with no database. `GET /agent/corrections-grade`
+serves them instead, so the authored grade still answers when the database is down and the
+panel fetches both.
 """
 
 from __future__ import annotations

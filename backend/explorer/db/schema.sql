@@ -155,6 +155,35 @@ CREATE TABLE IF NOT EXISTS labels (
 );
 CREATE INDEX IF NOT EXISTS idx_labels_target ON labels (target_kind, target_id);
 
+-- Chip corrections from the Ask tab (#51): a labelled disagreement with the model.
+--
+-- One row per confirmed selection — what the model returned, what the person ran, and which
+-- parts they changed. `agreed` rows are recorded too: an eval that only stores corrections
+-- learns only what the model got wrong, and "it was right and nobody touched it" is the other
+-- half of an accuracy figure.
+--
+-- Written ONLY by a human confirming or editing on Ask. `/agent/ask` never writes here. A
+-- model that wrote its own eval data would be recording an opinion it already held rather
+-- than evidence against it.
+--
+-- JSONB, not a normalized selection schema: the shape is Cube's query object, it is already
+-- versioned by cube/model/*.yml, and shredding it into rows would create a second definition
+-- of what a selection is — the one that goes stale when the Cube model changes.
+CREATE TABLE IF NOT EXISTS selection_corrections (
+    id                  BIGSERIAL PRIMARY KEY,
+    question            TEXT NOT NULL,
+    model_selection     JSONB NOT NULL,
+    confirmed_selection JSONB NOT NULL,
+    -- 'measures' | 'dimensions' | 'filters'; empty on an agreement
+    changed_fields      TEXT[] NOT NULL DEFAULT '{}',
+    agreed              BOOLEAN NOT NULL,
+    labeller            TEXT NOT NULL DEFAULT 'local',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_selection_corrections_agreed
+    ON selection_corrections (agreed, created_at DESC);
+
 -- one row per ingest run so the Admin tab (#30) can show status without parsing logs
 CREATE TABLE IF NOT EXISTS ingest_runs (
     id              BIGSERIAL PRIMARY KEY,
@@ -186,7 +215,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['industries','matters','deal_points','labels','ingest_runs']
+    FOREACH t IN ARRAY ARRAY['industries','matters','deal_points','labels','ingest_runs','selection_corrections']
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_touch_%1$s ON %1$s', t);
         EXECUTE format(

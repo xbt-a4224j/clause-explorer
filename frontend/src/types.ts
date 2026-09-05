@@ -303,6 +303,25 @@ export interface GradingResponse {
 }
 
 /**
+ * `GET /agent/corrections-grade` (#51) — the grade over real confirmations from Ask.
+ *
+ * Served apart from `/agent/grading` because that endpoint grades with **no database** (a test
+ * pins it by forbidding `psycopg.connect` for the call) and these rows live in Postgres.
+ * Rendered as its own row, never averaged with the authored 25: those were written to probe
+ * the vocabulary and include five questions that should be refused, while these are whatever
+ * people happened to ask.
+ */
+export interface CorrectionsGrade {
+  corrections_count: number
+  corrections_agreed: number
+  /** null when nothing has been recorded — n=0, not "always wrong" */
+  corrections_accuracy: number | null
+  /** which part of a selection people corrected, e.g. `{ filters: 3 }` */
+  changed_field_counts: Record<string, number>
+  note: string
+}
+
+/**
  * `GET /admin/calibration` (#44) — the extractor's per-deal-point weakness map.
  *
  * `accuracy` and the CI bounds are null when `measured` is false: the calibration run reached

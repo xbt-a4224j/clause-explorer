@@ -343,6 +343,67 @@ describe('the question box and its running cost', () => {
   })
 })
 
+/**
+ * #51 — the corrections row beside the authored one.
+ *
+ * Never averaged together. The authored 25 were written to probe the vocabulary and include
+ * five questions that should be refused; the corrections are whatever people actually asked.
+ * One headline over both would hide what each is measuring.
+ */
+describe('the grade over real corrections', () => {
+  function mockGrading(corrections: Record<string, unknown>) {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('corrections-grade')) {
+        return { ok: true, status: 200, json: async () => corrections } as Response
+      }
+      if (String(url).includes('/grading')) {
+        return { ok: true, status: 200, json: async () => GRADING } as Response
+      }
+      return { ok: true, status: 200, json: async () => CATALOG } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock)
+  }
+
+  it('shows the authored row and the corrections row as two separate rows', async () => {
+    mockGrading({
+      corrections_count: 4,
+      corrections_agreed: 3,
+      corrections_accuracy: 0.75,
+      changed_field_counts: { filters: 1 },
+      note: 'Real confirmations recorded on Ask.',
+    })
+    render(<Ask />)
+    expect(await screen.findByTestId('grade-authored')).toHaveTextContent('13 of 20')
+    expect(await screen.findByTestId('grade-corrections')).toHaveTextContent('3 of 4')
+  })
+
+  it('names which part of a selection people corrected', async () => {
+    mockGrading({
+      corrections_count: 4,
+      corrections_agreed: 3,
+      corrections_accuracy: 0.75,
+      changed_field_counts: { filters: 1 },
+      note: 'Real confirmations recorded on Ask.',
+    })
+    render(<Ask />)
+    expect(await screen.findByTestId('grade-corrections')).toHaveTextContent(/filters/)
+  })
+
+  it('renders "not measured" rather than 0.00 when nothing has been recorded', async () => {
+    mockGrading({
+      corrections_count: 0,
+      corrections_agreed: 0,
+      corrections_accuracy: null,
+      changed_field_counts: {},
+      note: 'Real confirmations recorded on Ask.',
+    })
+    render(<Ask />)
+    const row = await screen.findByTestId('grade-corrections')
+    expect(row).toHaveTextContent(/not measured/i)
+    expect(row).not.toHaveTextContent('0.00')
+  })
+})
+
 describe('the offline grade (#36)', () => {
   it('shows the grade computed from committed fixtures', async () => {
     mockCatalog()

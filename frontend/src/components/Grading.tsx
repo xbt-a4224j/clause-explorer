@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { GradingResponse } from '../types'
+import type { CorrectionsGrade, GradingResponse } from '../types'
 import { ignoreAbort } from '../abort'
 
 /**
@@ -16,6 +16,7 @@ import { ignoreAbort } from '../abort'
  */
 export function Grading() {
   const [data, setData] = useState<GradingResponse | null>(null)
+  const [corrections, setCorrections] = useState<CorrectionsGrade | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -30,6 +31,15 @@ export function Grading() {
       })
       .then(setData)
       .catch(ignoreAbort((e) => setError(e.message)))
+
+    // #51: a second request rather than a second field on the first. `/agent/grading` grades
+    // with no database — a test pins that by forbidding psycopg.connect for the call — and
+    // these rows live in Postgres. A failure here leaves the authored row standing.
+    fetch('/api/agent/corrections-grade', { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setCorrections(body as CorrectionsGrade | null))
+      .catch(ignoreAbort(() => setCorrections(null)))
+
     return () => controller.abort()
   }, [])
 
@@ -44,6 +54,11 @@ export function Grading() {
   if (!data) return <div className="skeleton skeleton--row" aria-label="loading grading" />
 
   const refusalBad = data.refusal_correct < data.refusal_total
+  // Read defensively: this comes from a second endpoint that may 404 on a database with no
+  // selection_corrections table yet, and a missing corrections row must not take the authored
+  // row down with it.
+  const correctionCount = corrections?.corrections_count ?? 0
+  const changedFields = corrections?.changed_field_counts ?? {}
 
   return (
     <section className="sem__pane" data-testid="grading">
@@ -57,6 +72,54 @@ export function Grading() {
         under different names. A grader that cannot see an alias will punish a correct answer,
         which is itself a finding about the vocabulary rather than about the model.
       </p>
+
+      {/*
+        #51: two rows, never one headline. The authored set was written in July to probe the
+        vocabulary and deliberately includes five questions that should be refused; the
+        corrections are whatever people actually asked on Ask, which is not a balanced sample
+        of anything. An average over both would describe neither.
+      */}
+      <table className="admin__table grade__sets" data-testid="grade-sets">
+        <thead>
+          <tr>
+            <th>case set</th>
+            <th>n</th>
+            <th>model was right</th>
+            <th>what people changed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-testid="grade-authored">
+            <td>authored — written to probe the vocabulary</td>
+            <td className="mono">{data.answerable_total}</td>
+            <td className="mono">
+              {data.answerable_correct} of {data.answerable_total}
+            </td>
+            <td className="mono">—</td>
+          </tr>
+          <tr data-testid="grade-corrections">
+            <td>corrections — real confirmations on Ask</td>
+            <td className="mono">{correctionCount}</td>
+            <td className="mono">
+              {correctionCount > 0 ? (
+                <>
+                  {corrections?.corrections_agreed ?? 0} of {correctionCount}
+                </>
+              ) : (
+                // n=0 is the honest statement. 0.00 would read as "the model is always wrong".
+                <span className="admin__unmeasured">not measured</span>
+              )}
+            </td>
+            <td className="mono">
+              {Object.keys(changedFields).length > 0
+                ? Object.entries(changedFields)
+                    .map(([field, n]) => `${field} ${n}`)
+                    .join(' · ')
+                : '—'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div className="grade__tiles">
         <div className="grade__tile">

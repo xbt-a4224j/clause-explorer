@@ -140,6 +140,39 @@ def run(eval_set_path: Path = EVAL_SET, recorded_path: Path = RECORDED) -> dict[
     }
 
 
+def grade_corrections(corrections: list[dict[str, Any]]) -> dict[str, Any]:
+    """Grade the real corrections recorded on Ask (#51), separately from the authored set.
+
+    Reported apart from the 25 authored cases and never folded into one headline, because the
+    two measure different things. The authored set was written to probe the vocabulary — it
+    deliberately includes five questions that should be refused. The corrections set is
+    whatever people actually asked, which is not a balanced sample of anything and is biased
+    towards questions someone thought worth running.
+
+    Accuracy here is agreements over rows: the model was right exactly when a person ran what
+    it selected without changing it. `changed_field_counts` is the more useful half — which
+    part of a selection people correct, which is checkable against the offline scores where
+    the filter value (0.50 exact-match) is much weaker than the measure (0.80 precision).
+
+    Takes rows rather than reading the database, so the module stays pure and the authored
+    grading keeps its "no database, no model" property. The caller supplies the rows.
+    """
+    total = len(corrections)
+    agreed = sum(1 for c in corrections if c.get("agreed"))
+    counts: dict[str, int] = {}
+    for correction in corrections:
+        for field in correction.get("changed_fields") or []:
+            counts[field] = counts.get(field, 0) + 1
+    return {
+        "corrections_count": total,
+        "corrections_agreed": agreed,
+        # None, not 0.0, on an empty set: 0.0 accuracy reads as "the model is always wrong",
+        # and n=0 is the honest statement. The panel renders it as "not measured".
+        "corrections_accuracy": round(agreed / total, 3) if total else None,
+        "changed_field_counts": counts,
+    }
+
+
 if __name__ == "__main__":
     summary = run()
     for r in summary["results"]:
