@@ -115,12 +115,18 @@ describe('the queue', () => {
     expect(predictions.getByText('No')).toBeInTheDocument()
   })
 
-  it('shows labelled / queue size progress', async () => {
+  it('gives each of its three numbers its own denominator', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
-    expect(await screen.findByTestId('label-progress')).toHaveTextContent('3')
-    expect(screen.getByTestId('label-progress')).toHaveTextContent('2')
+
+    // Three counts over three different scopes: the whole queue, this page load, and the
+    // database. They shared a sentence once, and a lifetime row count beside a session-scoped
+    // position read as one figure.
+    const progress = await screen.findByTestId('label-progress')
+    expect(progress).toHaveTextContent(/2 in the queue/)
+    expect(progress).toHaveTextContent(/0 reviewed since this page loaded/)
+    expect(progress).toHaveTextContent(/3 recorded in the database/)
   })
 })
 

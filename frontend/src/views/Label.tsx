@@ -109,7 +109,7 @@ export function Label() {
           grading run your answer <em>replaces</em> the model&rsquo;s for that matter and deal
           point and is scored against MAUD like any other answer — which means a mistyped label
           moves the accuracy table down, not up. The panel at the top of this tab is that
-          before/after pair as it stands today; <strong>Admin</strong> breaks it down by deal
+          before/after pair as it stands today; <strong>Trust</strong> breaks it down by deal
           point.
         </p>
         <p>
@@ -127,15 +127,21 @@ export function Label() {
 
       {!queue && <div className="skeleton skeleton--row" aria-label="loading queue" />}
 
-      {/* Two numbers that mean different things used to share a sentence: a lifetime row count
-          beside a session-scoped position, with nothing to tell them apart. Each now says what
-          it counts, and the one that resets on refresh says so. */}
+      {/* Three numbers over three different denominators: the whole queue, this page load, and
+          the database. They must not share a sentence — that is what they used to do, and a
+          lifetime row count sitting beside a session-scoped position read as one figure. Each
+          keeps its own scope word.
+
+          What came out is the ranking clause. "ranked by extractor disagreement" is a claim
+          about the queue's order, not a count, and it was making a line of three numbers read
+          as prose. It is stated in the explainer above and again on every item, in the
+          reviewer's own terms, which is where someone deciding what to do with *this* item
+          will look. */}
       {queue && (
         <p className="label__progress" data-testid="label-progress">
-          <span className="mono">{queue.queue_size.toLocaleString('en-US')}</span> in the queue,
-          ranked by extractor disagreement ·{' '}
-          <span className="mono">{cursor}</span> reviewed by you since this page loaded ·{' '}
-          <span className="mono">{queue.labelled_count}</span> recorded in total
+          <span className="mono">{queue.queue_size.toLocaleString('en-US')}</span> in the queue ·{' '}
+          <span className="mono">{cursor}</span> reviewed since this page loaded ·{' '}
+          <span className="mono">{queue.labelled_count}</span> recorded in the database
         </p>
       )}
 
@@ -387,10 +393,14 @@ function LoopOutcome() {
 
       {data && (
         <>
+          {/* Scoped, because this number and the "recorded in the database" one above it count
+              different things and will diverge the moment anybody reviews an item: this is what
+              the last calibration run graded, and that is what the table holds right now. */}
           <p className="label__outcomelead">
-            <span className="mono">{data.labels_applied}</span> decisions recorded, of which{' '}
+            <span className="mono">{data.labels_applied}</span> decisions were in the table when
+            calibration last ran, of which{' '}
             <span className="mono">{data.labels_differing}</span> differed from the model&rsquo;s
-            answer.
+            answer. Anything recorded since is counted above and is graded on the next run.
           </p>
 
           <dl className="label__figures">
@@ -449,7 +459,7 @@ function LoopOutcome() {
 
           <p className="label__provenance">
             Produced <span className="mono">{data.generated_at.slice(0, 10)}</span> by{' '}
-            <code>{data.command}</code>. Per deal point, on <strong>Admin</strong>.
+            <code>{data.command}</code>. Per deal point, on <strong>Trust</strong>.
           </p>
         </>
       )}

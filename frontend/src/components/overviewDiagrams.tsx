@@ -119,13 +119,13 @@ export function SystemDiagram() {
           SIC crosswalk
         </text>
         <text x="204" y="72">
-          one store, versioned ingest
+          versioned store
         </text>
         <text x="344" y="56">
           BM25 + vector
         </text>
         <text x="344" y="136">
-          named measures → SQL
+          named measures
         </text>
         <text x="502" y="56">
           find the documents
@@ -222,10 +222,10 @@ export function ProvenanceDiagram() {
           + deal points
         </text>
         <text x="200" y="56">
-          defined once, versioned
+          defined once
         </text>
         <text x="340" y="56">
-          is the slice thick enough?
+          is n big enough?
         </text>
         <text x="500" y="56">
           drills to the clauses

@@ -56,6 +56,7 @@ export function Ask() {
   // per-question line renders.
   const [questions, setQuestions] = useState(0)
   const [sessionCost, setSessionCost] = useState(0)
+  const [vocabularyOpen, setVocabularyOpen] = useState(false)
 
   useEffect(() => {
     // #38
@@ -96,36 +97,13 @@ export function Ask() {
         If you came to find comparable deals, that is <strong>Explore</strong>.
       </p>
 
-      <section className="sem__pane" data-testid="catalog">
-        <h3 className="sem__h">The vocabulary a selection may draw from</h3>
-        <p className="sem__sub">
-          Read live from Cube&rsquo;s metadata endpoint, not a checked-in copy.{' '}
-          <span data-testid="label-space">
-            Label space: <span className="mono">{catalog.label_space}</span>
-          </span>{' '}
-          — the model chooses from these names and no others, and an offline eval grades
-          against exactly this list.
-        </p>
-
-        <div className="sem__cols">
-          <div>
-            <h4 className="sem__h4">
-              Measures <span className="mono">{catalog.measures.length}</span>
-            </h4>
-            <EntryList entries={catalog.measures} testId="catalog-measures" />
-          </div>
-          <div>
-            <h4 className="sem__h4">
-              Dimensions <span className="mono">{catalog.dimensions.length}</span>
-            </h4>
-            <EntryList entries={catalog.dimensions} testId="catalog-dimensions" />
-          </div>
-        </div>
-      </section>
-
       {/* #47: the free-text path sits above the click-built one. A reader who lands here should
           meet the model first — it is the thing the repo claims and the thing that was, until
-          now, reachable only from the eval harness. The builder below is the contrast. */}
+          now, reachable only from the eval harness. The builder below is the contrast.
+
+          It also sits above the vocabulary now. The catalog is reference material and it was
+          the first screen and a half of this tab: a visitor met 48 identifiers and their
+          paragraphs before reaching the box they came to type in. */}
       <section className="sem__pane">
         <AskBox
           onAsked={(costUsd) => {
@@ -133,6 +111,49 @@ export function Ask() {
             setSessionCost((total) => total + costUsd)
           }}
         />
+      </section>
+
+      <section className="sem__pane" data-testid="catalog">
+        <h3 className="sem__h">The vocabulary a selection may draw from</h3>
+        <p className="sem__sub">
+          Read live from Cube&rsquo;s metadata endpoint, not a checked-in copy.{' '}
+          <span data-testid="label-space">
+            Label space: <span className="mono">{catalog.label_space}</span>
+          </span>{' '}
+          — <span className="mono">{catalog.measures.length}</span> measures and{' '}
+          <span className="mono">{catalog.dimensions.length}</span> dimensions. The model chooses
+          from these names and no others, and an offline eval grades against exactly this list.
+        </p>
+
+        {/* The count is the claim and stays on screen; the names behind it are reference, and
+            reference belongs one click away rather than in front of the instrument. */}
+        <button
+          type="button"
+          className="viz__toggle"
+          aria-expanded={vocabularyOpen}
+          data-testid="catalog-toggle"
+          onClick={() => setVocabularyOpen((open) => !open)}
+        >
+          {vocabularyOpen ? 'hide' : 'show'} all {catalog.label_space} names, with what each one
+          counts
+        </button>
+
+        {vocabularyOpen && (
+          <div className="sem__cols" data-testid="catalog-list">
+            <div>
+              <h4 className="sem__h4">
+                Measures <span className="mono">{catalog.measures.length}</span>
+              </h4>
+              <EntryList entries={catalog.measures} testId="catalog-measures" />
+            </div>
+            <div>
+              <h4 className="sem__h4">
+                Dimensions <span className="mono">{catalog.dimensions.length}</span>
+              </h4>
+              <EntryList entries={catalog.dimensions} testId="catalog-dimensions" />
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="sem__pane">

@@ -82,8 +82,11 @@ export function RoutingDiagram() {
 
       <g className="loop__sub">
         <text x="58" y="46">same words</text>
-        <text x="192" y="46">chooses the definition</text>
-        <text x="332" y="46">plausible either way</text>
+        {/* These sub-captions are centred inside a 104px node at 9px monospace, so ~5.4px a
+            character: past 18 they render outside the box they label. Measured in the browser
+            with getComputedTextLength, which is the only thing that catches it. */}
+        <text x="192" y="46">and the definition</text>
+        <text x="332" y="46">looks right</text>
         <text x="472" y="46">only diffable</text>
         <text x="58" y="142">same words</text>
         <text x="188" y="142">from the catalog</text>

@@ -149,7 +149,7 @@ describe('QueryBuilder — the one component with no cancel handling at all', ()
       />,
     )
     // select a measure so the run button is enabled, then start a query
-    fireEvent.click(screen.getByRole('button', { name: 'n deal_points' }))
+    fireEvent.click(screen.getByRole('button', { name: 'n deal_points.n' }))
     fireEvent.click(screen.getByRole('button', { name: /Run against Postgres/ }))
     expectAbortedOnUnmount(unmount)
   })

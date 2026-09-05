@@ -22,6 +22,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from explorer.agent.select import EXCLUDED_MEASURES, SELECTABLE
 from explorer.api.cube_client import CubeUnavailable, meta
 from explorer.api.logging import get_logger
 
@@ -48,6 +49,19 @@ class CatalogResponse(BaseModel):
 
 
 def _entries(cubes: list[dict[str, Any]], key: str) -> list[CatalogEntry]:
+    """Only what a selection may actually draw from.
+
+    `SELECTABLE` and `EXCLUDED_MEASURES` are imported from `agent/select.py` rather than
+    restated, because `validate_selection` rejects anything outside them and this endpoint feeds
+    a picker. Two lists would be two answers to "what can I select", and the one the user reads
+    would be the one that is wrong.
+
+    It was wrong. Walking the Ask tab, the builder offered `matters.industry_code` and
+    `industries.label`, and `POST /agent/run-selection` answered "'matters.industry_code' is not
+    a known dimension" — an error the UI produced by offering the option. `label_space` was
+    published as 48 under the claim "the model chooses from these names and no others"; the
+    model chose from 30.
+    """
     return [
         CatalogEntry(
             name=str(item.get("name", "")),
@@ -57,7 +71,9 @@ def _entries(cubes: list[dict[str, Any]], key: str) -> list[CatalogEntry]:
             description=str(item.get("description") or ""),
         )
         for cube in cubes
+        if cube.get("name") in SELECTABLE
         for item in cube.get(key, [])
+        if item.get("name") not in EXCLUDED_MEASURES
     ]
 
 

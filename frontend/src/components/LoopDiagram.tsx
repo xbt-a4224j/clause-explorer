@@ -21,11 +21,28 @@ export interface LoopCounts {
 }
 
 /**
+ * Which way the regrade moved, read from the counts on the diagram itself.
+ *
+ * This was the string `'score went down'` whenever any counts were passed. With the `labels`
+ * table empty the node beside it reads `569 → 569 correct`, so the arc closing the loop was
+ * captioning a picture with a claim the picture contradicted — on the one tab whose whole
+ * argument is that its figures are checkable. Caught by looking at the rendered page.
+ *
+ * All three strings clear the viewBox: anchored middle at x=52, a 9px italic sans string has
+ * about 20 characters before its left edge goes negative, and the longest here is 18.
+ */
+function direction({ correctBefore, correctAfter }: LoopCounts): string {
+  if (correctAfter < correctBefore) return 'score went down'
+  if (correctAfter > correctBefore) return 'score went up'
+  return 'score did not move'
+}
+
+/**
  * #54 puts real counts on the edges. Before this the diagram drew a mechanism that might never
  * have run; a cycle with 1,701 predictions and 6 decisions on it is a cycle that has turned.
  *
- * The regrade number goes DOWN — 569 correct to 565 — and the copy says so. A loop that only
- * ever reported improvement would be a loop nobody should believe.
+ * The direction is derived, never asserted. A loop that only ever reported improvement would be
+ * a loop nobody should believe, and one that only ever reported a fall would be no better.
  */
 export function LoopDiagram({ counts }: { counts?: LoopCounts } = {}) {
   const n = (v: number) => v.toLocaleString('en-US')
@@ -110,7 +127,7 @@ export function LoopDiagram({ counts }: { counts?: LoopCounts } = {}) {
           {counts ? `${counts.differing} differed` : 'one row each'}
         </text>
         <text x="353" y="176">
-          {counts ? `${counts.correctBefore} → ${counts.correctAfter} correct` : 'reads them, prefers them'}
+          {counts ? `${counts.correctBefore} → ${counts.correctAfter} correct` : 'reads and prefers them'}
         </text>
         <text x="189" y="176">where it is weak</text>
       </g>
@@ -122,7 +139,7 @@ export function LoopDiagram({ counts }: { counts?: LoopCounts } = {}) {
           moved into the clear band between the baseline node (ends y=116) and the bottom row
           (starts y=144). Caught by the screenshot pass, not by any unit test. */}
       <text className="loop__note" x="52" y="132">
-        {counts ? 'score went down' : 'loop closed (#41)'}
+        {counts ? direction(counts) : 'loop closed (#41)'}
       </text>
     </svg>
   )

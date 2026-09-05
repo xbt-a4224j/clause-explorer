@@ -637,7 +637,7 @@ kbd {
   background: var(--surface-1); border-color: var(--accent);
   box-shadow: inset 2px 0 0 var(--accent); color: var(--ink);
 }
-.qb__chipname { font-family: var(--font-mono); font-size: 11px; }
+.qb__chipname { font-size: 11px; color: var(--ink); }
 .qb__chip.is-on .qb__chipname { font-weight: 600; }
 .qb__chipcube { font-family: var(--font-mono); font-size: 9px; color: var(--ink-tertiary); }
 
@@ -1163,3 +1163,12 @@ kbd {
 
 .trust__section { margin-bottom: var(--pad-lg); }
 .trust__operator { padding-top: var(--pad-md); border-top: 1px solid var(--hairline); }
+
+/* The disagreement chart's zero state (#57 pass). A stacked bar over a total of zero draws
+   nothing, so the buckets are listed instead — the shape of the measurement, with nothing
+   measured into it yet. */
+.trust__buckets {
+  margin: 0; padding-left: 18px;
+  color: var(--ink-subtle); font-size: 12px; line-height: 1.7;
+}
+.trust__buckets .mono { color: var(--ink); }

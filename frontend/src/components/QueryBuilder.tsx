@@ -32,8 +32,15 @@ function Chip({
       onClick={onToggle}
       title={entry.description || entry.name}
     >
-      <span className="qb__chipname">{entry.name.split('.').slice(1).join('.')}</span>
-      <span className="qb__chipcube">{entry.cube}</span>
+      {/*
+        #57's fault 1, in the other picker. This read `n` over `deal_points`, so the three
+        different `n` measures in the vocabulary were told apart only by the cube name under
+        them, and nothing on the chip said what any of them counted. The catalog has carried a
+        title and a description since #36. Title leads; the qualified name — what actually gets
+        sent — stays underneath, which is also the Ask chip's shape.
+      */}
+      <span className="qb__chipname">{entry.title || entry.name}</span>
+      <span className="qb__chipcube">{entry.name}</span>
     </button>
   )
 }

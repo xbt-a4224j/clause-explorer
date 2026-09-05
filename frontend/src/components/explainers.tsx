@@ -59,23 +59,3 @@ export function DealTermsExplainer() {
     </>
   )
 }
-
-export function AdminExplainer() {
-  return (
-    <>
-      <p>
-        <strong>What this tab is for.</strong> Three operator questions without reading a log file
-        by hand: did the data land, what are we currently allowed to claim, and what is the system
-        doing right now. Ingest rows carry rows upserted, duration and a SHA-256 of the file read.
-        Calibration grades our extractor against <Term>MAUD</Term>&rsquo;s lawyer-written answers,
-        per deal point. The log viewer tails structured JSON lines, each carrying a request id.
-      </p>
-      <p>
-        <strong>The limit, which is the calibration table.</strong> Of the 5 deal points measured,
-        4 fall below the 0.7 reporting gate — accuracies of 0.50, 0.30, 0.30 and 0.20 against one
-        of 0.95. That is the table doing its job: it names which questions the system must decline
-        to answer on un-annotated documents.
-      </p>
-    </>
-  )
-}

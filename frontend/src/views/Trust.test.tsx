@@ -339,3 +339,41 @@ describe('Trust absorbs Admin', () => {
     expect(within(operator).getByText('Logs')).toBeInTheDocument()
   })
 })
+
+/**
+ * The zero state, now that the `labels` table is genuinely empty.
+ *
+ * The prose around the loop was rewritten to derive from the data, and the diagram was not:
+ * the arc closing it read "score went down" while the node beside it read `569 → 569 correct`.
+ * A tab whose entire argument is that its figures are checkable cannot caption a picture with
+ * a claim the picture contradicts.
+ */
+describe('the loop diagram states the direction the numbers show', () => {
+  it('says the score did not move when nothing has gone round the loop', async () => {
+    mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
+    render(<Trust />)
+    await screen.findByTestId('trust-loop-direction')
+    const note = document.querySelector('.loop__note')!
+    expect(note.textContent).toMatch(/did not move/i)
+  })
+
+  it('says it went down when it went down', async () => {
+    mockApi()
+    render(<Trust />)
+    await screen.findByTestId('trust-loop-direction')
+    const note = document.querySelector('.loop__note')!
+    expect(note.textContent).toMatch(/went down/i)
+  })
+
+  it('shows the four buckets rather than an empty bar when nothing was reviewed', async () => {
+    mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
+    render(<Trust />)
+    const frame = await screen.findByTestId('trust-disagreement')
+    // a stacked bar over a total of zero draws nothing, and a heading over nothing reads as a
+    // failed render rather than as a count of zero
+    expect(within(frame).queryByTestId('trust-disagreement-bar')).not.toBeInTheDocument()
+    const buckets = within(frame).getByTestId('trust-disagreement-empty')
+    expect(buckets).toHaveTextContent('reviewer corrected a wrong model answer')
+    expect(buckets).toHaveTextContent('reviewer differed and overwrote a correct answer')
+  })
+})

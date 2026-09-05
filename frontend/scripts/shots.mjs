@@ -77,6 +77,13 @@ const SHOTS = [
   {
     name: 'semantic-layer',
     tab: 'Ask',
+    // The vocabulary list is collapsed by default now — it was the first screen and a half of
+    // the tab, in front of the box people came to type in. Opened here so the callout still
+    // has something to point at.
+    before: async (page) => {
+      await page.locator('[data-testid="catalog-toggle"]').click()
+      await page.waitForSelector('[data-testid="catalog-list"]', { timeout: 5000 })
+    },
     callouts: [
       { sel: '.cat__list', text: 'the vocabulary the model may select from, read live from Cube' },
       { sel: '.qb__json', text: 'its output: a selection, never SQL. Gradeable offline' },

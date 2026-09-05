@@ -53,10 +53,14 @@ export function Trust() {
 
   return (
     <div className="trust">
+      {/* The tab strip already says "where the model is trusted, and where it is not"
+          directly above this, and this line opened by saying it again. What it is for is the
+          half a reader cannot get anywhere else: how to check any of it. */}
       <p className="sem__pointer">
-        Where the model is trusted, where it is not, and what the humans changed. Every figure
-        below is read from a committed artefact — the command that produced it is named beside
-        it, so none of this is a claim you have to take from us.
+        Every figure below is read from a committed artefact, with the command that produced it
+        named beside it. Nothing is recomputed when the tab opens, so this page and the repo
+        cannot disagree about what ran — which is what makes any of it checkable rather than
+        asserted.
       </p>
 
       <CostRow calibration={calibration} />
@@ -266,6 +270,13 @@ function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
  * the finding, so it is stated in the copy and kept in the table rather than drawn as a
  * zero-width segment nobody can see.
  */
+const DISAGREEMENT_BUCKETS = [
+  'reviewer agreed with the model',
+  'reviewer corrected a wrong model answer',
+  'reviewer differed and overwrote a correct answer',
+  'reviewer differed, and was wrong either way',
+] as const
+
 function DisagreementChart({ labels }: { labels: CalibrationLabels | null }) {
   if (!labels) return null
   const agreed = labels.labels_applied - labels.labels_differing
@@ -303,40 +314,50 @@ function DisagreementChart({ labels }: { labels: CalibrationLabels | null }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>reviewer agreed with the model</td>
-                <td className="mono">{agreed}</td>
-              </tr>
-              <tr>
-                <td>reviewer corrected a wrong model answer</td>
-                <td className="mono">0</td>
-              </tr>
-              <tr>
-                <td>reviewer differed and overwrote a correct answer</td>
-                <td className="mono">{overwroteCorrect}</td>
-              </tr>
-              <tr>
-                <td>reviewer differed, and was wrong either way</td>
-                <td className="mono">{differed - overwroteCorrect}</td>
-              </tr>
+              {DISAGREEMENT_BUCKETS.map((bucket, i) => (
+                <tr key={bucket}>
+                  <td>{bucket}</td>
+                  <td className="mono">
+                    {[agreed, 0, overwroteCorrect, differed - overwroteCorrect][i]}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         }
       >
-        <StackedBar
-          testId="trust-disagreement-bar"
-          total={labels.labels_applied}
-          segments={[
-            { label: 'agreed with the model', value: agreed, slot: 1 },
-            { label: 'differed, and was wrong against gold', value: differed, slot: 2 },
-          ]}
-        />
-        <Legend
-          items={[
-            { label: `agreed with the model — ${agreed}`, slot: 1 },
-            { label: `differed, and was wrong against gold — ${differed}`, slot: 2 },
-          ]}
-        />
+        {/*
+          A stacked bar over a total of zero draws nothing, and a heading with a note and then
+          empty space under it reads as a failed render rather than as a count of zero. The
+          buckets are what the chart would show, so at zero they are listed instead: the shape
+          of the measurement, with nothing measured into it yet.
+        */}
+        {labels.labels_applied === 0 ? (
+          <ul className="trust__buckets" data-testid="trust-disagreement-empty">
+            {DISAGREEMENT_BUCKETS.map((bucket) => (
+              <li key={bucket}>
+                {bucket} — <span className="mono">0</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <StackedBar
+              testId="trust-disagreement-bar"
+              total={labels.labels_applied}
+              segments={[
+                { label: 'agreed with the model', value: agreed, slot: 1 },
+                { label: 'differed, and was wrong against gold', value: differed, slot: 2 },
+              ]}
+            />
+            <Legend
+              items={[
+                { label: `agreed with the model — ${agreed}`, slot: 1 },
+                { label: `differed, and was wrong against gold — ${differed}`, slot: 2 },
+              ]}
+            />
+          </>
+        )}
       </ChartFrame>
     </section>
   )

@@ -99,3 +99,108 @@ class TestCatalog:
         response = client.get("/agent/catalog")
         assert response.status_code == 503
         assert "data" not in response.json()
+
+
+# --- the catalog is the SELECTABLE vocabulary, not every cube -------------------------------
+#
+# Found by walking the Ask tab. The builder listed `matters.industry_code` and
+# `industries.label` as things to group by, and `POST /agent/run-selection` answered
+# "'matters.industry_code' is not a known dimension" — an error the UI produced by offering the
+# option. `select.py` has restricted the agent to `comparable_deals` and `deal_points` since
+# #24 and this endpoint never applied the same restriction.
+#
+# The label-space figure was the worse half. The tab renders "Label space: 48 — the model
+# chooses from these names and no others, and an offline eval grades against exactly this
+# list", and the model actually chose from 30. That is the tab's headline gradeability claim,
+# published wrong by 18, on the one screen whose purpose is to make the claim checkable.
+
+WIDE_META: dict[str, Any] = {
+    "cubes": [
+        {
+            "name": "deal_points",
+            "measures": [
+                {"name": "deal_points.n", "title": "N", "type": "count"},
+                {
+                    "name": "deal_points.mean_numeric_value_do_not_use_for_market",
+                    "title": "Mean",
+                    "type": "number",
+                },
+            ],
+            "dimensions": [{"name": "deal_points.position", "title": "Position"}],
+        },
+        {
+            "name": "comparable_deals",
+            "measures": [{"name": "comparable_deals.n", "title": "N", "type": "count"}],
+            "dimensions": [{"name": "comparable_deals.label", "title": "Label"}],
+        },
+        {
+            "name": "matters",
+            "measures": [{"name": "matters.n", "title": "N", "type": "count"}],
+            "dimensions": [{"name": "matters.industry_code", "title": "Industry Code"}],
+        },
+        {
+            "name": "industries",
+            "measures": [],
+            "dimensions": [{"name": "industries.label", "title": "Label"}],
+        },
+    ]
+}
+
+
+@pytest.fixture
+def wide_meta(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    monkeypatch.setattr("explorer.api.catalog.meta", lambda: WIDE_META)
+    return WIDE_META
+
+
+class TestTheCatalogIsWhatCanActuallyBeSelected:
+    def test_a_cube_the_agent_cannot_select_from_is_not_listed(
+        self, wide_meta: dict[str, Any]
+    ) -> None:
+        body = client.get("/agent/catalog").json()
+        names = {d["name"] for d in body["dimensions"]} | {m["name"] for m in body["measures"]}
+        assert "matters.industry_code" not in names
+        assert "industries.label" not in names
+        assert "matters.n" not in names
+
+    def test_the_measure_excluded_by_name_is_excluded_here_too(
+        self, wide_meta: dict[str, Any]
+    ) -> None:
+        """`..._do_not_use_for_market` exists so calibration can show how far the mean diverges
+        from the median. Listing it in a picker makes it selectable regardless of what the name
+        says — which is the exact argument `select.py` makes for excluding it structurally."""
+        body = client.get("/agent/catalog").json()
+        assert all("do_not_use_for_market" not in m["name"] for m in body["measures"])
+
+    def test_the_label_space_is_the_number_a_selection_is_graded_against(
+        self, wide_meta: dict[str, Any]
+    ) -> None:
+        """The claim on the tab is "the model chooses from these names and no others". The
+        number has to be that set's size or the claim is false where it is loudest."""
+        from explorer.agent.select import fetch_vocabulary
+
+        vocabulary = fetch_vocabulary(WIDE_META)
+        body = client.get("/agent/catalog").json()
+        assert body["label_space"] == len(vocabulary.measures) + len(vocabulary.dimensions)
+        assert {m["name"] for m in body["measures"]} == set(vocabulary.measures)
+        assert {d["name"] for d in body["dimensions"]} == set(vocabulary.dimensions)
+
+    def test_everything_the_catalog_offers_survives_selection_validation(
+        self, wide_meta: dict[str, Any]
+    ) -> None:
+        """The property that was broken: a name a picker offers must not be one the run path
+        refuses. This is the assertion, rather than the cube list, because the cube list is how
+        it is implemented today and this is what it owes."""
+        from explorer.agent.select import fetch_vocabulary, validate_selection
+
+        vocabulary = fetch_vocabulary(WIDE_META)
+        body = client.get("/agent/catalog").json()
+        validate_selection(
+            {
+                "measures": [m["name"] for m in body["measures"]],
+                "dimensions": [d["name"] for d in body["dimensions"]],
+                "filters": [],
+                "timeDimensions": [],
+            },
+            vocabulary,
+        )

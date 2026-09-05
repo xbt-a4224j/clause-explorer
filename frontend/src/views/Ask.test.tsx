@@ -80,34 +80,58 @@ function mockCatalog(body: unknown = CATALOG, status = 200) {
 
 afterEach(() => vi.unstubAllGlobals())
 
+/**
+ * The 48-entry vocabulary is reference material, and it used to be the first screen and a half
+ * of this tab — a visitor met a wall of identifiers before the box they came to type in. It is
+ * collapsed now, with the claim it exists to make (the label space) still on screen.
+ */
+async function openVocabulary() {
+  const toggle = await screen.findByTestId('catalog-toggle')
+  fireEvent.click(toggle)
+  return screen.findByTestId('catalog-list')
+}
+
 describe('the vocabulary', () => {
   it('lists the measures and dimensions the model may select from', async () => {
     mockCatalog()
     render(<Ask />)
-    const catalog = await screen.findByTestId('catalog')
-    expect(within(catalog).getByText('deal_points.median_numeric_value')).toBeInTheDocument()
-    expect(within(catalog).getByText('matters.industry_code')).toBeInTheDocument()
+    const list = await openVocabulary()
+    expect(within(list).getByText('deal_points.median_numeric_value')).toBeInTheDocument()
+    expect(within(list).getByText('matters.industry_code')).toBeInTheDocument()
   })
 
   it('shows each entry description — an opaque identifier cannot be reviewed', async () => {
     mockCatalog()
     render(<Ask />)
     // scoped: percentile_cont also appears in the freeform-SQL contrast block by design
-    const catalog = await screen.findByTestId('catalog')
-    expect(within(catalog).getByText(/percentile_cont/)).toBeInTheDocument()
+    const list = await openVocabulary()
+    expect(within(list).getByText(/percentile_cont/)).toBeInTheDocument()
   })
 
-  it('states the label space size, because that is the gradeability claim', async () => {
+  it('states the label space size without being opened, because that is the claim', async () => {
     mockCatalog()
     render(<Ask />)
     await waitFor(() => expect(screen.getByTestId('label-space')).toHaveTextContent('3'))
+    // the count is the argument; the 48 identifiers behind it are reference
+    expect(screen.queryByTestId('catalog-list')).not.toBeInTheDocument()
   })
 
   it('separates measures from dimensions', async () => {
     mockCatalog()
     render(<Ask />)
-    const measures = await screen.findByTestId('catalog-measures')
+    await openVocabulary()
+    const measures = screen.getByTestId('catalog-measures')
     expect(within(measures).queryByText('matters.industry_code')).not.toBeInTheDocument()
+  })
+
+  it('puts the question box in front of the vocabulary, not behind it', async () => {
+    mockCatalog()
+    render(<Ask />)
+    const box = await screen.findByTestId('ask-box')
+    const catalog = screen.getByTestId('catalog')
+    expect(box.compareDocumentPosition(catalog) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
   })
 })
 
@@ -221,7 +245,7 @@ describe('the query builder', () => {
     render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
 
-    fireEvent.click(within(qb).getByRole('button', { name: /^n deal_points$/ }))
+    fireEvent.click(within(qb).getByRole('button', { name: /^N deal_points\.n$/ }))
     fireEvent.click(within(qb).getByRole('button', { name: /run against postgres/i }))
 
     const refused = await screen.findByTestId('qb-refused')

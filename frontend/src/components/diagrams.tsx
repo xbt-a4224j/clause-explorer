@@ -89,8 +89,8 @@ export function DealTermsDiagram() {
         <text x="385" y="56">12,937 rows</text>
         <text x="536" y="56">8 comparables</text>
         <text x="385" y="134">count per question</text>
-        <text x="223" y="134">not 75% — n is too small</text>
-        <text x="68" y="134">the actual clause text</text>
+        <text x="223" y="134">not 75% — n too small</text>
+        <text x="68" y="134">the clause text</text>
       </g>
 
       <text className="loop__note" x="300" y="182">
