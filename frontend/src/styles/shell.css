@@ -401,10 +401,15 @@ kbd {
 .label__predictions dd { margin: 0 0 0 4px; display: inline; color: var(--ink); }
 .label__edit { display: flex; flex-direction: column; gap: 4px; }
 .label__edit label { font-size: 11px; color: var(--ink-muted); }
-.label__edit input {
+.label__edit input, .label__edit select {
   padding: 6px 8px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
   background: var(--canvas); color: var(--ink); font: inherit;
+  max-width: 60ch;
 }
+/* Only reachable for a deal point with no recorded answers, which the loaded corpus has none
+   of. Says why the control is a text box rather than leaving it looking like the one #57
+   replaced. */
+.label__novocabulary { max-width: 60ch; color: var(--ink-subtle); font-size: 11px; }
 
 /* #52 — four named buttons replace the y/n/e/s keys. Plain neutral buttons: the accent is
    reserved for focus rings, the brand mark and intentional CTAs, and four equally weighted
@@ -951,7 +956,44 @@ kbd {
   font-size: 11px;
   text-transform: lowercase;
 }
-.ask__chipname { font-family: var(--font-mono); color: var(--ink); }
+.ask__chipname {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: help;
+}
+.ask__chipname:hover { text-decoration: underline dotted; }
+/* The qualified name stays visible under the title — it is what gets sent, and a reviewer
+   checking a selection against the catalog needs it. Quiet, so the readable name leads. */
+.ask__chipqual { color: var(--ink-tertiary); font-size: 11px; font-weight: 400; }
+/* Full width so the description wraps under the chip's controls rather than stretching the
+   chip row into one very long line. */
+.ask__chipdesc {
+  flex-basis: 100%;
+  max-width: 62ch;
+  padding-top: 2px;
+  color: var(--ink-subtle);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.ask__chipcoverage { color: var(--ink-tertiary); }
+.ask__chip { flex-wrap: wrap; }
+/* A member the corpus cannot answer with. Same hairline vocabulary as the refusal panel it is
+   explained in, and never colour alone — the panel above names every one of these in words. */
+.ask__chip.is-unanswerable {
+  border-style: dashed;
+  border-color: var(--hairline-strong);
+  background: var(--surface-3);
+}
+.ask__cannotlist { margin: 0 0 6px; padding-left: 18px; }
+.ask__cannotlist li { margin-bottom: 2px; }
 .ask__chipedit {
   min-width: 12ch;
   max-width: 28ch;

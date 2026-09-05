@@ -94,6 +94,30 @@ class TestQueueOrdering:
         assert body["queue_size"] == len(body["items"])
         assert "labelled_count" in body
 
+    def test_each_item_carries_the_answers_its_deal_point_may_take(
+        self, client: TestClient, predictions_file
+    ) -> None:  # type: ignore[no-untyped-def]
+        """#57. The Edit control was a free-text box over a closed vocabulary — the same fault
+        as Ask's filter chip. `/label/decide` has validated against this exact list since #56,
+        so the queue was withholding from the reviewer the one thing that would stop them
+        typing a value the write path then rejects."""
+        body = client.get("/label/queue").json()
+        item = next(i for i in body["items"] if i["deal_point_name"].endswith("(Y/N)"))
+        assert set(item["allowed_positions"]) >= {"Yes", "No"}
+
+    def test_the_queue_offers_exactly_what_the_write_path_accepts(
+        self, client: TestClient, predictions_file
+    ) -> None:  # type: ignore[no-untyped-def]
+        """One source, read twice. If these ever diverged the reviewer would be offered a
+        value the server refuses, which is a worse control than the text box was."""
+        import psycopg
+        from explorer.api.label import allowed_positions
+
+        body = client.get("/label/queue").json()
+        item = body["items"][0]
+        with psycopg.connect(DSN) as conn:
+            assert item["allowed_positions"] == allowed_positions(conn, item["deal_point_name"])
+
 
 @needs_corpus
 class TestQueueDrawsFromTheFullPredictionSet:
@@ -188,15 +212,42 @@ def test_a_value_outside_the_deal_points_vocabulary_is_rejected(client: TestClie
 
 
 def test_a_value_inside_the_vocabulary_is_accepted(client: TestClient) -> None:
-    response = client.post(
-        "/label/decide",
-        json={
-            "matter_id": "contract_10",
-            "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
-            "value": "No",
-        },
-    )
-    assert response.status_code == 200
+    """Cleans up after itself.
+
+    `labels` is not a test fixture — the calibration grader reads it, Trust renders the count,
+    and the Label tab reports it as "recorded in total". This test wrote a real reviewer
+    decision into the shared database on every run and left it there: after the table was
+    deliberately emptied, three runs of the suite had quietly refilled it with three identical
+    rows, so the genuine zero state was zero only until someone ran the tests. A row no
+    reviewer made must not become a row the published accuracy figure is graded on.
+    """
+    deal_point = "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)"
+    target = f"contract_10:{deal_point}"
+    with psycopg.connect(DSN) as conn:
+        before = conn.execute(
+            "SELECT count(*) FROM labels WHERE target_id = %s", (target,)
+        ).fetchone()[0]
+    try:
+        response = client.post(
+            "/label/decide",
+            json={"matter_id": "contract_10", "deal_point_name": deal_point, "value": "No"},
+        )
+        assert response.status_code == 200
+        with psycopg.connect(DSN) as conn:
+            after = conn.execute(
+                "SELECT count(*) FROM labels WHERE target_id = %s", (target,)
+            ).fetchone()[0]
+        assert after == before + 1
+    finally:
+        with psycopg.connect(DSN) as conn:
+            # Only what this test added, by count and newest-first, so a row a reviewer really
+            # recorded for the same deal point survives.
+            conn.execute(
+                "DELETE FROM labels WHERE id IN (SELECT id FROM labels WHERE target_id = %s "
+                "ORDER BY id DESC LIMIT (SELECT greatest(count(*) - %s, 0) FROM labels "
+                "WHERE target_id = %s))",
+                (target, before, target),
+            )
 
 
 def test_an_unknown_deal_point_is_rejected_rather_than_written(client: TestClient) -> None:

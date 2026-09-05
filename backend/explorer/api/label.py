@@ -45,12 +45,29 @@ class QueueItem(BaseModel):
     quoted_text: str | None
     span_start: int | None
     span_end: int | None
+    #: Every answer this deal point actually takes, read from the corpus (#57). `POST
+    #: /label/decide` has validated against this same list since #56, and the reviewer was the
+    #: only party not shown it — so Edit was a free-text box over a closed vocabulary, and the
+    #: only way to discover that vocabulary was to have an answer rejected.
+    allowed_positions: list[str]
 
 
 class QueueResponse(BaseModel):
     items: list[QueueItem]
     queue_size: int
     labelled_count: int
+
+
+def allowed_positions(conn: psycopg.Connection, deal_point_name: str) -> list[str]:
+    """The answers this deal point actually has, read from the data (#56).
+
+    Same source `/label/queue` uses to score the deterministic baseline, so the write path and
+    the read path cannot disagree about what a valid answer is.
+    """
+    rows = conn.execute(
+        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s", (deal_point_name,)
+    ).fetchall()
+    return sorted({str(r[0]) for r in rows if r[0] is not None})
 
 
 @router.get("/queue", response_model=QueueResponse)
@@ -78,12 +95,13 @@ def queue() -> QueueResponse:
         ).fetchone()
         labelled_count = labelled_row[0] if labelled_row else 0
 
-        allowed_by_point: dict[str, list[str]] = {}
-        for name in {p["deal_point_name"] for p in predictions}:
-            rows = conn.execute(
-                "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s", (name,)
-            ).fetchall()
-            allowed_by_point[name] = sorted({r[0] for r in rows})
+        # One read, used twice: it scores the deterministic baseline below and it is what the
+        # Edit control offers. Same function `/label/decide` validates with, so the control and
+        # the write path cannot drift apart.
+        allowed_by_point: dict[str, list[str]] = {
+            name: allowed_positions(conn, name)
+            for name in {p["deal_point_name"] for p in predictions}
+        }
 
     sources: dict[str, str] = dict(source_rows)
 
@@ -104,6 +122,7 @@ def queue() -> QueueResponse:
                 quoted_text=p.get("quoted_text"),
                 span_start=p.get("span_start"),
                 span_end=p.get("span_end"),
+                allowed_positions=allowed_by_point.get(p["deal_point_name"], []),
             )
         )
 
@@ -118,18 +137,6 @@ class DecideRequest(BaseModel):
     deal_point_name: str = Field(min_length=1)
     value: str = Field(min_length=1)
     prior_prediction: str | None = None
-
-
-def allowed_positions(conn: psycopg.Connection, deal_point_name: str) -> list[str]:
-    """The answers this deal point actually has, read from the data (#56).
-
-    Same source `/label/queue` uses to score the deterministic baseline, so the write path and
-    the read path cannot disagree about what a valid answer is.
-    """
-    rows = conn.execute(
-        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s", (deal_point_name,)
-    ).fetchall()
-    return sorted({str(r[0]) for r in rows if r[0] is not None})
 
 
 @router.post("/decide")

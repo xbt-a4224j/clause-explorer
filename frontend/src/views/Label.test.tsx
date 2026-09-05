@@ -26,6 +26,9 @@ const QUEUE: LabelQueueResponse = {
       quoted_text: 'a fee shall accrue beginning on the outside date',
       span_start: 10,
       span_end: 60,
+      // #57: the answers this deal point actually takes, read from the corpus. `/label/decide`
+      // has validated against this same list since #56.
+      allowed_positions: ['Maybe', 'No', 'Yes'],
     },
     {
       matter_id: 'contract_2',
@@ -36,6 +39,7 @@ const QUEUE: LabelQueueResponse = {
       quoted_text: null,
       span_start: null,
       span_end: null,
+      allowed_positions: ['No', 'Yes'],
     },
   ],
 }
@@ -72,7 +76,10 @@ async function ready() {
   await waitFor(() => {})
 }
 
-function mockApi(calibration: CalibrationLabels | null = CALIBRATION) {
+function mockApi(
+  queue: LabelQueueResponse = QUEUE,
+  calibration: CalibrationLabels | null = CALIBRATION,
+) {
   const decisions: unknown[] = []
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const u = String(url)
@@ -84,7 +91,7 @@ function mockApi(calibration: CalibrationLabels | null = CALIBRATION) {
       if (!calibration) return { ok: false, status: 404, json: async () => ({}) } as Response
       return { ok: true, json: async () => calibration } as Response
     }
-    return { ok: true, json: async () => QUEUE } as Response
+    return { ok: true, json: async () => queue } as Response
   })
   return { fetchMock, decisions }
 }
@@ -321,7 +328,7 @@ describe('what the decisions changed (#52)', () => {
   })
 
   it('says so plainly when calibration has not been run', async () => {
-    const { fetchMock } = mockApi(null)
+    const { fetchMock } = mockApi(QUEUE, null)
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
     const panel = await screen.findByTestId('label-outcome')
@@ -485,5 +492,62 @@ describe('designed states', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
     expect(await screen.findByText(/queue is empty/i)).toBeInTheDocument()
+  })
+})
+
+/**
+ * #57 — the Edit control was a free-text box over a closed vocabulary.
+ *
+ * `POST /label/decide` has validated against the deal point's own recorded answers since #56,
+ * and the reviewer was the only party not shown that list: the only way to discover the
+ * vocabulary was to have an answer rejected after typing it. Ask's filter chip had the
+ * identical fault and gets the identical control.
+ */
+describe('the editor offers the answers the deal point actually takes', () => {
+  it('is a select over the recorded positions, not a text box', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Edit'))
+    const control = screen.getByLabelText('correct value')
+    expect(control.tagName).toBe('SELECT')
+    expect(
+      within(control as HTMLSelectElement)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['Maybe', 'No', 'Yes'])
+  })
+
+  it('offers exactly what the server will accept, so a decision cannot be rejected', async () => {
+    const { fetchMock, decisions } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Correct'))
+    const control = screen.getByLabelText('correct value')
+    fireEvent.change(control, { target: { value: 'Maybe' } })
+    fireEvent.click(screen.getByRole('button', { name: /record this value/i }))
+
+    await waitFor(() => expect(decisions).toHaveLength(1))
+    expect(decisions[0]).toMatchObject({ value: 'Maybe', prior_prediction: 'Yes' })
+  })
+
+  it('falls back to a text box only when the deal point has no recorded answers', async () => {
+    const { fetchMock } = mockApi({
+      ...QUEUE,
+      items: [{ ...QUEUE.items[0], allowed_positions: [] }],
+      queue_size: 1,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Edit'))
+    expect(screen.getByLabelText('correct value').tagName).toBe('INPUT')
+    // and says why, rather than looking like the control it replaced
+    expect(screen.getByTestId('label-novocabulary')).toHaveTextContent(/no recorded answers/i)
   })
 })

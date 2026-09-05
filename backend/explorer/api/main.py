@@ -27,6 +27,7 @@ from explorer.api.grading import router as grading_router
 from explorer.api.label import router as label_router
 from explorer.api.logging import bind_request, clear_request, configure_logging, get_logger
 from explorer.api.matters import router as matters_router
+from explorer.api.members import router as members_router
 from explorer.api.run_selection import router as run_selection_router
 from explorer.api.selection_corrections import router as selection_corrections_router
 from explorer.api.settings import settings
@@ -57,6 +58,7 @@ app.include_router(catalog_router)
 app.include_router(run_selection_router)
 app.include_router(grading_router)
 app.include_router(ask_router)
+app.include_router(members_router)
 app.include_router(selection_corrections_router)
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"

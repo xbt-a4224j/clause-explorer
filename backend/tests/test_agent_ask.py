@@ -543,3 +543,127 @@ class TestLiveAsk:
         }
         assert "rows" not in body
         assert ask_module.numeric_leaves(body["model_selection"]) == []
+
+
+class TestTheSelectionIsCollapsedBeforeItIsRendered:
+    """#57 fault 2. Asked "What's the average deal size for healthcare?" the model selected
+    `comparable_deals.n` twice and the UI drew the chip twice. That is the model being sloppy
+    and the response faithfully reproducing the sloppiness — a duplicate name selects nothing
+    a single one does not, so it is collapsed here rather than in one client."""
+
+    def test_a_repeated_measure_becomes_one(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["comparable_deals.n", "comparable_deals.n"],
+                "dimensions": [],
+                "filters": [],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "average deal size"}).json()
+        assert body["measures"] == ["comparable_deals.n"]
+
+    def test_a_repeated_dimension_becomes_one(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["deal_points.n"],
+                "dimensions": ["deal_points.position", "deal_points.position"],
+                "filters": [],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "positions"}).json()
+        assert body["dimensions"] == ["deal_points.position"]
+
+    def test_selection_order_survives_the_collapse(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        """First occurrence wins. Re-sorting would make the chips disagree with the model's
+        own output shown beside them."""
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["deal_points.present_count", "deal_points.n", "deal_points.n"],
+                "dimensions": [],
+                "filters": [],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "prevalence"}).json()
+        assert body["measures"] == ["deal_points.present_count", "deal_points.n"]
+
+    def test_two_identical_filters_become_one(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["deal_points.n"],
+                "dimensions": [],
+                "filters": [
+                    {
+                        "member": "deal_points.position",
+                        "operator": "equals",
+                        "values": ["All Cash"],
+                    },
+                    {
+                        "member": "deal_points.position",
+                        "operator": "equals",
+                        "values": ["All Cash"],
+                    },
+                ],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "cash deals"}).json()
+        assert len(body["filters"]) == 1
+
+    def test_two_filters_on_one_member_with_different_values_both_survive(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        """Collapsing these would silently drop half of what was asked for, which is a worse
+        failure than showing two chips."""
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["deal_points.n"],
+                "dimensions": [],
+                "filters": [
+                    {
+                        "member": "deal_points.position",
+                        "operator": "equals",
+                        "values": ["All Cash"],
+                    },
+                    {"member": "deal_points.position", "operator": "equals", "values": ["Mixed"]},
+                ],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "cash or mixed"}).json()
+        assert len(body["filters"]) == 2
+
+    def test_the_model_output_is_still_echoed_verbatim(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
+    ) -> None:
+        """The chips are the cleaned reading; `model_selection` is what the model actually
+        said. Collapsing both would hide the sloppiness instead of handling it."""
+        stub_model(
+            monkeypatch,
+            {
+                "measures": ["comparable_deals.n", "comparable_deals.n"],
+                "dimensions": [],
+                "filters": [],
+                "timeDimensions": [],
+            },
+        )
+        body = client.post("/agent/ask", json={"question": "average deal size"}).json()
+        assert body["model_selection"]["measures"] == [
+            "comparable_deals.n",
+            "comparable_deals.n",
+        ]

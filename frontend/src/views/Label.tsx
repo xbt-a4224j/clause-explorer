@@ -235,18 +235,51 @@ export function Label() {
           {editing && (
             <div className="label__edit">
               <label htmlFor="label-correct-value">correct value</label>
-              <input
-                id="label-correct-value"
-                aria-label="correct value"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void decide(editValue, item.llm_prediction)
-                  // element-level, not a window binding: Escape abandons the correction
-                  if (e.key === 'Escape') setEditing(false)
-                }}
-                autoFocus
-              />
+              {/*
+                #57. This was a free-text box over a closed vocabulary — the same fault as
+                Ask's filter chip. `POST /label/decide` has validated against this exact list
+                since #56, so the only party not shown it was the reviewer, whose way of
+                learning the vocabulary was to type an answer and have it rejected.
+              */}
+              {item.allowed_positions.length > 0 ? (
+                <select
+                  id="label-correct-value"
+                  aria-label="correct value"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void decide(editValue, item.llm_prediction)
+                    // element-level, not a window binding: Escape abandons the correction
+                    if (e.key === 'Escape') setEditing(false)
+                  }}
+                  autoFocus
+                >
+                  {item.allowed_positions.map((position) => (
+                    <option key={position} value={position}>
+                      {position}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    id="label-correct-value"
+                    aria-label="correct value"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void decide(editValue, item.llm_prediction)
+                      if (e.key === 'Escape') setEditing(false)
+                    }}
+                    autoFocus
+                  />
+                  <span className="label__novocabulary" data-testid="label-novocabulary">
+                    This deal point has no recorded answers in the corpus, so there is no
+                    vocabulary to offer. The server will reject whatever you type here for the
+                    same reason — nothing to check it against.
+                  </span>
+                </>
+              )}
               <button
                 type="button"
                 className="label__action label__action--primary"

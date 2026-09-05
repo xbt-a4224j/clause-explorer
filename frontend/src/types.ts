@@ -193,6 +193,14 @@ export interface LabelQueueItem {
   quoted_text: string | null
   span_start: number | null
   span_end: number | null
+  /**
+   * Every answer this deal point actually takes, read from the corpus (#57).
+   *
+   * `POST /label/decide` has validated against this same list since #56 — the reviewer was the
+   * only party not shown it, so Edit was a free-text box over a closed vocabulary and the only
+   * way to learn the vocabulary was to have an answer rejected.
+   */
+  allowed_positions: string[]
 }
 
 export interface LabelQueueResponse {
@@ -429,4 +437,35 @@ export interface AskResponse {
   runnable: boolean
   blocked_reason: string | null
   usage: AskUsage
+}
+
+/**
+ * `POST /agent/members` (#57) — what one selected name means, and whether the corpus can
+ * answer with it.
+ *
+ * Read after `/agent/ask` returns, never before: the names come from the selection. Kept off
+ * `/agent/ask` because that route must never touch Cube's `/load`, and coverage is a query.
+ */
+export interface MemberInfo {
+  name: string
+  /** the catalog's own title, e.g. "Deal Points N". Falls back to `name` when unknown. */
+  title: string
+  description: string
+  /** "measure" | "dimension" | "unknown" */
+  kind: string
+  type: string
+  /** the values the corpus holds for this dimension, when they can be enumerated */
+  candidates: string[]
+  /** true only when `candidates` is the complete set — a truncated list is not a vocabulary */
+  enumerable: boolean
+  distinct_values: number
+  /** rows carrying a value / rows in the cube; null when coverage could not be probed */
+  populated: number | null
+  total: number | null
+  /** set when no selection over this member can produce an answer, saying why in full */
+  cannot_answer: string | null
+}
+
+export interface MembersResponse {
+  members: MemberInfo[]
 }

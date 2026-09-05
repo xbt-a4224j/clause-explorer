@@ -259,6 +259,42 @@ def _resolve_values(
     return resolved_values, resolutions, blockers
 
 
+def _collapse(names: list[str]) -> list[str]:
+    """First occurrence wins (#57).
+
+    Asked "What's the average deal size for healthcare?" the model selected
+    `comparable_deals.n` twice and the UI drew the same chip twice. A repeated name selects
+    nothing a single one does not, so it is collapsed once here rather than in every client
+    that renders a selection. Order is preserved: re-sorting would make the chips disagree
+    with `model_selection`, which is shown beside them precisely so the two can be compared.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in names:
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(name)
+    return out
+
+
+def _collapse_filters(filters: list[AskFilter]) -> list[AskFilter]:
+    """Two filters identical in member, operator and values are one filter.
+
+    Two filters on the same member with *different* values are not: collapsing those would
+    silently drop half of what was asked for, which is worse than drawing two chips.
+    """
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
+    out: list[AskFilter] = []
+    for f in filters:
+        key = (f.member, f.operator, tuple(f.values))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(f)
+    return out
+
+
 def _usage(call: SelectionCall) -> AskUsage:
     return AskUsage(
         model=call.model,
@@ -328,6 +364,10 @@ def ask(request: AskRequest) -> AskResponse:
             )
         )
 
+    filters = _collapse_filters(filters)
+    measures = _collapse(list(selection.get("measures", [])))
+    dimensions = _collapse(list(selection.get("dimensions", [])))
+
     usage = _usage(call)
     log.info(
         "agent_ask",
@@ -336,14 +376,20 @@ def ask(request: AskRequest) -> AskResponse:
         completion_tokens=usage.completion_tokens,
         latency_ms=usage.latency_ms,
         cost_usd=usage.cost_usd,
-        measures=selection.get("measures", []),
+        measures=measures,
+        collapsed=(
+            len(selection.get("measures", []))
+            + len(selection.get("dimensions", []))
+            - len(measures)
+            - len(dimensions)
+        ),
         unresolved=len(blockers),
     )
 
     return AskResponse(
         question=request.question,
-        measures=list(selection.get("measures", [])),
-        dimensions=list(selection.get("dimensions", [])),
+        measures=measures,
+        dimensions=dimensions,
         filters=filters,
         time_dimensions=list(selection.get("timeDimensions", [])),
         model_selection=selection,
