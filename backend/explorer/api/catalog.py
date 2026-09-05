@@ -32,6 +32,9 @@ log = get_logger()
 
 class CatalogEntry(BaseModel):
     name: str
+    #: Cube's `shortTitle`, which is the member's own title without the cube's name glued to the
+    #: front. `title` returns "Deal Points Agreements answering"; a chip has room for
+    #: "Agreements answering", and the cube is already shown beside it in the qualified name.
     title: str
     type: str
     cube: str
@@ -65,7 +68,7 @@ def _entries(cubes: list[dict[str, Any]], key: str) -> list[CatalogEntry]:
     return [
         CatalogEntry(
             name=str(item.get("name", "")),
-            title=str(item.get("title", "")),
+            title=str(item.get("shortTitle") or item.get("title", "")),
             type=str(item.get("type", "")),
             cube=str(cube.get("name", "")),
             description=str(item.get("description") or ""),

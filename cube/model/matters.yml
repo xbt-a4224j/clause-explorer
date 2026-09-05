@@ -71,6 +71,7 @@ cubes:
 
     dimensions:
       - name: id
+        title: Agreement
         sql: id
         type: string
         primary_key: true
@@ -78,6 +79,7 @@ cubes:
           single agreement.
 
       - name: target_name
+        title: Target
         sql: target_name
         type: string
         description: >-
@@ -87,11 +89,13 @@ cubes:
           key.
 
       - name: acquirer_name
+        title: Acquirer
         sql: acquirer_name
         type: string
         description: The buyer, read from the agreement's own header. NULL where unparsed.
 
       - name: signing_date
+        title: Signed
         sql: signing_date
         type: time
         description: >-
@@ -100,6 +104,7 @@ cubes:
           never characterise it as a multi-year sample.
 
       - name: signing_year
+        title: Signing year
         sql: "to_char({CUBE}.signing_date, 'YYYY')"
         type: string
         description: >-
@@ -107,6 +112,7 @@ cubes:
           corpus; a year facet therefore has exactly two non-empty values.
 
       - name: sic_code
+        title: SEC SIC code
         sql: sic_code
         type: string
         description: >-
@@ -115,12 +121,14 @@ cubes:
           industries.label for what the product actually facets on.
 
       - name: industry_code
+        title: Industry code
         sql: industry_code
         type: string
         description: The matter's industry code, from the SIC crosswalk. Prefer
           industries.label for anything user-facing; codes are opaque identifiers.
 
       - name: is_inferred_industry
+        title: Industry inferred
         sql: is_inferred_industry
         type: boolean
         description: >-
@@ -129,6 +137,7 @@ cubes:
           must flag it as inferred.
 
       - name: has_industry
+        title: Has an industry
         sql: "{CUBE}.industry_code IS NOT NULL"
         type: boolean
         description: >-
@@ -136,6 +145,7 @@ cubes:
           coverage honestly instead of letting 13 unclassified matters vanish from a facet.
 
       - name: deal_value_usd
+        title: Deal value (USD)
         sql: deal_value_usd
         type: number
         description: >-
@@ -144,6 +154,7 @@ cubes:
           there is no data behind it yet.
 
       - name: deal_size_band
+        title: Deal size band
         type: string
         sql: >-
           CASE
@@ -175,17 +186,20 @@ cubes:
           "Type of Consideration" deal point — gold, not inferred, unlike industry.
 
       - name: corpus
+        title: Corpus
         sql: corpus
         type: string
         description: Which dataset the matter came from. 'maud' for all 152 today.
 
       - name: updated_at
+        title: Last updated
         sql: updated_at
         type: time
         description: When the ingest last wrote this row. Operational, not analytical.
 
     measures:
       - name: n
+        title: Agreements
         type: count
         description: >-
           THE DENOMINATOR — how many agreements are in the current selection. This is the
@@ -203,6 +217,7 @@ cubes:
 
     dimensions:
       - name: code
+        title: Industry code
         sql: code
         type: string
         primary_key: true
@@ -213,6 +228,7 @@ cubes:
           "Health Care" to "Healthcare". Not for display; show `label` instead.
 
       - name: label
+        title: Industry
         sql: label
         type: string
         description: >-
@@ -222,6 +238,7 @@ cubes:
           described that way wherever it appears.
 
       - name: updated_at
+        title: Last updated
         sql: updated_at
         type: time
         description: When the ingest last wrote this concept. Operational, not analytical.

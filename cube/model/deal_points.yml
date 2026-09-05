@@ -63,12 +63,14 @@ cubes:
 
     dimensions:
       - name: id
+        title: Deal point row
         sql: id
         type: number
         primary_key: true
         public: false
 
       - name: matter_id
+        title: Matter
         sql: matter_id
         type: string
         description: >-
@@ -76,6 +78,7 @@ cubes:
           answer "how many deals", as opposed to how many labelled rows.
 
       - name: deal_point_name
+        title: Deal point
         sql: deal_point_name
         type: string
         description: >-
@@ -85,6 +88,7 @@ cubes:
           once, so an unfiltered n is the total number of labels, not a sample size.
 
       - name: position
+        title: Answer
         sql: position
         type: string
         description: >-
@@ -93,6 +97,7 @@ cubes:
           distribution of outcomes for one deal point.
 
       - name: numeric_value
+        title: Numeric answer
         sql: numeric_value
         type: number
         description: >-
@@ -103,6 +108,7 @@ cubes:
           deal_point_name before aggregating this.
 
       - name: is_inferred
+        title: Inferred
         sql: is_inferred
         type: boolean
         description: >-
@@ -111,12 +117,14 @@ cubes:
           defensible as expert-labelled; never mix the two in one number without saying so.
 
       - name: updated_at
+        title: Last updated
         sql: updated_at
         type: time
         description: When this row was last written by the ingest. Operational, not analytical.
 
     measures:
       - name: n
+        title: Agreements answering
         type: count
         description: >-
           THE DENOMINATOR. The number of labelled matters in the current selection — the sample
@@ -125,6 +133,7 @@ cubes:
           Report it alongside any count or percentage, never on its own as a headline.
 
       - name: present_count
+        title: Agreements with the provision
         type: count
         filters:
           - sql: "{CUBE}.position NOT IN ('None', 'No', 'N/A')"
@@ -151,6 +160,7 @@ cubes:
       # percentile with numeric_n — the sample size for the percentile is not the sample size
       # for the deal point.
       - name: numeric_n
+        title: Agreements with a number
         type: count
         filters:
           - sql: "{CUBE}.numeric_value IS NOT NULL"
@@ -160,6 +170,7 @@ cubes:
           categorical. Never report a median without it.
 
       - name: median_numeric_value
+        title: Median
         type: number
         sql: "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
         description: >-
@@ -170,6 +181,7 @@ cubes:
           meaningless number. Report with numeric_n.
 
       - name: p25_numeric_value
+        title: 25th percentile
         type: number
         sql: "PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
         description: >-
@@ -177,6 +189,7 @@ cubes:
           median_numeric_value. Use with p75 to show the spread a median hides.
 
       - name: p75_numeric_value
+        title: 75th percentile
         type: number
         sql: "PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {CUBE}.numeric_value)"
         description: >-
@@ -185,6 +198,7 @@ cubes:
           support.
 
       - name: mean_numeric_value_do_not_use_for_market
+        title: Mean (do not quote as market)
         type: avg
         sql: numeric_value
         description: >-
@@ -194,6 +208,7 @@ cubes:
           additional matching rights periods.
 
       - name: count_distinct_matters
+        title: Distinct agreements
         type: count_distinct
         sql: matter_id
         description: >-
@@ -203,6 +218,7 @@ cubes:
           forbidden in this model.
 
       - name: expert_labelled_n
+        title: Lawyer-labelled answers
         type: count
         filters:
           - sql: "{CUBE}.is_inferred = false"
@@ -212,6 +228,7 @@ cubes:
           for the corpus as currently loaded.
 
       - name: with_source_span_n
+        title: Answers with a source span
         type: count
         filters:
           - sql: "{CUBE}.source_span_start IS NOT NULL"
@@ -221,6 +238,7 @@ cubes:
           sample size for a negotiated-terms figure.
 
       - name: matters_total
+        title: Agreements in scope
         type: count_distinct
         sql: matter_id
         description: >-
