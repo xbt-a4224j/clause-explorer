@@ -101,12 +101,14 @@ const SELECTION = {
   refusal_accuracy: 0.2,
 }
 
-function mockApi() {
+/** `overrides.labels` lets a test drive the zero state without a second mock. */
+function mockApi(overrides: { labels?: typeof LABELS } = {}) {
+  const labels = overrides.labels ?? LABELS
   const fetchMock = vi.fn(async (url: string) => {
     const u = String(url)
     // calibration-labels must be matched before calibration — its path is a superstring
     if (u.includes('calibration-labels')) {
-      return { ok: true, status: 200, json: async () => LABELS } as Response
+      return { ok: true, status: 200, json: async () => labels } as Response
     }
     if (u.includes('measure-selection')) {
       return { ok: true, status: 200, json: async () => SELECTION } as Response
@@ -229,11 +231,33 @@ describe('where the reviewer disagreed', () => {
     expect(frame.querySelectorAll('.viz__legend li')).toHaveLength(2)
   })
 
-  it('states that none of the differing decisions was right against gold', async () => {
+  it('splits the differing decisions by what they cost, from the data', async () => {
+    // The fixture has 6 decisions, 5 differing, and 4 that overwrote a correct answer
+    // (569 → 565). The note must derive that split rather than assert a remembered finding:
+    // the live table was purged of its development keystrokes and now holds none.
     mockApi()
     render(<Trust />)
     const frame = await screen.findByTestId('trust-disagreement')
-    expect(frame).toHaveTextContent(/none of them was right/i)
+    expect(frame).toHaveTextContent(/5 differed from the model/i)
+    expect(frame).toHaveTextContent(/4 overwrote an answer that had been correct/i)
+    expect(frame).toHaveTextContent(/1 swapped one wrong answer for another/i)
+  })
+
+  it('says nothing has been reviewed when the table is empty, and claims no finding', async () => {
+    mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
+    render(<Trust />)
+    const frame = await screen.findByTestId('trust-disagreement')
+    expect(frame).toHaveTextContent(/nothing has been reviewed yet/i)
+    // an empty table must not produce a finding about human review
+    expect(frame.textContent ?? '').not.toMatch(/none of them was right|differed from the model/i)
+  })
+
+  it('never reports the loop as an improvement, in either state', async () => {
+    mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
+    render(<Trust />)
+    const direction = await screen.findByTestId('trust-loop-direction')
+    expect(direction.textContent ?? '').not.toMatch(/improved|better|▲|↑/)
+    expect(direction).toHaveTextContent(/no decisions have been recorded yet/i)
   })
 
   it('keeps the empty bucket in the table rather than drawing a zero-width segment', async () => {

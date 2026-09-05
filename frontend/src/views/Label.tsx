@@ -127,11 +127,15 @@ export function Label() {
 
       {!queue && <div className="skeleton skeleton--row" aria-label="loading queue" />}
 
+      {/* Two numbers that mean different things used to share a sentence: a lifetime row count
+          beside a session-scoped position, with nothing to tell them apart. Each now says what
+          it counts, and the one that resets on refresh says so. */}
       {queue && (
         <p className="label__progress" data-testid="label-progress">
-          <span className="mono">{queue.labelled_count}</span> labelled ·{' '}
-          <span className="mono">{cursor}</span> of <span className="mono">{queue.queue_size}</span>{' '}
-          in this session
+          <span className="mono">{queue.queue_size.toLocaleString('en-US')}</span> in the queue,
+          ranked by extractor disagreement ·{' '}
+          <span className="mono">{cursor}</span> reviewed by you since this page loaded ·{' '}
+          <span className="mono">{queue.labelled_count}</span> recorded in total
         </p>
       )}
 
@@ -141,7 +145,8 @@ export function Label() {
         <div className="state state--empty">
           <h3 className="state__title">Queue is empty</h3>
           <p className="state__body">
-            {labelledThisSession} labelled this session · {queue.labelled_count} total.
+            {labelledThisSession} reviewed since this page loaded, {queue.labelled_count}{' '}
+            recorded in total.
           </p>
         </div>
       )}

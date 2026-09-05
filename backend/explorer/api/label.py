@@ -120,12 +120,48 @@ class DecideRequest(BaseModel):
     prior_prediction: str | None = None
 
 
+def allowed_positions(conn: psycopg.Connection, deal_point_name: str) -> list[str]:
+    """The answers this deal point actually has, read from the data (#56).
+
+    Same source `/label/queue` uses to score the deterministic baseline, so the write path and
+    the read path cannot disagree about what a valid answer is.
+    """
+    rows = conn.execute(
+        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s", (deal_point_name,)
+    ).fetchall()
+    return sorted({str(r[0]) for r in rows if r[0] is not None})
+
+
 @router.post("/decide")
 def decide(request: DecideRequest) -> dict[str, Any]:
     """Accept, reject-and-correct, or (via a different `value`) overwrite a prediction. Every
     call writes a row — there is no separate "reject" verb, because a reject with no correction
-    would just be silence, and silence does not become a label #28 can grade against."""
+    would just be silence, and silence does not become a label #28 can grade against.
+
+    The value is checked against the deal point's own vocabulary first. This endpoint used to
+    take any non-empty string, and two of the six rows it shipped with were `s` (the Skip key
+    landing in the database as an answer) and `N` (a half-typed `No`). Those rows were then
+    graded against MAUD, so a keystroke became a measurement. A table that feeds a published
+    accuracy figure cannot accept a value that is not a possible answer to its own question.
+    """
     with psycopg.connect(settings.database_url) as conn:
+        allowed = allowed_positions(conn, request.deal_point_name)
+        if not allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"No deal point named {request.deal_point_name!r} has recorded answers, so "
+                    "there is no vocabulary to check a decision against."
+                ),
+            )
+        if request.value not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"{request.value!r} is not an answer to {request.deal_point_name!r}. "
+                    f"Allowed: {', '.join(allowed)}"
+                ),
+            )
         conn.execute(
             """
             INSERT INTO labels (target_kind, target_id, field, value, prior_prediction, labeller)

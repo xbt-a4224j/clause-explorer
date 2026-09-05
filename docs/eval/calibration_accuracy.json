@@ -19,12 +19,12 @@
     "price_source": "https://developers.openai.com/api/docs/pricing",
     "price_checked_on": "2026-09-03"
   },
-  "labels_applied": 6,
-  "labels_differing": 5,
+  "labels_applied": 0,
+  "labels_differing": 0,
   "correct_before": 569,
-  "correct_after": 565,
+  "correct_after": 569,
   "accuracy_before": 0.33450911228689006,
-  "accuracy_after": 0.3321575543797766,
+  "accuracy_after": 0.33450911228689006,
   "results": [
     {
       "deal_point_name": "Accuracy of Fundamental Target R&Ws-Types of R&Ws",
@@ -491,7 +491,7 @@
       "reportable": false,
       "correct_before": 4,
       "accuracy_before": 0.2,
-      "labels_applied": 1,
+      "labels_applied": 0,
       "measured": true
     },
     {
@@ -586,19 +586,6 @@
       "measured": true
     },
     {
-      "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
-      "n": 20,
-      "correct": 5,
-      "accuracy": 0.25,
-      "ci_low": 0.112,
-      "ci_high": 0.469,
-      "reportable": false,
-      "correct_before": 6,
-      "accuracy_before": 0.3,
-      "labels_applied": 1,
-      "measured": true
-    },
-    {
       "deal_point_name": "Failure to meet projections (Y/N)",
       "n": 20,
       "correct": 5,
@@ -665,6 +652,19 @@
     },
     {
       "deal_point_name": "Accuracy of Target \"General\" R&W: Bringdown Timing Answer",
+      "n": 20,
+      "correct": 6,
+      "accuracy": 0.3,
+      "ci_low": 0.145,
+      "ci_high": 0.519,
+      "reportable": false,
+      "correct_before": 6,
+      "accuracy_before": 0.3,
+      "labels_applied": 0,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Action prohibited/omission required by the agreement-Answer",
       "n": 20,
       "correct": 6,
       "accuracy": 0.3,
@@ -911,19 +911,6 @@
       "measured": true
     },
     {
-      "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
-      "n": 20,
-      "correct": 10,
-      "accuracy": 0.5,
-      "ci_low": 0.299,
-      "ci_high": 0.701,
-      "reportable": false,
-      "correct_before": 13,
-      "accuracy_before": 0.65,
-      "labels_applied": 4,
-      "measured": true
-    },
-    {
       "deal_point_name": "Failure to meet projections: subject to \"disproportionate impact\" modifier",
       "n": 20,
       "correct": 10,
@@ -1003,6 +990,19 @@
     },
     {
       "deal_point_name": "Accuracy of Fundamental Target R&Ws: Bringdown Standard",
+      "n": 20,
+      "correct": 13,
+      "accuracy": 0.65,
+      "ci_low": 0.433,
+      "ci_high": 0.819,
+      "reportable": false,
+      "correct_before": 13,
+      "accuracy_before": 0.65,
+      "labels_applied": 0,
+      "measured": true
+    },
+    {
+      "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
       "n": 20,
       "correct": 13,
       "accuracy": 0.65,

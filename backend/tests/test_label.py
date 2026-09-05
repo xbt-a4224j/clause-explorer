@@ -121,9 +121,18 @@ class TestDecide:
     ) -> None:
         written = []
 
+        class FakeCursor:
+            """#56: the endpoint now reads the deal point's vocabulary before it writes, so the
+            fake has to answer that read. `Yes` is in the set, so the write still happens and
+            this test still asserts what it always did."""
+
+            def fetchall(self) -> list[tuple[str]]:
+                return [("Yes",), ("No",)]
+
         class FakeConn:
-            def execute(self, sql: str, params: dict) -> None:  # type: ignore[type-arg]
+            def execute(self, sql: str, params: object = None) -> FakeCursor:
                 written.append((sql, params))
+                return FakeCursor()
 
             def __enter__(self):  # type: ignore[no-untyped-def]
                 return self
@@ -143,7 +152,9 @@ class TestDecide:
         )
         assert response.status_code == 200
         assert written
-        assert "INSERT INTO labels" in written[0][0]
+        # the vocabulary read comes first, then the insert
+        assert "SELECT DISTINCT position" in written[0][0]
+        assert "INSERT INTO labels" in written[-1][0]
 
     def test_a_missing_value_is_rejected(self, client: TestClient) -> None:
         response = client.post(
@@ -151,3 +162,48 @@ class TestDecide:
             json={"matter_id": "contract_1", "deal_point_name": "Ticking fee"},
         )
         assert response.status_code == 422
+
+
+# --- the write path has a vocabulary (#56) -------------------------------------------------
+#
+# `POST /label/decide` took any non-empty string and wrote it into a table that grades the
+# extractor. Two of the six rows this shipped with were `s` (the Skip key) and `N` (a half-typed
+# `No`), neither of which is a possible answer to its question. A graded table with keystrokes in
+# it is worse than an empty one, because the number it produces looks like a measurement.
+
+
+def test_a_value_outside_the_deal_points_vocabulary_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/label/decide",
+        json={
+            "matter_id": "contract_10",
+            "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+            "value": "s",
+        },
+    )
+    assert response.status_code == 422
+    detail = response.json()["error"]["message"]
+    # the rejection has to name what was allowed, or the caller cannot fix it
+    assert "Yes" in detail and "No" in detail
+
+
+def test_a_value_inside_the_vocabulary_is_accepted(client: TestClient) -> None:
+    response = client.post(
+        "/label/decide",
+        json={
+            "matter_id": "contract_10",
+            "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+            "value": "No",
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_an_unknown_deal_point_is_rejected_rather_than_written(client: TestClient) -> None:
+    """A deal point with no recorded positions has no vocabulary to check against, so there is
+    no safe value to accept for it."""
+    response = client.post(
+        "/label/decide",
+        json={"matter_id": "contract_10", "deal_point_name": "Not A Deal Point", "value": "No"},
+    )
+    assert response.status_code == 422

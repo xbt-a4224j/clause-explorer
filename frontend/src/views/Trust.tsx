@@ -211,12 +211,34 @@ function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
         }}
       />
       <p className="admin__note" data-testid="trust-loop-direction">
-        {labels.labels_applied} decisions were graded into the next calibration run, and the
-        score <strong>went down</strong>: {labels.correct_before} correct of{' '}
-        {labels.prediction_count.toLocaleString('en-US')} before, {labels.correct_after} after.
-        That is the loop working, not failing — a reviewer&rsquo;s answer is preferred over the
-        model&rsquo;s and then graded against MAUD like any other, so a mistyped label lowers
-        the number instead of being quietly discarded.
+        {labels.labels_applied === 0 ? (
+          <>
+            <strong>No decisions have been recorded yet.</strong> The loop is wired and graded:
+            a reviewer&rsquo;s answer is preferred over the model&rsquo;s and then scored against
+            MAUD like any other, so this number can move in either direction. It currently reads{' '}
+            {labels.correct_before} correct of{' '}
+            {labels.prediction_count.toLocaleString('en-US')} because nothing has gone through it.
+            The rows that used to be here were keystrokes from building the tab, not review, and
+            were removed rather than shown as a finding.
+          </>
+        ) : (
+          <>
+            {labels.labels_applied} decisions were graded into the next calibration run, and the
+            score{' '}
+            <strong>
+              {labels.correct_after < labels.correct_before
+                ? 'went down'
+                : labels.correct_after > labels.correct_before
+                  ? 'went up'
+                  : 'did not move'}
+            </strong>
+            : {labels.correct_before} correct of{' '}
+            {labels.prediction_count.toLocaleString('en-US')} before, {labels.correct_after}{' '}
+            after. A reviewer&rsquo;s answer is preferred over the model&rsquo;s and then graded
+            against MAUD like any other, so a mistyped label lowers the number instead of being
+            quietly discarded.
+          </>
+        )}
       </p>
       <p className="admin__note" data-testid="trust-corpus-caveat">
         <strong>The caveat this corpus forces.</strong> Every item in the queue already has a
@@ -256,14 +278,21 @@ function DisagreementChart({ labels }: { labels: CalibrationLabels | null }) {
         testId="trust-disagreement"
         title="Where the reviewer disagreed with the model"
         note={
-          <>
-            All {labels.labels_applied} recorded decisions. {differed} differed from the model
-            and <strong>none of them was right against MAUD&rsquo;s gold label</strong> —{' '}
-            {overwroteCorrect} of those overwrote an answer that had been correct, and the
-            remaining one swapped a wrong answer for another wrong one. That is the honest and
-            interesting finding here, and it is why the reviewer&rsquo;s decision is graded
-            rather than trusted.
-          </>
+          labels.labels_applied === 0 ? (
+            <>
+              <strong>Nothing has been reviewed yet.</strong> Each decision lands in one of the
+              four buckets below and is scored against MAUD, so a reviewer who overwrites a
+              correct answer costs the run a point. That is the design: the decision is graded,
+              not trusted.
+            </>
+          ) : (
+            <>
+              All {labels.labels_applied} recorded decisions. {differed} differed from the model.
+              Of those, {overwroteCorrect} overwrote an answer that had been correct and{' '}
+              {differed - overwroteCorrect} swapped one wrong answer for another. The reviewer&rsquo;s
+              decision is graded rather than trusted, which is why the split is shown at all.
+            </>
+          )
         }
         table={
           <table className="admin__table">

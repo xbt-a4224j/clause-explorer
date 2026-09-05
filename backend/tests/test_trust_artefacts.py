@@ -117,14 +117,39 @@ class TestTheChartedFiguresComeFromTheFiles:
         assert len([r for r in measured if r["accuracy"] < 0.70]) == 77
         assert len([r for r in measured if r["accuracy"] == 0.0]) == 6
 
-    def test_the_label_loop_lowered_the_score(self) -> None:
+    def test_the_label_loop_artefact_is_internally_consistent(self) -> None:
+        """The shipped artefact records zero decisions, and the numbers agree with that.
+
+        This used to pin 6 applied and 569 -> 565 as *the finding*. Every one of those six rows
+        turned out to be a development keystroke: a literal `s` from the Skip key, a half-typed
+        `N`, and four reflexive `No`s on one deal point. They were graded against MAUD, so a
+        keystroke became a published measurement. They are purged (#56), and the write path now
+        validates against the deal point's vocabulary so it cannot happen again.
+
+        What is asserted here is the property that outlives any particular data: the artefact is
+        the single source for what the charts draw, and the delta it reports has to follow from
+        the decisions it recorded rather than from a sentence someone wrote once.
+        """
         labels = json.loads((ROOT / "docs" / "results" / "calibration-labels.json").read_text())
         assert labels["prediction_count"] == 1701
-        assert labels["labels_applied"] == 6
-        assert labels["labels_differing"] == 5
-        # The direction is the finding. 569 -> 565.
-        assert labels["correct_after"] < labels["correct_before"]
-        assert (labels["correct_before"], labels["correct_after"]) == (569, 565)
+        assert labels["labels_differing"] <= labels["labels_applied"]
+        assert 0 <= labels["correct_before"] <= labels["prediction_count"]
+        assert 0 <= labels["correct_after"] <= labels["prediction_count"]
+        if labels["labels_applied"] == 0:
+            # nothing was substituted, so nothing can have moved
+            assert labels["correct_after"] == labels["correct_before"]
+        else:
+            # a substitution can move the score either way; it may not leave it unexplained
+            assert (
+                labels["correct_after"] != labels["correct_before"]
+                or labels["labels_differing"] == 0
+            )
+
+    def test_no_decisions_are_currently_recorded(self) -> None:
+        """The shipped state, stated plainly so a regression is loud rather than quiet."""
+        labels = json.loads((ROOT / "docs" / "results" / "calibration-labels.json").read_text())
+        assert labels["labels_applied"] == 0
+        assert (labels["correct_before"], labels["correct_after"]) == (569, 569)
 
     def test_the_cost_row(self) -> None:
         table = json.loads((ROOT / "docs" / "eval" / "calibration_accuracy.json").read_text())
