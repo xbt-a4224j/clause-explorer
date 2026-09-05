@@ -65,9 +65,15 @@ and the coverage grid. It does **not** do retrieval, ranking, individual record 
 
 ## Hard constraints
 
-- **Everything open source.** Postgres, Cube Core (Apache-2.0), FastAPI, React/Vite,
-  rank-bm25, structlog. The OpenAI API is used for embeddings/generation and is **pluggable**;
-  the app must boot and serve retrieval, facets, and all table views with no key.
+- **Everything open source** except the model. Postgres, Cube Core (Apache-2.0), FastAPI,
+  React/Vite, rank-bm25, structlog. The OpenAI API is used for embeddings, extraction and
+  measure selection, and **an API key is required** to run the product.
+  This used to say the app must boot and serve everything with no key. That constraint was
+  written when nothing in the app called a model, so it cost nothing to keep. It costs
+  something now: the model sits on the user's path in Ask, and a build that guarantees
+  everything works without a key is a build whose headline feature is the one thing that does
+  not. Tests that make a real call stay marked `needs_key` so CI holds no secrets, which is a
+  property of the test suite and not a promise about the product.
 - **`.env` is gitignored and this repo is public.** Never commit a key, never log one, never echo
   one in an error message or test fixture.
 - **No fabricated numbers.** Every metric, count, accuracy figure, or latency in any README,
