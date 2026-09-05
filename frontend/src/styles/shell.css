@@ -405,7 +405,69 @@ kbd {
   padding: 6px 8px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
   background: var(--canvas); color: var(--ink); font: inherit;
 }
-.label__hint { font-size: 11px; color: var(--ink-tertiary); }
+
+/* #52 — four named buttons replace the y/n/e/s keys. Plain neutral buttons: the accent is
+   reserved for focus rings, the brand mark and intentional CTAs, and four equally weighted
+   verdicts are not a CTA. Accept carries a slightly stronger border because it is the one
+   the queue is ranked to make cheap, not because it is the recommended answer. */
+.label__actions { display: flex; flex-wrap: wrap; gap: var(--pad-sm); }
+.label__action {
+  padding: 5px 14px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+  background: var(--surface-1); color: var(--ink); font: inherit; font-size: 13px;
+  cursor: pointer;
+}
+.label__action:hover { background: var(--surface-3); }
+.label__action--primary { border-color: var(--ink-tertiary); font-weight: 500; }
+.label__actionhint { margin: 0; font-size: 11px; line-height: 1.5; color: var(--ink-tertiary); }
+.label__actionhint strong { color: var(--ink-subtle); font-weight: 500; }
+.label__edit button { align-self: flex-start; }
+
+/* the verdict on the item just decided — sits above the queue so it survives the advance */
+.label__agreement {
+  margin: 0; padding: var(--pad-sm) var(--pad-md);
+  border-left: 2px solid var(--hairline-strong); background: var(--surface-2);
+  font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
+}
+.label__agreement strong { color: var(--ink); font-weight: 500; }
+.label__agreement .mono { font-family: var(--font-mono); color: var(--ink); }
+
+/* ---- Label · what the decisions changed (#52) --------------------------------------------
+   The loop's output, at the top of the loop. Quiet panel, no status colour on the figures:
+   the direction is carried by the sentence, and the one colour used is the same amber the
+   thin-cell and bad-number marks use, never green. */
+.label__outcome {
+  display: flex; flex-direction: column; gap: var(--pad-sm);
+  background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius);
+  padding: var(--pad-md);
+}
+.label__outcometitle { margin: 0; font-size: 13px; font-weight: 500; color: var(--ink); }
+.label__outcomelead { margin: 0; font-size: 12px; color: var(--ink-subtle); }
+.label__outcomelead .mono { font-family: var(--font-mono); color: var(--ink); }
+.label__figures { display: flex; flex-wrap: wrap; gap: var(--pad-lg); margin: 0; }
+.label__figure { display: flex; flex-direction: column; gap: 2px; }
+.label__figure dt {
+  font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-tertiary);
+}
+.label__figure dd {
+  margin: 0; display: flex; align-items: baseline; gap: var(--pad-sm);
+  font-family: var(--font-mono); font-size: 16px; color: var(--ink);
+}
+.label__pct { font-size: 11px; color: var(--ink-subtle); }
+/* the fall is marked by border and words, not by colour alone — and never by a green arrow */
+.label__direction {
+  margin: 0; padding: var(--pad-sm) var(--pad-md);
+  border-left: 2px solid var(--hairline-strong); background: var(--surface-2);
+  font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
+}
+.label__direction strong { color: var(--ink); font-weight: 500; }
+/* #9a6700 / #fff8e5: the amber already used for thin cells and the bad eval number, so a
+   number that moved the wrong way reads the same way everywhere in the app */
+.label__direction.is-down { border-left-color: #9a6700; background: #fff8e5; }
+.label__outcomecaveat { margin: 0; font-size: 12px; line-height: 1.55; color: var(--ink-subtle); }
+.label__outcomecaveat strong { color: var(--ink); font-weight: 500; }
+.label__provenance { margin: 0; font-size: 11px; color: var(--ink-tertiary); }
+.label__provenance .mono { font-family: var(--font-mono); }
+.label__missing { margin: 0; font-size: 12px; color: var(--ink-subtle); }
 
 /* ---- Admin (#30) ------------------------------------------------------------------------- */
 .admin { display: flex; flex-direction: column; gap: var(--pad-lg); }

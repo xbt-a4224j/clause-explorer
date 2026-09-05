@@ -176,26 +176,21 @@ describe('human labels in calibration (#41)', () => {
     expect(table).toHaveTextContent(/MAE carveouts/)
   })
 
-  it('states how many labels were applied and how many differed from the prediction', async () => {
+  // #52 moved the headline and the corpus caveat to the top of the Label tab, beside the queue
+  // that produces them. Admin keeps the per-deal-point breakdown and points at the panel — the
+  // assertion is that it no longer repeats the figures.
+  it('points at the Label panel instead of restating the before/after headline', async () => {
     render(<Admin />)
-    const section = await screen.findByTestId('calibration-labels-summary')
-    expect(section).toHaveTextContent(/6/)
-    expect(section).toHaveTextContent(/2/)
-    expect(section).toHaveTextContent(/45 of 100/)
-    expect(section).toHaveTextContent(/44 of 100/)
+    const section = await screen.findByTestId('calibration-labels-pointer')
+    expect(section).toHaveTextContent(/Label/)
+    expect(section).not.toHaveTextContent(/45 of 100/)
+    expect(section).not.toHaveTextContent(/44 of 100/)
   })
 
   it('names the command that produced the numbers, so they are checkable', async () => {
     render(<Admin />)
-    const section = await screen.findByTestId('calibration-labels-summary')
+    const section = await screen.findByTestId('calibration-labels-provenance')
     expect(section).toHaveTextContent(/explorer\.evals\.calibration/)
-  })
-
-  it('keeps the corpus caveat: every reviewed item already had gold', async () => {
-    render(<Admin />)
-    const section = await screen.findByTestId('calibration-labels-caveat')
-    expect(section).toHaveTextContent(/already has a lawyer/i)
-    expect(section).toHaveTextContent(/un-annotated/i)
   })
 })
 
