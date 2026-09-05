@@ -600,7 +600,7 @@ def identify_registrant(
     on 15 and unplaceable on 9.
 
     A miss is now the only failure mode left, and a miss is visible: NULL industry, excluded
-    from every rollup, counted in the Coverage grid's thin cells.
+    from every rollup, and shown on the Explore rail as an unclassified bucket with its cause.
     """
     title_words = deal_title_words(title)
     for candidate in target_candidates(header, title_words):

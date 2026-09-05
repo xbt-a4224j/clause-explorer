@@ -1,8 +1,8 @@
-"""`GET /tables/*` — browsable views so nobody opens psql (#31).
+"""`GET /tables/*` — raw rows, read by Admin and the Overview corpus strip (#31, #48).
 
-Server-side sort, filter, and pagination is the whole point: the frontend must never be able to
-load a whole table, so what earns a test is that the limit is enforced, that only whitelisted
-tables and columns can ever reach a query, and that the schema/null-count metadata is real.
+Server-side sort, filter, and pagination is the whole point: no caller may load a whole table,
+so what earns a test is that the limit is enforced, that only whitelisted tables and columns can
+ever reach a query, and that the schema/null-count metadata is real.
 
 Runs with `OPENAI_API_KEY` unset.
 """
@@ -126,15 +126,5 @@ class TestInferredFieldsAreFlagged:
         assert "target_name" not in inferred_cols
 
 
-@needs_corpus
-class TestCSVExport:
-    def test_exports_the_current_filtered_view_as_csv(self, client: TestClient) -> None:
-        response = client.get(
-            "/tables/deal_points/export.csv",
-            params={"filter_column": "deal_point_name", "filter_value": "Ability to consummate"},
-        )
-        assert response.status_code == 200
-        assert response.headers["content-type"].startswith("text/csv")
-        body = response.text
-        assert body.count("\n") > 1  # header + at least one data row
-        assert "Ability to consummate" in body
+# The CSV export test was deleted in #48 along with the route it covered: `Tables.tsx` was its
+# only caller, and the tab is gone. `test_health.py` now asserts the route stays gone.

@@ -7,7 +7,8 @@ definition that drifts.
 
 **Zero-count values are returned, not dropped.** A facet value that disappears when it hits
 zero tells the user nothing; one that renders disabled with `n=0` tells them the corpus has
-nothing there, which is a real answer and the Coverage tab's entire thesis.
+nothing there, which is a real answer. #48 cut the Coverage tab, so this rail is now the only
+place in the product carrying that argument: a gap is a finding, not something to smooth over.
 """
 
 from __future__ import annotations

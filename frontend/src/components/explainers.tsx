@@ -10,7 +10,7 @@ import { Term } from './Term'
  * "Why it is built this way", where a reader who wants it can read all of it at once.
  *
  * Jargon still expands on first use through `<Term>`, on every tab, because someone who lands
- * on Coverage first should not have to visit Explore to learn what MAUD is. The definitions
+ * on Ask first should not have to visit Explore to learn what MAUD is. The definitions
  * live in the glossary rather than in prose, which is most of what made the cut affordable.
  *
  * Every number below traces to a command in `docs/walkthrough.md` or `docs/results/`.
@@ -55,64 +55,6 @@ export function DealTermsExplainer() {
         outside that set is invisible here, not absent from the agreements. Below a sample of 30 a
         row renders &ldquo;6 of 8&rdquo;, never &ldquo;75%&rdquo; — a percentage claims precision
         eight deals cannot support.
-      </p>
-    </>
-  )
-}
-
-export function CoverageExplainer() {
-  return (
-    <>
-      <p>
-        <strong>What this tab is for.</strong> Seeing where experience is thick and where it is
-        thin before you promise a client something. Every deal sits in one industry × period cell,
-        and thin cells are styled loudly rather than faded, because a gap is more actionable than
-        a strength you already knew about. Click one and Deal Terms refuses:{' '}
-        <code>n=3 — insufficient to characterize (threshold 5)</code>. The gate is server-side, so
-        a raw <code>curl</code> gets the same refusal.
-      </p>
-      <p>
-        <strong>The limit.</strong> 33 of 45 cells are too thin to characterize; only 12 are
-        reportable. And &ldquo;Health Care&rdquo; here groups pharma, biotech, devices and contract
-        research organisations, which the standard industry classification does not — our
-        definition, producing 25 matters where the standard one produces 3.
-      </p>
-    </>
-  )
-}
-
-export function TablesExplainer() {
-  return (
-    <>
-      <p>
-        <strong>What this tab is for.</strong> Checking the app&rsquo;s homework without opening{' '}
-        <code>psql</code>. Five tables — <code>matters</code> (152), <code>deal_points</code>{' '}
-        (12,937), <code>industries</code> (20), <code>labels</code>,{' '}
-        <code>ingest_runs</code> — sorted and filtered on the
-        server, with the state mirrored into the URL so a row you found is a link you can send.
-        Every table marks which columns are <em>inferred</em> rather than expert-labelled.
-      </p>
-      <p>
-        <strong>What the five tables are.</strong> <code>matters</code> is the universe of
-        comparable deals — 152 merger agreements. <code>deal_points</code> holds one row per
-        agreement per ABA question, 12,937 of them. <code>industries</code> is the 20-row
-        vocabulary the SIC crosswalk supplies. <code>labels</code>
-        records human review decisions. <code>ingest_runs</code> records what was loaded, when,
-        how long it took and with what checksum.
-      </p>
-      <p>
-        <strong>What to look for.</strong> Sorting and filtering happen on the server, and the
-        state is mirrored into the URL, so a row you found is a link you can send. Every table
-        marks which of its columns are <em>inferred</em> rather than expert-labelled — that
-        distinction is the largest source of quiet error in a system like this, so it is in the
-        schema rather than only in documentation.
-      </p>
-      <p>
-        <strong>The provenance rule this tab lets you test.</strong> A row whose text cannot be
-        traced to a byte range in a downloaded file is a bug. Deal-point rows carry their source
-        file and character offsets; open the file at those offsets and you get exactly that text, never
-        a paraphrase. 3.8% of deal points have no located span at all, and they store NULL rather
-        than a nearest guess — a wrong offset opens the wrong clause and looks completely right.
       </p>
     </>
   )

@@ -119,8 +119,8 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
       <section className="sem__pane">
         <h3 className="sem__h">What someone would actually do here</h3>
         <p className="sem__sub">
-          Three questions, three people who ask them, and the path each one takes. Every journey
-          below runs against the corpus that is loaded right now, and each says where it stops.
+          Two questions, two people who ask them, and the path each one takes. Every journey below
+          runs against the corpus that is loaded right now, and each says where it stops.
         </p>
         <ul className="jrn__list" data-testid="journeys">
           {JOURNEYS.map((journey) => (
@@ -186,16 +186,16 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
           </li>
           <li>
             <strong>The model never writes SQL.</strong> It selects from a versioned catalog of
-            named measures, which is why its output can be graded offline — see{' '}
-            <em>Semantic Layer</em>.
+            named measures, which is why its output can be graded offline — see <em>Ask</em>.
           </li>
           <li>
             <strong>Nothing re-extracts the expert labels.</strong> Re-deriving them with a model
             would replace the most reliable thing in the system with the least.
           </li>
           <li>
-            <strong>Thin coverage is shown, not smoothed.</strong> On <em>Coverage</em> the sparse
-            cells are the prominent ones.
+            <strong>Thin coverage is shown, not smoothed.</strong> On <em>Explore</em> a facet
+            value with no matching deals stays on screen, disabled, with the reason stated. A gap
+            is a finding, so it is not swept out of the rail.
           </li>
         </ul>
       </section>

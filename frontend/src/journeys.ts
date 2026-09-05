@@ -1,17 +1,18 @@
 import type { TabId } from './tabs'
 
 /**
- * The three journeys the product exists to serve, as data.
+ * The two journeys the product exists to serve, as data.
  *
  * Overview used to end with a paragraph naming all eight tabs, which told a reader what the
- * tabs were called and not what anyone would do with them. These are the same three walkthroughs
- * `docs/demo-scripts.md` treats as the acceptance test, made runnable: each carries the filters
- * its first step needs, so "run this" lands on a filtered view rather than an empty one.
+ * tabs were called and not what anyone would do with them. These are walkthroughs from
+ * `docs/demo-scripts.md`, made runnable: each carries the filters its Explore step needs, so
+ * "run this" ends on a filtered view rather than an empty one.
  *
- * Each journey names a person, because the three have genuinely different readers — the analyst
- * assembling comparables, the associate checking a claim, and the data manager deciding whether
- * an extractor may run on firm documents — and a tool that serves all three without saying so
- * reads as a feature list.
+ * #48 cut the third. "Is that really market?" was the Coverage-adjacent one — its payoff was
+ * the gate refusing a thin slice, which is the same argument the first journey makes when it
+ * rolls up a set, and three journeys for three different readers is a suite rather than a
+ * product. Each remaining journey names a person: the analyst assembling comparables, and the
+ * data manager deciding whether an extractor may run on firm documents.
  */
 
 export interface JourneySeed {
@@ -54,14 +55,16 @@ export const JOURNEYS: readonly Journey[] = [
     today:
       'Search the document system by keyword, open eight agreements, read each no-shop section, build a table by hand.',
     steps: [
+      'Ask · the measure and the slice',
       'Explore · healthcare, all cash',
       'Deal Terms · roll the set up',
-      'open the outliers',
       'the clause, in the filing',
     ],
     outcome: 'Counts with their denominator, and the two deals that went the other way.',
     limit: null,
-    tab: 'explore',
+    // #48: the journey begins where the question is put, not at the facet rail. The seed below
+    // still travels — Explore applies it when the second step lands there.
+    tab: 'ask',
     seed: {
       folio_industry_code: HEALTH_CARE,
       folio_industry_label: 'Health Care Industry',
@@ -69,23 +72,6 @@ export const JOURNEYS: readonly Journey[] = [
       consideration_type: 'All Cash',
     },
     cta: 'Run this',
-  },
-  {
-    id: 'is-it-market',
-    who: 'An associate',
-    question: '“A partner said everyone is doing commercially reasonable efforts now. Is that true?”',
-    today: 'Trust the recollection, or spend an afternoon proving it and still hedge the answer.',
-    steps: [
-      'Deal Terms · the whole set',
-      'read the distribution',
-      'narrow the slice',
-      'the gate refuses a thin one',
-    ],
-    outcome: 'A base rate, and an explicit statement of what this sample cannot support.',
-    limit: null,
-    tab: 'deal-terms',
-    seed: null,
-    cta: 'Open Deal Terms',
   },
   {
     id: 'trust-the-extractor',

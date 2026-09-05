@@ -33,20 +33,24 @@ function mockHealth(status = 'ok', cube = 'ok') {
           }),
       })
     }
-    if (String(url).includes('/coverage')) {
+    // Ask is tab two since #48, so pressing "2" mounts it and it reads the catalog
+    if (String(url).includes('/agent/catalog')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ measures: [], dimensions: [], label_space: 0 }),
+      })
+    }
+    if (String(url).includes('/agent/grading')) {
       return Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve({
-            rows: [],
-            columns: [],
-            column_axis: 'year',
-            column_note: '',
-            column_totals: {},
-            total_n: 0,
-            min_n: 5,
-            thin_cell_count: 0,
-            empty_cell_count: 0,
+            cases: [],
+            answerable_total: 0,
+            answerable_correct: 0,
+            refusal_total: 0,
+            refusal_correct: 0,
+            note: '',
           }),
       })
     }
@@ -99,10 +103,25 @@ describe('shell', () => {
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/overview/i)
   })
 
-  it('keeps Explore one key away — it is still the entry point for demo script 1', async () => {
+  it('puts Ask second — the act, not the mechanism, behind Overview (#48)', async () => {
     render(<App />)
     await userEvent.keyboard('2')
+    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/^ask/i)
+    // the old name described the implementation; nothing in the bar should still carry it
+    expect(screen.queryByRole('tab', { name: /semantic layer/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps Explore one key behind Ask — still the entry point for demo script 1', async () => {
+    render(<App />)
+    await userEvent.keyboard('3')
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/explore/i)
+  })
+
+  it('is six tabs — Coverage and Tables were cut (#48)', () => {
+    render(<App />)
+    expect(screen.getAllByRole('tab')).toHaveLength(6)
+    expect(screen.queryByRole('tab', { name: /coverage/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /tables/i })).not.toBeInTheDocument()
   })
 })
 

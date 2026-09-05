@@ -2,13 +2,11 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
 import { Admin } from './views/Admin'
-import { Coverage } from './views/Coverage'
+import { Ask } from './views/Ask'
 import { DealTerms } from './views/DealTerms'
 import { Explore } from './views/Explore'
 import { Label } from './views/Label'
 import { Overview } from './views/Overview'
-import { SemanticLayer } from './views/SemanticLayer'
-import { Tables } from './views/Tables'
 import { Grading } from './components/Grading'
 import { MatterCard } from './components/MatterCard'
 import { QueryBuilder } from './components/QueryBuilder'
@@ -89,10 +87,6 @@ function expectAbortedOnUnmount(unmount: () => void) {
 }
 
 describe('every fetching view aborts on unmount', () => {
-  it('Coverage', () => {
-    expectAbortedOnUnmount(render(<Coverage onNavigateToExplore={() => {}} />).unmount)
-  })
-
   it('DealTerms', () => {
     expectAbortedOnUnmount(render(<DealTerms selection={['m-1']} />).unmount)
   })
@@ -106,16 +100,12 @@ describe('every fetching view aborts on unmount', () => {
     expectAbortedOnUnmount(render(<Label />).unmount)
   })
 
-  it('Tables', () => {
-    expectAbortedOnUnmount(render(<Tables />).unmount)
-  })
-
   it('Admin', () => {
     expectAbortedOnUnmount(render(<Admin />).unmount)
   })
 
-  it('SemanticLayer', () => {
-    expectAbortedOnUnmount(render(<SemanticLayer />).unmount)
+  it('Ask', () => {
+    expectAbortedOnUnmount(render(<Ask />).unmount)
   })
 
   it('Overview', () => {

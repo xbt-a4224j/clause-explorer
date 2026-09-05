@@ -377,44 +377,6 @@ kbd {
 .drill__party { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .explore__corpus { font-size: 11px; color: var(--ink-muted); letter-spacing: 0.02em; }
 
-/* ---- Coverage (#22) --------------------------------------------------------------------- */
-
-.cov { display: flex; flex-direction: column; gap: var(--pad-md); min-width: 0; }
-.cov__note { font-size: 12px; color: var(--ink-subtle); }
-.cov__caption { font-size: 11px; color: var(--ink-muted); }
-.cov__skeleton { display: flex; flex-direction: column; gap: 6px; }
-
-/* the table itself scrolls horizontally in its own box — the page body never does */
-.cov__scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); }
-.cov__table { border-collapse: collapse; width: 100%; font-size: 12px; }
-.cov__table th, .cov__table td {
-  padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--hairline);
-  white-space: nowrap;
-}
-.cov__table thead th {
-  background: var(--surface-2); color: var(--ink-muted); font-weight: 500;
-  position: sticky; top: 0;
-}
-.cov__corner, .cov__rowlabel { text-align: left; }
-.cov__rowlabel { font-weight: 500; color: var(--ink); background: var(--surface-1); }
-.cov__total { font-weight: 500; background: var(--surface-2); }
-
-.cov__cell { padding: 0; }
-.cov__hit {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
-  width: 100%; padding: 6px 10px;
-  background: transparent; border: 0; color: var(--ink); font: inherit; text-align: right;
-  cursor: pointer;
-}
-.cov__hit:hover { background: var(--surface-3); }
-.cov__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-/* Thin cells are LOUD, not faded — the opposite of default BI styling. A greyed-out number
-   reads as "small"; this reads as "not reportable", which is the actual finding. */
-.cov__cell--thin { background: #fff1e5; }
-.cov__cell--thin .cov__hit { color: #9a6700; font-weight: 600; }
-.cov__thinlabel { font-size: 9px; font-weight: 400; color: #9a6700; white-space: normal; max-width: 8rem; }
-
 /* min_n refusal (#23) — its own visual state. Not an error (nothing is broken) and not an
    empty result (there IS data; it is too small to show safely). Amber, between the neutral
    empty state and the red error state, and framed by the accent rather than danger. */
@@ -487,35 +449,6 @@ kbd {
   background: transparent; color: var(--ink); font: inherit; cursor: pointer;
 }
 .admin__pager button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ---- Tables (#31) ------------------------------------------------------------------------ */
-.tables { display: flex; flex-direction: column; gap: var(--pad-md); }
-.tables__bar { display: flex; gap: var(--pad-sm); align-items: center; flex-wrap: wrap; }
-.tables__bar select, .tables__bar input {
-  padding: 4px 8px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
-  background: var(--canvas); color: var(--ink); font: inherit; font-size: 12px;
-}
-.tables__export {
-  padding: 4px 10px; border: 1px solid var(--hairline); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
-}
-.tables__count { margin-left: auto; font-size: 11px; color: var(--ink-muted); }
-.tables__table { border-collapse: collapse; width: 100%; font-size: 12px; }
-.tables__table th, .tables__table td {
-  padding: 5px 8px; text-align: left; border-bottom: 1px solid var(--hairline); white-space: nowrap;
-}
-.tables__table thead th { background: var(--surface-2); vertical-align: top; }
-.tables__sort { background: transparent; border: 0; color: var(--ink); font: inherit; font-weight: 500; cursor: pointer; padding: 0; }
-.tables__coltype { font-size: 10px; color: var(--ink-tertiary); font-weight: 400; margin-top: 2px; }
-.tables__inferredcol { color: #9a6700; }
-.tables__inferredcell { color: #9a6700; }
-.tables__row { cursor: pointer; }
-.tables__row:hover { background: var(--surface-3); }
-.tables__expanded td { background: var(--surface-2); white-space: normal; }
-.tables__full { display: grid; grid-template-columns: 12rem 1fr; gap: 4px 12px; font-size: 11px; }
-.tables__full dt { color: var(--ink-tertiary); }
-.tables__full dd { margin: 0; color: var(--ink-subtle); word-break: break-word; }
-
 /* ── Explainer panel + diagrams (#33, #34, #35) ──────────────────────────────────────────
    Every tab carries one. Quiet by construction: it must not compete with the instrument
    it explains, and on Label it sits above a loop targeting five seconds per item. */
@@ -573,7 +506,7 @@ kbd {
 .label__why strong { color: var(--ink); font-weight: 500; }
 .label__why .mono { font-family: var(--font-mono); color: var(--ink); }
 
-/* ── Semantic Layer (#36) ────────────────────────────────────────────────────────────────
+/* ── Ask (#36; was Semantic Layer until #48) ─────────────────────────────────────────────
    The vocabulary is the argument, so it gets the space. Monospace on the identifiers
    because they are the exact strings the model selects from — a prettified label would
    undercut the claim that this is the live catalog. */
@@ -766,7 +699,7 @@ kbd {
 }
 
 /* ── Overview (#39) ──────────────────────────────────────────────────────────────────────
-   The only tab that argues rather than demonstrates, so it reuses the Semantic Layer pane
+   The only tab that argues rather than demonstrates, so it reuses the Ask pane
    and prose rules rather than inventing a second document style. What is local to it is
    the corpus strip and the not-this list. */
 
@@ -900,7 +833,7 @@ kbd {
 }
 .jrn__run:hover { background: var(--surface-3); border-color: var(--ink-tertiary); }
 
-/* Semantic Layer is the argument, not the product — say so before the argument starts. */
+/* Ask opens by saying what you do here, and where to go instead if you wanted Explore. */
 .sem__pointer {
   margin: 0 0 var(--pad-md);
   font-size: 13px;

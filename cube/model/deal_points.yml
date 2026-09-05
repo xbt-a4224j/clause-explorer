@@ -224,5 +224,7 @@ cubes:
         type: count_distinct
         sql: matter_id
         description: >-
-          Alias of count_distinct_matters kept for the coverage grid (#22), where the cell value
-          is "how many agreements sit in this industry x period cell". Exact, not approximate.
+          Alias of count_distinct_matters — "how many agreements sit in this slice". Introduced
+          for the coverage grid, which #48 cut; it stays because the measure-selection eval's
+          expected output names it, so removing it would silently change the label space the
+          eval grades against. Exact, not approximate.

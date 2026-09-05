@@ -153,9 +153,15 @@ describe('facet rail', () => {
   })
 
   it('renders a zero-count value disabled rather than hiding it', async () => {
+    // #48 deleted the Coverage tab, so this is now the only place in the app making the
+    // argument that a gap is a finding: the value stays on screen, carries its n=0, and is
+    // disabled rather than removed. Hiding it would make an absent slice indistinguishable
+    // from one that was never offered.
     renderExplore()
     const empty = await screen.findByRole('button', { name: /Educational Services/ })
+    expect(empty).toBeInTheDocument()
     expect(empty).toBeDisabled()
+    expect(empty).toHaveAttribute('aria-disabled', 'true')
     expect(within(empty).getByText('n=0')).toBeInTheDocument()
   })
 
@@ -248,9 +254,12 @@ describe('filter before rank', () => {
   })
 })
 
-describe('coverage pre-filter', () => {
-  /** A Coverage cell click hands Explore a code and year (#22) — this is the receiving end. */
-  it('applies seed filters from a Coverage cell click and consumes them', async () => {
+describe('journey pre-filter', () => {
+  /**
+   * An Overview journey hands Explore a code and a year — this is the receiving end. It was a
+   * Coverage cell click too until #48 cut that tab; the seed channel itself is unchanged.
+   */
+  it('applies seed filters from a journey and consumes them', async () => {
     const onConsumed = vi.fn()
     const ref = createRef<HTMLInputElement>()
     render(

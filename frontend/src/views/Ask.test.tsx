@@ -1,10 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SemanticLayer } from './SemanticLayer'
+import { Ask } from './Ask'
 import type { CatalogResponse } from '../types'
 
 /**
- * Semantic Layer (#36).
+ * Ask (#36; renamed from Semantic Layer and moved second in the bar by #48).
  *
  * The tab exists to make one argument inspectable: the model selects from a fixed
  * vocabulary, so correctness is discrete and gradeable, and the number itself is computed
@@ -83,7 +83,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('the vocabulary', () => {
   it('lists the measures and dimensions the model may select from', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const catalog = await screen.findByTestId('catalog')
     expect(within(catalog).getByText('deal_points.median_numeric_value')).toBeInTheDocument()
     expect(within(catalog).getByText('matters.industry_code')).toBeInTheDocument()
@@ -91,7 +91,7 @@ describe('the vocabulary', () => {
 
   it('shows each entry description — an opaque identifier cannot be reviewed', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     // scoped: percentile_cont also appears in the freeform-SQL contrast block by design
     const catalog = await screen.findByTestId('catalog')
     expect(within(catalog).getByText(/percentile_cont/)).toBeInTheDocument()
@@ -99,29 +99,51 @@ describe('the vocabulary', () => {
 
   it('states the label space size, because that is the gradeability claim', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     await waitFor(() => expect(screen.getByTestId('label-space')).toHaveTextContent('3'))
   })
 
   it('separates measures from dimensions', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const measures = await screen.findByTestId('catalog-measures')
     expect(within(measures).queryByText('matters.industry_code')).not.toBeInTheDocument()
+  })
+})
+
+describe('the argument sits below the demonstration (#48)', () => {
+  it('renders the explainer after the catalog and the builder, not in front of them', async () => {
+    mockCatalog()
+    render(<Ask />)
+    const builder = await screen.findByTestId('query-builder')
+    const explainer = screen.getByRole('button', { name: /what the semantic layer is for/i })
+    // renaming the tab to Ask demotes the argument; it is not weakened, it moves
+    expect(builder.compareDocumentPosition(explainer) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('keeps the governed-vocabulary argument verbatim', async () => {
+    mockCatalog()
+    render(<Ask />)
+    await screen.findByTestId('query-builder')
+    const prose = document.querySelector('.explain__prose')!
+    expect(prose).toHaveTextContent(/router.*not a calculator/i)
+    expect(prose).toHaveTextContent(/picks a measure and filters from the published vocabulary/i)
   })
 })
 
 describe('honesty about what the layer does not fix', () => {
   it('says a wrong selection still returns a real number', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const caveat = await screen.findByTestId('relocated-risk')
     expect(caveat).toHaveTextContent(/wrong question|real number/i)
   })
 
   it('explains that the freeform arm is not executed', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/not (run|executed)/i)
   })
 })
@@ -129,14 +151,14 @@ describe('honesty about what the layer does not fix', () => {
 describe('designed states', () => {
   it('reports an unreachable semantic layer rather than an empty vocabulary', async () => {
     mockCatalog({ detail: 'Cube did not return its metadata' }, 503)
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByRole('heading', { name: /unavailable/i })).toBeInTheDocument()
     expect(screen.queryByTestId('catalog')).not.toBeInTheDocument()
   })
 
   it('renders the vocabulary with no API key — only live selection needs one', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('catalog')).toBeInTheDocument()
     expect(screen.getByTestId('keyless-note')).toBeInTheDocument()
   })
@@ -150,7 +172,7 @@ describe('designed states', () => {
 describe('the query builder', () => {
   it('offers no free-text input at all — that absence is the argument', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
     expect(within(qb).queryByRole('textbox')).not.toBeInTheDocument()
     expect(qb.querySelectorAll('input, textarea')).toHaveLength(0)
@@ -158,7 +180,7 @@ describe('the query builder', () => {
 
   it('builds the query from clicks, and shows exactly what it will send', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
 
     fireEvent.click(within(qb).getByRole('button', { name: /median_numeric_value/ }))
@@ -169,7 +191,7 @@ describe('the query builder', () => {
 
   it('will not run without a measure — there is nothing to compute', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
     expect(within(qb).getByRole('button', { name: /run against postgres/i })).toBeDisabled()
   })
@@ -196,7 +218,7 @@ describe('the query builder', () => {
       return { ok: true, status: 200, json: async () => CATALOG } as Response
     })
     vi.stubGlobal('fetch', fetchMock)
-    render(<SemanticLayer />)
+    render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
 
     fireEvent.click(within(qb).getByRole('button', { name: /^n deal_points$/ }))
@@ -212,14 +234,14 @@ describe('the query builder', () => {
 describe('worked examples (#37)', () => {
   it('offers examples to start from — 56 names with no entry point is a reference card', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const ex = await screen.findByTestId('qb-examples')
     expect(ex.querySelectorAll('button').length).toBeGreaterThanOrEqual(3)
   })
 
   it('loading one fills the builder and explains it in English', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const ex = await screen.findByTestId('qb-examples')
 
     fireEvent.click(within(ex).getByText(/COVID-19 by name/i))
@@ -231,14 +253,14 @@ describe('worked examples (#37)', () => {
 
   it('includes one that is meant to be refused', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const ex = await screen.findByTestId('qb-examples')
     expect(within(ex).getByText(/single company/i)).toBeInTheDocument()
   })
 
   it('says why Run is disabled rather than leaving a dead button', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     const qb = await screen.findByTestId('query-builder')
     expect(qb).toHaveTextContent(/also need a measure/i)
   })
@@ -247,7 +269,7 @@ describe('worked examples (#37)', () => {
 describe('inline jargon (#35)', () => {
   it('defines its own terms without leaving the tab', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     await screen.findByTestId('query-builder')
     // the explainer prose carries clickable terms; clicking one reveals a definition in place
     const terms = document.querySelectorAll('.term__btn')
@@ -258,25 +280,25 @@ describe('inline jargon (#35)', () => {
 describe('the offline grade (#36)', () => {
   it('shows the grade computed from committed fixtures', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('grade-answerable')).toHaveTextContent('13 of 20')
   })
 
   it('reports refusal accuracy separately rather than averaging it away', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('grade-refusal')).toHaveTextContent('1 of 5')
   })
 
   it('states the bad refusal number as the finding, not a footnote', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('grade-finding')).toHaveTextContent(/min_n|enforced in the API/i)
   })
 
   it('shows the freeform arm for contrast, marked as not run', async () => {
     mockCatalog()
-    render(<SemanticLayer />)
+    render(<Ask />)
     expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/not run/i)
   })
 })

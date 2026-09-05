@@ -1,6 +1,6 @@
 """Content-addressed embedding cache — the reason retrieval works with no API key (#16).
 
-The app must boot and serve retrieval, facets, coverage and every table view with
+The app must boot and serve retrieval, facets, the rollup and every table view with
 `OPENAI_API_KEY` unset (CLAUDE.md). Embeddings are the one part of retrieval that would
 otherwise need a paid API on every request, so they are cached by **content hash** and the
 cache file is committed. A clone with no key gets identical results to one with a key, because
