@@ -49,12 +49,22 @@ export function barPath(x: number, y: number, width: number, height: number, rad
 export function ChartFrame({
   title,
   note,
+  footnote,
   table,
   testId,
   children,
 }: {
   title: string
+  /** At most two sentences: what the chart says. */
   note?: ReactNode
+  /**
+   * The statistical argument, below the chart and behind a disclosure.
+   *
+   * These captions had grown to seven lines explaining a lower bound mid-sentence, which is the
+   * same fault the explainer collapse fixed on the older tabs: prose defending a chart instead
+   * of a chart that reads. Nothing is deleted, it moves below the thing it qualifies.
+   */
+  footnote?: ReactNode
   table: ReactNode
   testId: string
   children: ReactNode
@@ -87,6 +97,12 @@ export function ChartFrame({
           children
         )}
       </div>
+      {footnote && (
+        <details className="viz__footnote" data-testid={`${testId}-footnote`}>
+          <summary>How to read this</summary>
+          <p>{footnote}</p>
+        </details>
+      )}
     </section>
   )
 }
@@ -204,8 +220,11 @@ export function BarChart({
               y2={height - 4}
               strokeWidth={2}
             />
+            {/* At the top the label sits on whatever the first bar is. Sorted worst-first that
+                was empty space; sorted best-first the longest bar runs straight through it. The
+                foot of the rule is empty under either ordering. */}
             {ruleLabel && (
-              <text className="viz__rulelbl" x={ruleX + 5} y={12}>
+              <text className="viz__rulelbl" x={ruleX + 5} y={height - 6}>
                 {ruleLabel}
               </text>
             )}

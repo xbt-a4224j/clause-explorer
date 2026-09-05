@@ -1179,3 +1179,10 @@ kbd {
 .trust__missing div { margin-bottom: var(--pad-sm); }
 .trust__missing dt { color: var(--ink); font-weight: 500; }
 .trust__missing dd { margin: 2px 0 0; color: var(--ink-subtle); line-height: 1.5; }
+
+/* The statistical argument sits below the chart it qualifies, folded away. A caption that has to
+   explain a Wilson bound mid-sentence is defending the chart rather than labelling it. */
+.viz__footnote { margin-top: var(--pad-sm); font-size: 12px; color: var(--ink-subtle); }
+.viz__footnote summary { cursor: pointer; color: var(--ink-tertiary); }
+.viz__footnote summary:hover { color: var(--ink-subtle); }
+.viz__footnote p { margin: 6px 0 0; line-height: 1.55; max-width: 52rem; }

@@ -257,7 +257,7 @@ describe('where the reviewer disagreed', () => {
     render(<Trust />)
     const direction = await screen.findByTestId('trust-loop-direction')
     expect(direction.textContent ?? '').not.toMatch(/improved|better|▲|↑/)
-    expect(direction).toHaveTextContent(/no decisions have been recorded yet/i)
+    expect(direction).toHaveTextContent(/no decisions recorded yet/i)
   })
 
   it('keeps the empty bucket in the table rather than drawing a zero-width segment', async () => {

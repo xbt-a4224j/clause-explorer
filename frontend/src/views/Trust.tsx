@@ -106,10 +106,8 @@ export function Trust() {
           rendered when there is nothing below it to describe. */}
       {anything && (
         <p className="sem__pointer" data-testid="trust-lead">
-          Every figure below is read from a committed artefact, with the command that produced
-          it named beside it. Nothing is recomputed when the tab opens, so this page and the
-          repo cannot disagree about what ran — which is what makes any of it checkable rather
-          than asserted.
+          Every figure here is read from a committed artefact, named beside it, so the page and
+          the repo cannot disagree about what ran.
         </p>
       )}
 
@@ -157,7 +155,6 @@ function CostRow({ calibration }: { calibration: CalibrationResponse | null }) {
   if (!cost) return null
   return (
     <section className="trust__section">
-      <h2 className="admin__heading">What the calibration run cost</h2>
       <StatTiles
         testId="trust-cost"
         tiles={[
@@ -191,14 +188,21 @@ function CostRow({ calibration }: { calibration: CalibrationResponse | null }) {
  */
 function AccuracyChart({ calibration }: { calibration: CalibrationResponse | null }) {
   if (!calibration || calibration.results.length === 0) return null
-  const rows = calibration.results
+  // The grader emits worst-first, because the ordering is a finding about the extractor. This
+  // tab is read to decide what the extractor may be trusted with, and that decision is made at
+  // the top of the list, so the ones that clear the gate go there. Unmeasured rows sink to the
+  // bottom: they are a coverage gap, not a score of zero.
+  const rows = [...calibration.results].sort((a, b) => {
+    if (a.measured !== b.measured) return a.measured ? -1 : 1
+    return (b.accuracy ?? 0) - (a.accuracy ?? 0)
+  })
   const measured = rows.filter((r) => r.measured)
   const gate = calibration.min_extraction_confidence
   const clearingGate = measured.filter((r) => (r.accuracy ?? 0) >= gate).length
   const belowGate = measured.length - clearingGate
   const zeros = measured.filter((r) => r.accuracy === 0).length
   const unmeasured = rows.length - measured.length
-  const worst = measured[0]
+  const best = measured[0]
 
   const data = rows.map((r) => ({
     label: r.deal_point_name,
@@ -207,24 +211,30 @@ function AccuracyChart({ calibration }: { calibration: CalibrationResponse | nul
       ? `${r.correct} of ${r.n} · 95% CI [${r.ci_low?.toFixed(2)}, ${r.ci_high?.toFixed(2)}]`
       : 'the run never reached this deal point',
     // selective: only the worst row is labelled, so the label still means something
-    directLabel: r === worst && r.accuracy !== null ? `worst · ${r.accuracy.toFixed(2)}` : undefined,
+    directLabel: r === best && r.accuracy !== null ? `best · ${r.accuracy.toFixed(2)}` : undefined,
   }))
 
   return (
     <section className="trust__section">
       <ChartFrame
         testId="trust-accuracy"
-        title="Accuracy across the deal-point vocabulary"
+        title="Accuracy by deal point"
         note={
           <>
-            {measured.length} of {rows.length} deal points measured on the held-out slice,
-            worst first. <strong>{belowGate} sit below the {gate.toFixed(2)} rule</strong> and{' '}
-            {clearingGate} reach it on the point estimate — though only{' '}
-            {calibration.reportable_count} clear the gate the product actually enforces, which
-            tests the Wilson <em>lower bound</em> rather than the point estimate, so a deal
-            point cannot be flattered by a sample too small to tell it from a coin flip.{' '}
-            {zeros} score exactly 0.00. {unmeasured} render “not measured”: the run never
-            reached them, which is a coverage gap and not a failed extraction.
+            <strong>
+              {calibration.reportable_count} of {measured.length} deal points are trusted enough
+              to answer
+            </strong>
+            ; {belowGate} sit below the {gate.toFixed(2)} gate. Best first.
+          </>
+        }
+        footnote={
+          <>
+            {clearingGate} reach {gate.toFixed(2)} on the point estimate but only{' '}
+            {calibration.reportable_count} clear the gate, which tests the Wilson lower bound so a
+            deal point cannot be flattered by a sample too small to tell from a coin flip.{' '}
+            {zeros} score exactly 0.00, and {unmeasured} read “not measured”, a coverage gap
+            rather than a failed extraction.
           </>
         }
         table={
@@ -279,7 +289,7 @@ function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
   if (!labels) return null
   return (
     <section className="trust__section">
-      <h2 className="admin__heading">The loop, with what actually went round it</h2>
+      <h2 className="admin__heading">The review loop</h2>
       <LoopDiagram
         counts={{
           predictions: labels.prediction_count,
@@ -292,13 +302,9 @@ function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
       <p className="admin__note" data-testid="trust-loop-direction">
         {labels.labels_applied === 0 ? (
           <>
-            <strong>No decisions have been recorded yet.</strong> The loop is wired and graded:
-            a reviewer&rsquo;s answer is preferred over the model&rsquo;s and then scored against
-            MAUD like any other, so this number can move in either direction. It currently reads{' '}
-            {labels.correct_before} correct of{' '}
-            {labels.prediction_count.toLocaleString('en-US')} because nothing has gone through it.
-            The rows that used to be here were keystrokes from building the tab, not review, and
-            were removed rather than shown as a finding.
+            <strong>No decisions recorded yet</strong>, so the score stands where the extractor
+            left it: {labels.correct_before} correct of{' '}
+            {labels.prediction_count.toLocaleString('en-US')}.
           </>
         ) : (
           <>
@@ -313,15 +319,15 @@ function LoopSection({ labels }: { labels: CalibrationLabels | null }) {
             </strong>
             : {labels.correct_before} correct of{' '}
             {labels.prediction_count.toLocaleString('en-US')} before, {labels.correct_after}{' '}
-            after. A reviewer&rsquo;s answer is preferred over the model&rsquo;s and then graded
-            against MAUD like any other, so a mistyped label lowers the number instead of being
-            quietly discarded.
+            after.
           </>
         )}
       </p>
       <p className="admin__note" data-testid="trust-corpus-caveat">
-        <strong>The caveat this corpus forces.</strong> Every item in the queue already has a
-        lawyer&rsquo;s answer behind it, so a reviewer here is being scored against a gold label
+        A reviewer&rsquo;s answer replaces the model&rsquo;s and is then graded against MAUD like
+        any other, so a mistyped label lowers the score rather than being quietly discarded.{' '}
+        <strong>And every item in the queue already has a
+        lawyer&rsquo;s answer behind it</strong>, so a reviewer here is being scored against a gold label
         rather than supplying one. On un-annotated firm documents there would be no such
         comparison, and the loop&rsquo;s value would be the label rather than the grade.
       </p>
@@ -478,18 +484,22 @@ function SelectionQualityChart({ summary }: { summary: MeasureSelectionSummary |
     <section className="trust__section">
       <ChartFrame
         testId="trust-selection"
-        title="Selection quality, by what the model was asked to get right"
+        title="Selection quality"
         note={
           <>
-            {summary.case_count} authored cases. Read the shape, not the average: the model is
-            decent at picking the <strong>measure</strong>, mediocre at the{' '}
-            <strong>filter value</strong>, and bad at knowing when to{' '}
-            <strong>decline</strong>. Each lands somewhere different — the measure is enum-locked
-            so its mistakes are visible in the chip; the filter value cannot be, so it goes down
-            a resolution ladder that fails loudly; and refusal at{' '}
-            {summary.refusal_accuracy.toFixed(2)} is why <code>min_n</code> lives in the server
-            rather than in the model&rsquo;s judgment. It is also why a human confirms the chips
-            on Ask.
+            Read the shape, not the average: decent at picking the{' '}
+            <strong>measure</strong>, mediocre at the <strong>filter value</strong>, bad at
+            knowing when to <strong>decline</strong>. {summary.case_count} authored cases.
+          </>
+        }
+        footnote={
+          <>
+            Each failure lands somewhere different, which is why the architecture treats them
+            differently. The measure is enum-locked, so a wrong one is visible in the chip. The
+            filter value cannot be, so it goes down a resolution ladder that fails loudly rather
+            than returning zero rows. And refusal at {summary.refusal_accuracy.toFixed(2)} is why{' '}
+            <code>min_n</code> lives in the server rather than in the model&rsquo;s judgment, and
+            why a human confirms the chips on Ask.
           </>
         }
         table={
