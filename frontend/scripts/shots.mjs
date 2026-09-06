@@ -47,6 +47,38 @@ const SHOTS = [
     ],
   },
   {
+    // The repo's retrieval claim, as a picture. Keyword-only is screenshotted rather than the
+    // default blend because the interesting frame is the one where a card's own two numbers
+    // disagree with each other — bm25 high, vector low — which is the whole argument for
+    // blending them and is invisible at alpha=0.5.
+    name: 'retrieval',
+    tab: 'Explore',
+    before: async (page) => {
+      // The industry facet first: the contrast this shot exists to show is measured on the
+      // healthcare slice, and an unfiltered run ranks a different set. A caption naming
+      // scores from one query over a screenshot of another is a fabricated number.
+      await page.locator('.facet__value', { hasText: 'Health Care Industry' }).first().click()
+      await page.waitForTimeout(500)
+      await page.fill('.explore__input', 'healthcare take-private with a go-shop')
+      await page.waitForSelector('[data-testid="rank-control"]', { timeout: 10000 })
+      await page
+        .locator('[data-testid="rank-control"] .rank__btn', { hasText: 'Keyword' })
+        .click()
+      await page.waitForFunction(
+        () => document.querySelectorAll('.explore__list li').length > 2,
+        { timeout: 20000 },
+      )
+      // expand the top card so its three scores are on screen beside the control
+      await page.locator('.explore__list li .card__hit').first().click()
+      await page.waitForSelector('.card__scores', { timeout: 10000 })
+      await page.waitForTimeout(400)
+    },
+    callouts: [
+      { sel: '[data-testid="rank-control"]', text: 'turn either half of the retrieval off and watch the order move' },
+      { sel: '.card__scores', text: 'top on keywords alone, and near the bottom on meaning' },
+    ],
+  },
+  {
     name: 'deal-terms',
     tab: 'Deal Terms',
     callouts: [
@@ -119,15 +151,17 @@ const SHOTS = [
     callouts: [
       { sel: '.label__disagree', text: 'two extractors disagree, so one is wrong: ranked first' },
       { sel: '.label__predictions', text: 'model vs keyword baseline, side by side' },
-      { sel: '.label__hint', text: 'keyboard only: y accept · n correct · e edit · s skip' },
       { sel: '.label__progress', text: 'decisions are graded into the next calibration run' },
     ],
   },
   {
-    name: 'admin-calibration',
-    tab: 'Admin',
+    // #54 folded Admin into Trust. The old shot pointed at a tab that no longer exists, so
+    // every run since has printed "nothing to frame, skipped" and shipped a stale PNG.
+    name: 'trust',
+    tab: 'Trust',
     callouts: [
-      { sel: '[data-testid="calibration-report"]', text: 'accuracy per deal point on held-out gold, published not buried' },
+      { sel: '[data-testid="trust-lead"]', text: 'the headline is what the extractor may answer, not a score' },
+      { sel: '[data-testid="trust-loop-direction"]', text: 'the label loop reports a loss when review makes it worse' },
     ],
   },
 ]
