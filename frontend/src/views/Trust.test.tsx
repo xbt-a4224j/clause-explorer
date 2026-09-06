@@ -133,7 +133,7 @@ describe('the tab bar', () => {
 
   it('positions Trust after Deal Terms', () => {
     const ids = TABS.map((t) => t.id)
-    expect(ids.indexOf('trust')).toBe(ids.indexOf('deal-terms') + 1)
+    expect(ids.indexOf('trust')).toBe(ids.indexOf('terms') + 1)
   })
 })
 

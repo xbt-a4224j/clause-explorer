@@ -23,7 +23,15 @@
  * Order is load-bearing: the number-key shortcut is the index, so reordering this array
  * silently rebinds every shortcut.
  */
-export type TabId = 'overview' | 'ask' | 'explore' | 'deal-terms' | 'trust' | 'label'
+// Ids come from the platform. `terms` was `deal-terms`, which shipped into a health-claims
+// fork of this app and stayed there: an id lives in URLs, tests and keyboard bindings, so it
+// outlives the label somebody remembered to rename. The id is the part nobody thinks to
+// change, which is why it is the part that has to be generic — the LABEL below is still
+// "Deal Terms", because this is a legal product and should read like one.
+export type { TabId } from '@quorum/ui'
+import type { TabId } from '@quorum/ui'
+
+import { STRINGS } from './strings'
 
 export interface Tab {
   id: TabId
@@ -39,50 +47,38 @@ export interface Tab {
   group: 'work' | 'under-the-hood'
 }
 
-export const TABS: readonly Tab[] = [
+export const TABS: readonly Tab[] = ([
   {
     id: 'overview',
-    label: 'Overview',
-    hint: 'what this is and how it works',
     audience: 'partner',
     group: 'work',
   },
   {
     id: 'ask',
-    label: 'Ask',
-    hint: 'a question becomes a governed number, or a refusal',
     audience: 'partner',
     group: 'work',
   },
   {
     id: 'explore',
-    label: 'Explore',
-    hint: 'find comparable deals',
     audience: 'partner',
     group: 'work',
   },
   {
-    id: 'deal-terms',
-    label: 'Deal Terms',
-    hint: 'what was negotiated across a set',
+    id: 'terms',
     audience: 'partner',
     group: 'work',
   },
   {
     id: 'trust',
-    label: 'Trust',
-    hint: 'where the model is trusted, and where it is not',
     audience: 'km',
     group: 'under-the-hood',
   },
   {
     id: 'label',
-    label: 'Label',
-    hint: 'review the uncertainty queue',
     audience: 'km',
     group: 'under-the-hood',
   },
-] as const
+] as const).map((tab) => ({ ...tab, ...STRINGS.tabs[tab.id] }))
 
 export const SHORTCUTS: ReadonlyArray<[string, string]> = [
   ['1 – 6', 'switch tab'],

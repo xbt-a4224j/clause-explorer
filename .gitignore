@@ -52,3 +52,7 @@ vendor/
 # replaced it is data/mappings/sic_to_folio.csv, which is 12 KB, checked in on purpose, and
 # auditable a row at a time. Attribution stays in docs/provenance.md.
 data/folio/
+
+# The platform UI, synced by semantic-quorum/scripts/sync-into.sh. Rebuilt, never committed —
+# the same rule as vendor/ for the wheel; platform.lock records which version.
+frontend/vendor/

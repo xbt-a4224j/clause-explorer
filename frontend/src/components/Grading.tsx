@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CorrectionsGrade, GradingResponse } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 
 /**
  * The offline grade (#36).

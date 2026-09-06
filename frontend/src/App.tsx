@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
-import { ignoreAbort } from './abort'
+import { ignoreAbort } from '@quorum/ui'
 import type { Journey, JourneySeed } from './journeys'
 import { Trust } from './views/Trust'
 import { Ask } from './views/Ask'
@@ -153,7 +153,7 @@ export function App() {
             seedFilters={seed}
             onSeedConsumed={() => setSeed(null)}
           />
-        ) : active === 'deal-terms' ? (
+        ) : active === 'terms' ? (
           <DealTerms selection={selection} />
         ) : active === 'label' ? (
           <Label />

@@ -44,7 +44,7 @@ export function DealTermsDiagram() {
       aria-labelledby="dt-t dt-d"
       preserveAspectRatio="xMinYMin meet"
     >
-      <title id="dt-t">How the deal-terms rollup is built</title>
+      <title id="dt-t">How the terms rollup is built</title>
       <desc id="dt-d">
         152 merger agreements were each read by lawyers who answered the same 92 questions, the
         American Bar Association's public target deal points. Those answers are stored one row

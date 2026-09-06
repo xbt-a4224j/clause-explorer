@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CatalogEntry, RunSelectionResponse } from '../types'
-import { isAbortError, useAbortOnUnmount } from '../abort'
+import { isAbortError, useAbortOnUnmount } from '@quorum/ui'
 
 /**
  * The click-to-build query panel (#37).

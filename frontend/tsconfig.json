@@ -14,7 +14,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "baseUrl": ".",
+    // Mirrors the Vite alias. Two places rather than one because tsc and Vite resolve
+    // independently; they are checked against each other by the build, which fails loudly if
+    // they disagree.
+    "paths": { "@quorum/ui": ["./vendor/quorum-ui/src/index.ts"] }
   },
-  "include": ["src"]
+  "include": ["src", "vendor/quorum-ui/src"]
 }

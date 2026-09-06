@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CalibrationLabels, LabelQueueItem, LabelQueueResponse } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { LoopDiagram } from '../components/LoopDiagram'
 

@@ -51,3 +51,24 @@ describe('colour comes from tokens.css', () => {
   })
 
 })
+
+describe('the platform UI is present and is the source of colour', () => {
+  const VENDORED = import.meta.glob('../vendor/quorum-ui/src/**/*.css', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }) as Record<string, string>
+
+  // Only the PRESENCE of the vendored files is checked here. Asserting their CONTENT was
+  // tried and does not work: Vite's CSS pipeline returns empty text under `?raw` in the test
+  // environment, the same limitation that removed the local tokens.css assertion above. The
+  // palette's contents — including the mechanism colours — are asserted in the platform's own
+  // suite, where the file is read from disk and the check actually runs.
+  it('the sync actually ran', () => {
+    // A missing vendor/ resolves the alias to nothing and fails the build — but only the
+    // BUILD, and only once someone runs it. This says so in the test suite instead, because
+    // "did you run make platform-sync" is a question worth answering in a second.
+    expect(Object.keys(VENDORED).length).toBeGreaterThan(0)
+  })
+
+})

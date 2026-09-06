@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { IngestRun, LogLine } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 
 /**
  * The operator surface: did the data land, and what did the server do (#30, moved in #54).

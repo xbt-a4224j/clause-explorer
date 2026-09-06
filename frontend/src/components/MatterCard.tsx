@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DealPointDetail, Matter, MatterDetail } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 
 /**
  * One comparable deal, with drill-through to the clauses behind it (#19, #20).

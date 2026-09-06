@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { TableRowsResponse } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 import { ProvenanceDiagram, SystemDiagram } from '../components/overviewDiagrams'
 import { JOURNEYS, type Journey } from '../journeys'
 

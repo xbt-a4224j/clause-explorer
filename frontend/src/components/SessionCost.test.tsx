@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { SessionCost } from './SessionCost'
+import { SessionCost } from '@quorum/ui'
 
 /**
  * #50 — the running total at the foot of the tab.

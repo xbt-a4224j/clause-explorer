@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import type { DealTermRow, DealTermsResponse, DrillMatter } from '../types'
-import { ignoreAbort, isAbortError, useAbortOnUnmount } from '../abort'
+import { ignoreAbort, isAbortError, useAbortOnUnmount } from '@quorum/ui'
 import { ExplainerPanel } from '../components/ExplainerPanel'
 import { DealTermsDiagram } from '../components/diagrams'
 import { DealTermsExplainer } from '../components/explainers'
@@ -29,7 +29,7 @@ export function DealTerms({ selection }: { selection: string[] }) {
     setData(null)
     setError(null)
 
-    fetch('/api/deal-terms', {
+    fetch('/api/terms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ matter_ids: selection }),
@@ -49,7 +49,7 @@ export function DealTerms({ selection }: { selection: string[] }) {
   if (selection.length === 0) {
     return (
       <div className="state state--empty">
-      <ExplainerPanel id="deal-terms" title="What this tab is for: what was negotiated" diagram={<DealTermsDiagram />} defaultOpen={false}>
+      <ExplainerPanel id="terms" title="What this tab is for: what was negotiated" diagram={<DealTermsDiagram />} defaultOpen={false}>
         <DealTermsExplainer />
       </ExplainerPanel>
         <h3 className="state__title">No deals selected</h3>
@@ -135,7 +135,7 @@ function TermRow({ row, selection }: { row: DealTermRow; selection: string[] }) 
   async function drill() {
     if (drilled || absent || gated) return
     try {
-      const response = await fetch('/api/deal-terms/drill', {
+      const response = await fetch('/api/terms/drill', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ matter_ids: selection, deal_point_name: row.deal_point_name }),

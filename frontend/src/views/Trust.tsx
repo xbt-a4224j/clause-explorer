@@ -4,7 +4,7 @@ import type {
   CalibrationResponse,
   MeasureSelectionSummary,
 } from '../types'
-import { ignoreAbort } from '../abort'
+import { ignoreAbort } from '@quorum/ui'
 import { BarChart, ChartFrame, Legend, StackedBar, StatTiles } from '../components/charts'
 import { LoopDiagram } from '../components/LoopDiagram'
 import { IngestStatus, LogViewer } from '../components/operator'
