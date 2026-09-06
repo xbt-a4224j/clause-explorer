@@ -10,6 +10,8 @@ a label space; this is the wiring, and wiring is what silently broke three times
 
 from __future__ import annotations
 
+import pathlib
+
 from explorer.agent.interpret import interpret
 
 DEAL_POINTS = [
@@ -166,3 +168,33 @@ def test_the_shipped_prompt_is_the_benchmarked_prompt() -> None:
     from explorer.evals.ask_bench import CONFIRM_PROMPT
 
     assert CHOOSE_PROMPT == CONFIRM_PROMPT
+
+
+def test_the_prompt_assembled_from_the_manifest_is_the_benchmarked_one() -> None:
+    """The prompt now comes from `quorum.yaml`, and must still be the string that scored 20/27.
+
+    Extracting a prompt into a template is exactly the change that breaks quietly: the text is
+    the implementation, and reflowing it once already cost a live wrong answer. So this asserts
+    byte-equality against the committed artefact rather than "looks equivalent".
+
+    It is a different assertion from the one above, and both are needed. That one pins the
+    product to the harness — they had already drifted once. This one pins BOTH to the measured
+    text, which nothing else does now that neither holds a literal copy of it. Editing
+    `strings:` in the manifest is a prompt edit, and a prompt edit needs a re-run.
+    """
+    from explorer.agent.interpret import CHOOSE_PROMPT
+
+    benchmarked = (
+        pathlib.Path(__file__).parent / "fixtures" / "benchmarked_prompt.txt"
+    ).read_text()
+    assert CHOOSE_PROMPT == benchmarked
+
+
+def test_the_domain_declares_a_separate_denominator_for_percentiles() -> None:
+    """Only 809 of 12,937 answers carry a parseable number, so a median's sample is not the
+    deal point's count. The two differ by 16x and the manifest has to say so; the platform
+    refuses to load a domain that declares percentiles without a denominator for them."""
+    from explorer.domain import DOMAIN
+
+    assert DOMAIN.percentile_denominator == "deal_points.numeric_n"
+    assert DOMAIN.percentile_denominator != DOMAIN.count_measure

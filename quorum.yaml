@@ -12,6 +12,12 @@ numeric_measures:
   - deal_points.p25_numeric_value
   - deal_points.p75_numeric_value
 
+# THE denominator for those percentiles, and not deal_points.n. Only answers whose text carries
+# a parseable number are in a percentile's sample — 809 of 12,937 rows corpus-wide, because most
+# deal points are categorical. Reporting a median beside the deal point's own count claims a
+# sample sixteen times the one it came from.
+numeric_count: deal_points.numeric_n
+
 selectable:
   - comparable_deals
   - deal_points
@@ -21,8 +27,44 @@ selectable:
 excluded_measures:
   - deal_points.mean_numeric_value_do_not_use_for_market
 
+# The domain's nouns. The platform supplies every structural sentence of the selection prompt —
+# the four shapes, the null rules, the self-check — and reads these for the words. Getting one
+# wrong is not cosmetic: the prompt IS the implementation here, and `tests/test_prompt.py`
+# pins the assembled result byte-for-byte against the string that scored 20/27.
 strings:
   record: agreement
   records: agreements
   subject: deal point
+  subject_title: ABA deal point
+  subject_heading: DEAL POINT
   rollup_tab: Deal Terms
+
+  # Separate from `records` deliberately. The example phrasings are how a LAWYER speaks ("how
+  # many deals have X"); the shape definitions describe what is counted ("how many agreements").
+  # Collapsing the two changes the prompt and invalidates the measurement.
+  colloquial: deals
+
+  corpus_description: public-target merger agreements
+
+  # Phrases a lawyer uses that name exactly one deal point. Listing them is worth real accuracy
+  # and does not overfit — they are vocabulary, not answers.
+  terms_of_art:
+    - no-shop
+    - fiduciary out
+    - MAE carve-out
+    - bringdown
+    - tail period
+
+  # What this corpus does NOT hold, in full phrases because the prompt repeats "no" before each.
+  # deal_value_usd is NULL on all 152 matters, and MAUD carries no fees and no adviser names.
+  absent:
+    - no deal values in dollars
+    - no fee amounts
+    - no adviser names
+
+  # Why an unscoped percentile is refused, in this corpus's own units. The generic platform
+  # wording is true but a refusal naming the actual units is one a lawyer can act on.
+  scope_reason: >-
+    it averages a column that holds several units at once — tail periods in months,
+    matching-rights periods in business days, ownership thresholds in percent — so an unscoped
+    percentile mixes them into a number with no unit
