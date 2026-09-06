@@ -70,7 +70,14 @@ class TestDecliningIsAnAnswer:
         12,937, the number of labelled ROWS, which reads as an agreement count and is not one.
         A shape that silently changes what it counts is worse than a decline.
         """
-        assert _run("how many agreements do we have", "count", None) is not None
+        assert (
+            interpret(
+                "how many agreements do we have",
+                choose=lambda q: ("count", None),
+                covers=True,
+            )
+            is not None
+        )
         assert _run("how many have an answer", "coverage", None) is None
 
 
@@ -100,3 +107,35 @@ class TestTheChoicesAreClosed:
         """`covers_the_question: false` means the taxonomy has nothing for this — the closest
         deal point is not an answer."""
         assert _run("anything", "distribution", None) is None
+
+
+class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
+    """Caught on the deployed stack, not by the benchmark, which is the point.
+
+    "What's the average deal size in dollars" came back as **152**. The model could find no
+    deal point (correct — deal value is NULL on all 152 matters), said so, and then the `count`
+    shape ran anyway with no filter and returned the corpus size. A number in answer to a
+    question the corpus cannot answer is worse than a refusal, because it looks like an answer.
+
+    The benchmark missed it because it graded the deal point and ignored the shape. A metric
+    that reads half the output certifies half the system.
+
+    `covers_the_question: false` now declines outright rather than only clearing the deal
+    point. The one shape that legitimately has no deal point — "how many agreements are
+    loaded" — is reached by the model returning `count` WITH the flag true.
+    """
+
+    def test_the_average_deal_size_question_declines_rather_than_counting(self) -> None:
+        assert _run("what's the average deal size in dollars", "count", None) is None
+
+    def test_a_genuine_count_question_still_answers(self) -> None:
+        """The flag is about whether the CORPUS can answer, not whether a deal point exists."""
+        s = interpret(
+            "how many agreements are loaded", choose=lambda q: ("count", None), covers=True
+        )
+        assert s is not None
+        assert s["measures"] == ["comparable_deals.n"]
+
+    def test_a_shape_with_no_deal_point_and_no_coverage_declines(self) -> None:
+        for shape in ("distribution", "median", "coverage"):
+            assert _run("unanswerable", shape, None) is None, shape

@@ -153,7 +153,7 @@ def choose_interpretation(
     usage: list[tuple[int, int]] | None = None,
     *,
     glosses: dict[str, list[str]] | None = None,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, bool]:
     """Shape and deal point, in one enum-constrained call, with a self-check.
 
     The self-check is structural rather than a sterner prompt, and that distinction was
@@ -167,7 +167,7 @@ def choose_interpretation(
     """
     key = api_key or settings.openai_api_key
     if not key:
-        return None, None
+        return None, None, False
 
     from openai import OpenAI
 
@@ -198,10 +198,11 @@ def choose_interpretation(
 
     shape = out.get("shape") if out.get("shape") in SHAPES else None
     deal_point = safe.get(out.get("deal_point")) if out.get("deal_point") else None
-    if not out.get("covers_the_question"):
+    covers = bool(out.get("covers_the_question"))
+    if not covers:
         deal_point = None
-    log.info("interpretation", question=question, shape=shape, deal_point=deal_point)
-    return shape, deal_point
+    log.info("interpretation", question=question, shape=shape, deal_point=deal_point, covers=covers)
+    return shape, deal_point, covers
 
 
 def deal_point_glosses(values: Any = None) -> dict[str, list[str]]:
@@ -240,6 +241,7 @@ def interpret(
     *,
     choose: Any = None,
     usage: list[tuple[int, int]] | None = None,
+    covers: bool | None = None,
 ) -> dict[str, Any] | None:
     """The selection this question means, or None when the corpus cannot answer it.
 
@@ -257,9 +259,21 @@ def interpret(
     usage = usage if usage is not None else []
     choose = choose or (lambda q: choose_interpretation(q, api_key, usage))
 
-    shape, deal_point = choose(question)
+    chosen = choose(question)
+    # A stubbed chooser may return the pair; the real one returns the triple.
+    shape, deal_point, *rest = (*chosen, covers) if len(chosen) == 2 else chosen
+    covers = rest[0] if rest else covers
     if shape is None:
         log.info("interpret_declined", question=question, reason="no shape")
+        return None
+    if deal_point is None and shape == "count" and not covers:
+        # The demo-killer, caught on the deployed stack: "what's the average deal size in
+        # dollars" found no deal point (right — deal value is NULL on all 152 matters), then
+        # ran `count` unfiltered and answered 152. A number in reply to a question the corpus
+        # cannot answer is worse than a refusal, because it looks like an answer. `count`
+        # without a deal point is only legitimate when the model affirms the corpus can answer
+        # — "how many agreements are loaded" — which is what `covers` carries.
+        log.info("interpret_declined", question=question, shape=shape, reason="count, uncovered")
         return None
     if deal_point is None and shape != "count":
         log.info("interpret_declined", question=question, shape=shape, reason="no deal point")

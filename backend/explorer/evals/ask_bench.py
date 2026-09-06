@@ -376,15 +376,31 @@ def grade(trials: int = 1, only: set[str] | None = None) -> None:
                 cost += sum(pt for pt, _ in outcome.usage) * 0.15 / 1e6
                 cost += sum(c for _, c in outcome.usage) * 0.60 / 1e6
                 expected, got = item["deal_point"], outcome.deal_point
+                want_shape = item.get("shape")
                 if expected is None:
-                    if got is None:
+                    # Must decline. Any deal point OR any shape that still runs is a failure:
+                    # `count` with no deal point returns 152, and 152 in answer to "what's the
+                    # average deal size" is worse than a refusal, not better.
+                    if got is None and outcome.shape is None:
                         declined_right += 1
                     elif trial == 0:
-                        misses.append(f"{item['q'][:40]} -> should decline, got {got[:32]}")
-                elif got and expected.lower() in got.lower():
+                        misses.append(
+                            f"{item['q'][:40]} -> should decline, got "
+                            f"{outcome.shape}/{str(got)[:26]}"
+                        )
+                elif got and expected.lower() in got.lower() and outcome.shape == want_shape:
                     right += 1
                 elif trial == 0:
-                    misses.append(f"{item['q'][:40]} -> {str(got)[:36]}")
+                    # The shape half was invisible until 2026-09-06: grading only the deal
+                    # point scored `coverage` as correct where `distribution` was wanted, and
+                    # the deployed app then returned n=152 instead of the split. A metric that
+                    # ignores half the output certifies half the system.
+                    why = (
+                        f"shape {outcome.shape} != {want_shape}"
+                        if got and expected.lower() in got.lower()
+                        else str(got)[:34]
+                    )
+                    misses.append(f"{item['q'][:40]} -> {why}")
             totals.append(right + declined_right)
             answered.append(right)
         results.append(
