@@ -122,7 +122,7 @@ export function Trust() {
           </h3>
           <p className="state__body">
             This tab renders committed artefacts and computes nothing on request, so an artefact
-            that has not been written is a blank rather than a zero. Each one below says what to
+            that has not been written stays blank. Each one below says what to
             run.
           </p>
           <dl className="trust__missing">
@@ -498,7 +498,7 @@ function SelectionQualityChart({ summary }: { summary: MeasureSelectionSummary |
         title="Selection quality"
         note={
           <>
-            Read the shape, not the average: decent at picking the{' '}
+            Read the shape: decent at picking the{' '}
             <strong>measure</strong>, mediocre at the <strong>filter value</strong>, bad at
             knowing when to <strong>decline</strong>. {summary.case_count} authored cases.
           </>

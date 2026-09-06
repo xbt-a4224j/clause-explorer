@@ -16,15 +16,19 @@ import type { CatalogResponse } from '../types'
  * still returns a real number.
  */
 
+// Deliberately representative rather than minimal. A three-entry fixture with no deal point
+// cannot exercise grouping, and a fixture narrower than production is how the min_n gate bug
+// survived twenty tests: the buggy measure did not exist in any test's world.
 const CATALOG: CatalogResponse = {
-  label_space: 3,
+  label_space: 5,
   measures: [
     {
       name: 'deal_points.n',
       title: 'N',
       type: 'count',
       cube: 'deal_points',
-      description: 'matters answering this deal point',
+      description:
+        'THE DENOMINATOR. The number of labelled matters in the current selection. Report it alongside any count or percentage, never on its own as a headline.',
     },
     {
       name: 'deal_points.median_numeric_value',
@@ -35,6 +39,20 @@ const CATALOG: CatalogResponse = {
     },
   ],
   dimensions: [
+    {
+      name: 'deal_points.deal_point_name',
+      title: 'Deal point',
+      type: 'string',
+      cube: 'deal_points',
+      description: 'The ABA deal point being answered. 92 distinct values in the loaded corpus.',
+    },
+    {
+      name: 'deal_points.position',
+      title: 'Answer',
+      type: 'string',
+      cube: 'deal_points',
+      description: 'The negotiated position the annotator recorded for this deal point.',
+    },
     {
       name: 'matters.industry_code',
       title: 'Industry',
@@ -96,8 +114,10 @@ describe('the vocabulary', () => {
     mockCatalog()
     render(<Ask />)
     const list = await openVocabulary()
-    expect(within(list).getByText('deal_points.median_numeric_value')).toBeInTheDocument()
-    expect(within(list).getByText('matters.industry_code')).toBeInTheDocument()
+    // the namespace and the member render separately now, so the row is asserted by its
+    // member name with the cube beside it rather than by the joined identifier
+    expect(within(list).getByText('median_numeric_value')).toBeInTheDocument()
+    expect(within(list).getByText('industry_code')).toBeInTheDocument()
   })
 
   it('shows each entry description — an opaque identifier cannot be reviewed', async () => {
@@ -111,17 +131,37 @@ describe('the vocabulary', () => {
   it('states the label space size without being opened, because that is the claim', async () => {
     mockCatalog()
     render(<Ask />)
-    await waitFor(() => expect(screen.getByTestId('label-space')).toHaveTextContent('3'))
-    // the count is the argument; the 48 identifiers behind it are reference
+    await waitFor(() => expect(screen.getByTestId('label-space')).toHaveTextContent('5'))
+    // the count is the argument; the identifiers behind it are reference
     expect(screen.queryByTestId('catalog-list')).not.toBeInTheDocument()
   })
 
-  it('separates measures from dimensions', async () => {
+  it('groups names by the job they do rather than by measure vs dimension', async () => {
+    /**
+     * This test used to assert the opposite — that measures and dimensions were kept apart.
+     * That split is Cube's filing system, and it answers a question nobody reading this page
+     * has: someone wants to know what they can ASK. "Count agreements" needs a measure and a
+     * dimension together, so the two are deliberately interleaved now.
+     */
     mockCatalog()
     render(<Ask />)
-    await openVocabulary()
-    const measures = screen.getByTestId('catalog-measures')
-    expect(within(measures).queryByText('matters.industry_code')).not.toBeInTheDocument()
+    const list = await openVocabulary()
+    expect(within(list).getByText(/count agreements/i)).toBeInTheDocument()
+    expect(within(list).getByText(/choose the term/i)).toBeInTheDocument()
+    // and one group holds both kinds
+    expect(screen.queryByTestId('catalog-measures')).not.toBeInTheDocument()
+  })
+
+  it('shows a short line by default and the full note on request', async () => {
+    /** Twenty-nine paragraphs written AT the model is a wall for a person. Ordered, not
+     * hidden: the full text is one checkbox away. */
+    mockCatalog()
+    render(<Ask />)
+    const list = await openVocabulary()
+    const long = 'Report it alongside any count or percentage'
+    expect(within(list).queryByText(new RegExp(long, 'i'))).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('catalog-full'))
+    expect(within(screen.getByTestId('catalog-list')).getByText(new RegExp(long, 'i'))).toBeInTheDocument()
   })
 
   it('puts the question box in front of the vocabulary, not behind it', async () => {
@@ -152,7 +192,7 @@ describe('the argument sits below the demonstration (#48)', () => {
     render(<Ask />)
     await screen.findByTestId('query-builder')
     const prose = document.querySelector('.explain__prose')!
-    expect(prose).toHaveTextContent(/router.*not a calculator/i)
+    expect(prose).toHaveTextContent(/it routes: it picks a measure and filters/i)
     expect(prose).toHaveTextContent(/picks a measure and filters from the published vocabulary/i)
   })
 })

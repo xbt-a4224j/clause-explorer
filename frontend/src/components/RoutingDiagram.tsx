@@ -24,7 +24,7 @@ export function RoutingDiagram() {
         produces a number. The model chooses both the number and the definition of the
         number, and the result can only be compared to another generated query, not scored.
         Governed selection: the question goes to a language model constrained to a catalog of
-        named measures and dimensions. It emits a selection, not a query. Filter values are
+        named measures and dimensions. It emits a selection. Filter values are
         resolved against the values actually present in the data, failing loudly rather than
         returning an empty result. The semantic layer turns the selection into SQL and
         Postgres computes the number. Only the selection can be wrong, and a selection is

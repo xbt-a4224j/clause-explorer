@@ -1323,3 +1323,48 @@ kbd {
 /* Governed: every figure Cube computed. A hairline on the left of the panel, nothing more —
    the number itself is never coloured, because a coloured number reads as a status. */
 .qb__json, .terms__caption { border-left: 2px solid var(--mech-governed); padding-left: 8px; }
+
+/* ── Ask · the vocabulary, grouped by the job each name does ───────────────────────────────
+   Was two columns of 3-6 line paragraphs under "Measures" and "Dimensions" — Cube's filing
+   system, presented to someone who wants to know what they can ask. A name and one line each,
+   in groups, with the full note one checkbox away. */
+.cat { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 18px 26px; }
+.cat__group { min-width: 0; break-inside: avoid; }
+.cat__grouph {
+  margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--ink);
+  letter-spacing: .02em;
+}
+.cat__count { color: var(--ink-tertiary); font-weight: 400; font-family: var(--font-mono); }
+.cat__blurb { margin: 0 0 8px; font-size: 11.5px; line-height: 1.45; color: var(--ink-tertiary); }
+.cat__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.cat__item {
+  display: grid; grid-template-columns: minmax(0, auto) 1fr; gap: 2px 8px;
+  padding: 5px 8px; border-radius: 4px; background: var(--surface-2); min-width: 0;
+}
+.cat__name { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+/* which namespace it came from, kept because the same short name can exist in both */
+.cat__cube {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-tertiary);
+  align-self: center;
+}
+.cat__desc {
+  grid-column: 1 / -1; font-size: 11.5px; line-height: 1.5; color: var(--ink-subtle);
+  min-width: 0; overflow-wrap: break-word;
+}
+.cat__fulltoggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0 0 14px; font-size: 12px; color: var(--ink-subtle); cursor: pointer;
+}
+
+/* The shouted label Cube uses to flag a measure to the model — THE DENOMINATOR, THE NUMERATOR.
+   It is the most useful thing about the measure, so it reads as a tag instead of being cut. */
+.cat__role {
+  display: inline-block; margin-right: 6px; padding: 0 5px;
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .04em;
+  color: var(--ink-subtle); background: var(--surface-3); border-radius: 3px;
+  vertical-align: 1px;
+}
+/* groups flow and pack instead of aligning to a grid row — a one-item group next to a
+   six-item one left a column of dead space */
+.cat { display: block; columns: 3 330px; column-gap: 26px; }
+.cat__group { break-inside: avoid; margin: 0 0 18px; }

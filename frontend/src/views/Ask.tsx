@@ -34,17 +34,146 @@ import { Grading } from '../components/Grading'
  * question box does, and 7bc47ee dropped the guarantee that it would not.
  */
 
-function EntryList({ entries, testId }: { entries: CatalogEntry[]; testId: string }) {
+/**
+ * The vocabulary, grouped by the job each name does.
+ *
+ * It was two columns headed Measures and Dimensions, each a stack of 3-6 line paragraphs. That
+ * is Cube's own filing system, and it answers a question nobody asked: a reader wants to know
+ * what they can ASK, and "is this a measure or a dimension" is an implementation detail of the
+ * semantic layer. Twenty-nine paragraphs under two headings is also just a wall — everything
+ * looked equally important, including `deal_points.id`.
+ *
+ * The descriptions themselves are written AT THE MODEL — "ALWAYS filter on this before reading
+ * any count" — which is correct for the thing that reads /meta and wrong for a person reading a
+ * page. So the lead line is trimmed to the first sentence and the rest sits behind one toggle
+ * for the whole panel. Nothing is hidden; it is ordered.
+ */
+
+const GROUPS: { title: string; blurb: string; match: (name: string) => boolean }[] = [
+  {
+    title: 'Count agreements',
+    blurb: 'Sample sizes. Every figure this product reports carries one of these.',
+    match: (n) =>
+      /\.(n|count_distinct_matters|expert_labelled_n|numeric_n|with_source_span_n)$/.test(n),
+  },
+  {
+    title: 'Count provisions',
+    blurb: 'How many agreements in the slice actually have the thing.',
+    match: (n) => n.endsWith('.present_count'),
+  },
+  {
+    title: 'Numbers inside answers',
+    blurb:
+      'For terms measured in days, months or percent. Pin one deal point first — unscoped these mix the units.',
+    match: (n) => /(median|p25|p75)_numeric_value$/.test(n),
+  },
+  {
+    title: 'Choose the term',
+    blurb: 'Which negotiated point, and how it came out. Nearly every legal question names one.',
+    match: (n) => /\.(deal_point_name|position|numeric_value)$/.test(n),
+  },
+  {
+    title: 'Choose the deals',
+    blurb: 'Narrow the set of agreements before asking about a term.',
+    match: (n) =>
+      /comparable_deals\.(label|code|consideration_type|signing_year|signing_date|deal_size_band|target_name|acquirer_name)$/.test(
+        n,
+      ),
+  },
+  {
+    title: 'Provenance and plumbing',
+    blurb: 'Row identity and how a value got there. Rarely what a question is about.',
+    match: () => true,
+  },
+]
+
+/**
+ * Split a Cube description into its shouted role label and its first real sentence.
+ *
+ * The model-facing descriptions open with a flag in capitals — `THE DENOMINATOR.`,
+ * `THE NUMERATOR for ...` — which is genuinely the most useful thing about the measure, so it
+ * becomes a tag rather than being thrown away. Discarding it left sentences starting with a
+ * dangling em dash: "— how many answers in the selection carry a number at all."
+ *
+ * `e.g.` and `i.e.` are not sentence ends. Treating them as one truncated four entries to
+ * "The ABA deal point being answered, e.g." and "The median of the numeric answers — e.g.".
+ */
+export function summarise(description: string): { role: string | null; lead: string } {
+  if (!description) return { role: null, lead: '' }
+  // At least TWO capitalised words, so a description opening on a single one — `FALSE for
+  // MAUD's expert labels` — is prose rather than a label. Terminated by a full stop, a colon,
+  // an em dash, or the first lowercase word: `THE DENOMINATOR FOR EVERY PERCENTILE BELOW —`
+  // ends on the dash and `THE NUMERATOR for "how many..."` ends on `for`.
+  const labelled = description.match(
+    /^([A-Z][A-Z_]*(?:[ /][A-Z][A-Z_]*)+)(?:\s*[.:—–-]|\s+(?=[a-z]))\s*(.*)$/s,
+  )
+  const role = labelled ? labelled[1].trim() : null
+  let rest = (labelled ? labelled[2] : description).trim()
+  rest = rest.replace(/^[—–-]\s*/, '')
+  // Only when a label was actually removed, and never on an identifier: blanket capitalising
+  // turned `percentile_cont(0.5) WITHIN GROUP` into `Percentile_cont(...)`.
+  const code = /^[a-z_]+[_(]/.test(rest)
+  if (labelled && rest && !code) rest = rest[0].toUpperCase() + rest.slice(1)
+
+  // a full stop that ends a sentence: followed by a space and a capital, or the string's end,
+  // and not part of e.g. / i.e. / an initial
+  // A sentence may open with a digit or a quote — "809 of 12,937 rows." and '"Type of
+  // Consideration-Answer".' both follow one. The required whitespace is what keeps `0.5` and
+  // `12,937` from splitting: there is no space after those stops.
+  const end = rest.search(/(?<!\b(?:e\.g|i\.e|[A-Z]))\.(?=\s+["'(0-9A-Z]|$)/)
+  const lead = end > 0 ? rest.slice(0, end + 1) : rest
+  return { role, lead }
+}
+
+function EntryList({
+  entries,
+  testId,
+  full,
+}: {
+  entries: CatalogEntry[]
+  testId: string
+  full: boolean
+}) {
+  const seen = new Set<string>()
+  const groups = GROUPS.map((g) => {
+    const rows = entries.filter((e) => !seen.has(e.name) && g.match(e.name))
+    rows.forEach((r) => seen.add(r.name))
+    return { ...g, rows }
+  }).filter((g) => g.rows.length)
+
   return (
-    <ul className="cat__list" data-testid={testId}>
-      {entries.map((e) => (
-        <li className="cat__item" key={e.name}>
-          <code className="cat__name">{e.name}</code>
-          <span className="cat__type">{e.type}</span>
-          {e.description && <p className="cat__desc">{e.description}</p>}
-        </li>
+    <div className="cat" data-testid={testId}>
+      {groups.map((g) => (
+        <section className="cat__group" key={g.title}>
+          <h4 className="cat__grouph">
+            {g.title} <span className="cat__count">{g.rows.length}</span>
+          </h4>
+          <p className="cat__blurb">{g.blurb}</p>
+          <ul className="cat__list">
+            {g.rows.map((e) => (
+              <li className="cat__item" key={e.name}>
+                <code className="cat__name">{e.name.split('.')[1]}</code>
+                <span className="cat__cube">{e.name.split('.')[0]}</span>
+                <span className="cat__desc">
+                  {full ? (
+                    e.description
+                  ) : (
+                    <>
+                      {summarise(e.description || '').role && (
+                        <span className="cat__role">
+                          {summarise(e.description || '').role}
+                        </span>
+                      )}
+                      {summarise(e.description || '').lead}
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -57,6 +186,7 @@ export function Ask() {
   const [questions, setQuestions] = useState(0)
   const [sessionCost, setSessionCost] = useState(0)
   const [vocabularyOpen, setVocabularyOpen] = useState(false)
+  const [fullNotes, setFullNotes] = useState(false)
 
   useEffect(() => {
     // #38
@@ -116,7 +246,7 @@ export function Ask() {
       <section className="sem__pane" data-testid="catalog">
         <h3 className="sem__h">The vocabulary a selection may draw from</h3>
         <p className="sem__sub">
-          Read live from Cube&rsquo;s metadata endpoint, not a checked-in copy.{' '}
+          Read from Cube&rsquo;s metadata endpoint on every request.{' '}
           <span data-testid="label-space">
             Label space: <span className="mono">{catalog.label_space}</span>
           </span>{' '}
@@ -139,19 +269,23 @@ export function Ask() {
         </button>
 
         {vocabularyOpen && (
-          <div className="sem__cols" data-testid="catalog-list">
-            <div>
-              <h4 className="sem__h4">
-                Measures <span className="mono">{catalog.measures.length}</span>
-              </h4>
-              <EntryList entries={catalog.measures} testId="catalog-measures" />
-            </div>
-            <div>
-              <h4 className="sem__h4">
-                Dimensions <span className="mono">{catalog.dimensions.length}</span>
-              </h4>
-              <EntryList entries={catalog.dimensions} testId="catalog-dimensions" />
-            </div>
+          <div data-testid="catalog-list">
+            <label className="cat__fulltoggle">
+              <input
+                type="checkbox"
+                checked={fullNotes}
+                onChange={(e) => setFullNotes(e.target.checked)}
+                data-testid="catalog-full"
+              />
+              show the full note on each name
+            </label>
+            {/* Measures and dimensions are interleaved on purpose: they are grouped by the job
+                a name does, and "count the agreements" needs one of each. */}
+            <EntryList
+              entries={[...catalog.measures, ...catalog.dimensions]}
+              testId="catalog-entries"
+              full={fullNotes}
+            />
           </div>
         )}
       </section>
@@ -215,7 +349,7 @@ WHERE deal_point_name =
       >
         <p>
           <strong>What this tab is for.</strong> Showing what the language model is and is not
-          allowed to do. It is a <em>router</em>, not a calculator: it picks a measure and
+          allowed to do. It <em>routes</em>: it picks a measure and
           filters from the published vocabulary above, and Postgres computes every number on
           this screen. Correctness is then one discrete question — did it pick the right
           measure and filters — gradeable offline with no database and no model. It also gives{' '}

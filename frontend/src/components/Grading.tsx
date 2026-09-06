@@ -140,7 +140,7 @@ export function Grading() {
 
       {refusalBad && (
         <p className="qb__blocked" data-testid="grade-finding">
-          <strong>This is the finding, not a footnote.</strong> The model is bad at knowing when
+          <strong>This is the finding.</strong> The model is bad at knowing when
           to refuse. That is precisely why <code>min_n</code> is enforced in the API rather than
           asked for in a prompt — refusal cannot be the model&rsquo;s job when this is how well
           it does it.
