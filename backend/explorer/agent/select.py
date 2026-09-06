@@ -144,6 +144,52 @@ def fetch_vocabulary(cube_meta: dict[str, Any] | None = None) -> Vocabulary:
     )
 
 
+#: Measures that are meaningless unless the selection is scoped to ONE deal point.
+#:
+#: `numeric_value` is a single column carrying three incommensurable units — tail periods in
+#: months, matching-rights periods in business days, and ownership thresholds in percent. A
+#: percentile over the unscoped column is the median of {months, days, percent}: on this corpus
+#: it evaluates to `4`, which is not a wrong quantity so much as not a quantity. The app served
+#: exactly that in answer to "what's the average deal size".
+#:
+#: The Cube model has always said so — `median_numeric_value.description` reads "Filter by
+#: deal_point_name first or this mixes days, months and percents into one meaningless number" —
+#: and a test asserts that descriptions carry warnings like it. Nothing read the warning. A
+#: description is documentation; this is the gate.
+#:
+#: Counts are deliberately absent: `n` and `numeric_n` count rows rather than averaging
+#: quantities, so mixed units do not corrupt them and the guard must not touch them.
+REQUIRES_SCOPE: dict[str, str] = {
+    "deal_points.median_numeric_value": "deal_points.deal_point_name",
+    "deal_points.p25_numeric_value": "deal_points.deal_point_name",
+    "deal_points.p75_numeric_value": "deal_points.deal_point_name",
+}
+
+#: Said in the measure's own words rather than a second wording that can drift from it.
+SCOPE_REASON = (
+    "it averages a column that holds several units at once — tail periods in months, "
+    "matching-rights periods in business days, ownership thresholds in percent — so an "
+    "unscoped percentile mixes them into a number with no unit"
+)
+
+
+def _is_scoped_to_one(selection: dict[str, Any], member: str) -> bool:
+    """Whether the selection pins `member` to a single value, either way that counts.
+
+    Grouping by it is as good as filtering to one: one row per deal point means each
+    percentile falls inside a single unit. Refusing the grouped form would be the kind of
+    over-refusal that gets a gate switched off rather than fixed.
+    """
+    if member in selection.get("dimensions", []):
+        return True
+    return any(
+        f.get("member") == member
+        and f.get("operator", "equals") == "equals"
+        and len(f.get("values") or []) == 1
+        for f in selection.get("filters", [])
+    )
+
+
 def validate_selection(selection: dict[str, Any], vocabulary: Vocabulary) -> None:
     """Defense in depth: the schema should make an invalid name undecidable, but this is the
     one gate every selection passes through before it reaches Cube, schema behaved or not."""
@@ -151,6 +197,14 @@ def validate_selection(selection: dict[str, Any], vocabulary: Vocabulary) -> Non
     for measure in selection.get("measures", []):
         if measure not in vocabulary.measures:
             raise InvalidSelection(f"{measure!r} is not a known measure.", selection)
+        required = REQUIRES_SCOPE.get(measure)
+        if required and not _is_scoped_to_one(selection, required):
+            raise InvalidSelection(
+                f"{measure!r} needs {required!r} pinned to one value, because "
+                f"{SCOPE_REASON}. Filter to a single deal point, or group by "
+                f"{required!r} so each row stays inside one unit.",
+                selection,
+            )
     for dimension in selection.get("dimensions", []):
         if dimension not in vocabulary.dimensions:
             raise InvalidSelection(f"{dimension!r} is not a known dimension.", selection)

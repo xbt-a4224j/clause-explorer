@@ -12,7 +12,10 @@ real call, marked `needs_key`.
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
+import yaml
 from explorer.agent import select as select_module
 from explorer.agent.select import (
     InvalidSelection,
@@ -175,3 +178,127 @@ class TestLiveAgent:
         )
         validate_selection(selection, vocab)  # does not raise: proves the enum held live
         assert selection["measures"]
+
+
+class TestAMeasureThatIsMeaninglessWithoutItsFilter:
+    """`median_numeric_value` aggregates `numeric_value` across whatever is selected, and the
+    corpus stores three incommensurable units in that column:
+
+        Tail Period Length                150 rows   6-12    MONTHS
+        Initial matching rights (COR)     147 rows    2-5    BUSINESS DAYS
+        Definition includes stock deals    61 rows     50    PERCENT
+
+    Unfiltered, the median of all 809 is `4` — not a wrong quantity, not a quantity at all.
+    The measure's own description in `cube/model/deal_points.yml` already says so: "Filter by
+    deal_point_name first or this mixes days, months and percents into one meaningless
+    number." There is even a test asserting that descriptions warn like this. Nothing read the
+    warning, so the app served `4` in answer to "what's the average deal size".
+
+    A description is documentation. This is the gate.
+    """
+
+    @staticmethod
+    def _vocab() -> Vocabulary:
+        return Vocabulary(
+            measures=(
+                "deal_points.n",
+                "deal_points.median_numeric_value",
+                "deal_points.p25_numeric_value",
+                "comparable_deals.n",
+            ),
+            dimensions=("deal_points.deal_point_name", "deal_points.position"),
+        )
+
+    def test_a_bare_median_is_rejected(self) -> None:
+        with pytest.raises(InvalidSelection) as excinfo:
+            validate_selection(
+                {"measures": ["deal_points.median_numeric_value"], "dimensions": [], "filters": []},
+                self._vocab(),
+            )
+        assert "deal_point_name" in str(excinfo.value)
+
+    def test_the_message_says_why_rather_than_just_no(self) -> None:
+        """A refusal a user cannot act on is a dead end. The reason is already written in the
+        Cube model; this surfaces it instead of inventing a second wording."""
+        with pytest.raises(InvalidSelection) as excinfo:
+            validate_selection(
+                {"measures": ["deal_points.median_numeric_value"], "dimensions": [], "filters": []},
+                self._vocab(),
+            )
+        message = str(excinfo.value).lower()
+        assert "unit" in message or "days" in message
+
+    def test_filtering_to_one_deal_point_makes_it_valid(self) -> None:
+        validate_selection(
+            {
+                "measures": ["deal_points.median_numeric_value"],
+                "dimensions": [],
+                "filters": [
+                    {
+                        "member": "deal_points.deal_point_name",
+                        "operator": "equals",
+                        "values": ["Tail Period Length-Answer"],
+                    }
+                ],
+            },
+            self._vocab(),
+        )
+
+    def test_grouping_by_deal_point_also_makes_it_valid(self) -> None:
+        """One row per deal point means each median is within a single unit. Refusing this
+        would be the over-refusal that makes a gate get switched off."""
+        validate_selection(
+            {
+                "measures": ["deal_points.median_numeric_value"],
+                "dimensions": ["deal_points.deal_point_name"],
+                "filters": [],
+            },
+            self._vocab(),
+        )
+
+    def test_filtering_to_several_deal_points_is_still_rejected(self) -> None:
+        """Two deal points is two units. The mixing is the problem, not the count."""
+        with pytest.raises(InvalidSelection):
+            validate_selection(
+                {
+                    "measures": ["deal_points.median_numeric_value"],
+                    "dimensions": [],
+                    "filters": [
+                        {
+                            "member": "deal_points.deal_point_name",
+                            "operator": "equals",
+                            "values": ["Tail Period Length-Answer", "Knowledge Definition-Answer"],
+                        }
+                    ],
+                },
+                self._vocab(),
+            )
+
+    def test_every_percentile_measure_carries_the_same_requirement(self) -> None:
+        """p25 and p75 read the same column and mix the same units."""
+        with pytest.raises(InvalidSelection):
+            validate_selection(
+                {"measures": ["deal_points.p25_numeric_value"], "dimensions": [], "filters": []},
+                self._vocab(),
+            )
+
+    def test_a_plain_count_is_untouched(self) -> None:
+        """The guard must be narrow. Counts do not mix units and must not start refusing."""
+        validate_selection(
+            {"measures": ["deal_points.n"], "dimensions": [], "filters": []}, self._vocab()
+        )
+        validate_selection(
+            {"measures": ["comparable_deals.n"], "dimensions": [], "filters": []}, self._vocab()
+        )
+
+    def test_the_requirement_names_a_member_that_exists_in_the_model(self) -> None:
+        """A guard pointing at a renamed dimension would reject every selection with an error
+        naming a field nobody can add."""
+        from explorer.agent.select import REQUIRES_SCOPE
+
+        model = yaml.safe_load(
+            (pathlib.Path(__file__).resolve().parents[2] / "cube/model/deal_points.yml").read_text()
+        )
+        names = {f"deal_points.{d['name']}" for d in model["cubes"][0]["dimensions"]}
+        for measure, required in REQUIRES_SCOPE.items():
+            assert required in names, f"{measure} requires {required}, which is not in the model"
