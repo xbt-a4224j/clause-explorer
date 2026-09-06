@@ -26,6 +26,51 @@
   --accent-hover: #0550ae;   /* accent.emphasis */
   --success: #1a7f37;        /* success.fg */
 
+  /* ── MECHANISM ─────────────────────────────────────────────────────────────────────
+     Colour here encodes WHICH MECHANISM produced what you are looking at, and nothing
+     else. The app is otherwise deliberately neutral, and that neutrality had a cost: a
+     reader could not tell by looking that facet counts came from a governed semantic
+     layer while the ranking came from hybrid retrieval. That is the same complaint as
+     "an unscrupulous observer cannot see where the model is used versus a plain DB
+     query" — partly a visual problem, fixed here.
+
+     Three mechanisms, so three hues. `exact` and `meaning` are the two halves of the
+     hybrid blend, so hybrid is rendered as a gradient between them rather than as a
+     fourth colour — the picture is then literally what the arithmetic does.
+
+     All three are Primer primitives (purple.fg, orange.fg, pink.fg), and the set was
+     validated WITH `--accent` in it rather than eyeballed:
+
+       node scripts/validate_palette.js "#8250df,#bc4c00,#bf3989,#0969da" --mode light
+       lightness PASS · chroma PASS · CVD sep PASS · normal-vision PASS · contrast PASS
+
+     Teal and indigo were tried first and both FAILED the normal-vision floor against
+     --accent (ΔE 12.7 and 13.6, below 15): the accent blue owns the entire blue-purple-
+     teal region, and nothing else may live there. Every one of these is >= 5:1 on white.
+
+     Always pair the colour with its word — "bm25", "vector", "Keyword" — never colour
+     alone. The accent↔meaning pair sits at ΔE 3.5 under tritanopia, and the label is
+     what carries the meaning for that reader. */
+  --mech-governed: #8250df;        /* purple.fg  — Cube: facet counts, rollups, selections */
+  --mech-governed-bg: #fbefff;     /* purple.subtle */
+  --mech-exact: #bc4c00;           /* orange.fg  — BM25: the literal words you typed */
+  --mech-exact-bg: #fff1e5;        /* orange.subtle */
+  --mech-meaning: #bf3989;         /* pink.fg    — embeddings: deals that read alike */
+  --mech-meaning-bg: #ffeff7;      /* pink.subtle */
+
+  /* ── STATUS ────────────────────────────────────────────────────────────────────────
+     Promoted from 11 literals that had grown across shell.css while CLAUDE.md said the
+     only hardcoded hex in the codebase was two Admin status dots. The amber pair was
+     independently retyped four times, and #6a4a00/#fffaf0/#e6d8b5 were a near-miss
+     duplicate of an amber sitting four lines away. */
+  --warn: #9a6700;                 /* yellow.fg  — thin cells, suppression, a bad eval */
+  --warn-ink: #6a4500;             /* body text inside a warn panel */
+  --warn-bg: #fff8e5;              /* yellow.subtle */
+  --warn-border: #e6d3a3;
+  --danger: #d1242f;               /* danger.fg  — rejected, unreachable, failed */
+  --danger-ink: #8a1a22;
+  --danger-bg: #fff5f5;
+
   --scrim: rgba(31, 35, 40, 0.45);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;

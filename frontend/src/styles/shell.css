@@ -105,8 +105,8 @@
 .shell__dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .shell__dot--ok { background: var(--success); }
 /* Primer attention.fg / danger.fg — the dark-theme values washed out on a light canvas */
-.shell__dot--warn { background: #9a6700; }
-.shell__dot--bad { background: #d1242f; }
+.shell__dot--warn { background: var(--warn); }
+.shell__dot--bad { background: var(--danger); }
 .shell__sep { color: var(--ink-tertiary); }
 .shell__spacer { flex: 1; }
 .shell__helpbtn {
@@ -413,7 +413,7 @@ kbd {
   padding: var(--pad-md); display: flex; flex-direction: column; gap: var(--pad-sm);
 }
 .label__meta { font-size: 12px; color: var(--ink-subtle); }
-.label__disagree { color: #9a6700; font-weight: 500; }
+.label__disagree { color: var(--warn); font-weight: 500; }
 .label__predictions {
   display: flex; gap: var(--pad-lg); font-family: var(--font-mono); font-size: 12px;
 }
@@ -485,9 +485,9 @@ kbd {
   font-size: 12px; line-height: 1.5; color: var(--ink-subtle);
 }
 .label__direction strong { color: var(--ink); font-weight: 500; }
-/* #9a6700 / #fff8e5: the amber already used for thin cells and the bad eval number, so a
+/* var(--warn) / var(--warn-bg): the amber already used for thin cells and the bad eval number, so a
    number that moved the wrong way reads the same way everywhere in the app */
-.label__direction.is-down { border-left-color: #9a6700; background: #fff8e5; }
+.label__direction.is-down { border-left-color: var(--warn); background: var(--warn-bg); }
 .label__outcomecaveat { margin: 0; font-size: 12px; line-height: 1.55; color: var(--ink-subtle); }
 .label__outcomecaveat strong { color: var(--ink); font-weight: 500; }
 .label__provenance { margin: 0; font-size: 11px; color: var(--ink-tertiary); }
@@ -522,7 +522,7 @@ kbd {
 .admin__row--below td:first-child { color: var(--ink-subtle); }
 .admin__unmeasured { color: var(--ink-tertiary); font-style: italic; }
 .admin__ok { color: var(--success); }
-.admin__bad { color: #cf222e; }
+.admin__bad { color: var(--danger); }
 .admin__logbar { display: flex; gap: var(--pad-sm); align-items: center; }
 .admin__logbar select, .admin__logbar input {
   padding: 4px 8px; border: 1px solid var(--hairline-strong); border-radius: var(--radius);
@@ -672,7 +672,7 @@ kbd {
 }
 .qb__run {
   padding: 6px 12px; border: 1px solid var(--accent); border-radius: var(--radius);
-  background: var(--accent); color: #fff; font: inherit; font-size: 12px; cursor: pointer;
+  background: var(--accent); color: var(--surface-1); font: inherit; font-size: 12px; cursor: pointer;
 }
 .qb__run:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 .qb__run:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -686,8 +686,8 @@ kbd {
   padding: var(--pad-sm) var(--pad-md); border-radius: var(--radius); font-size: 12px;
   line-height: 1.5;
 }
-.qb__refused { border: 1px solid #9a6700; background: #fff8e5; color: #6a4500; }
-.qb__rejected { border: 1px solid #d1242f; background: #fff5f5; color: #8a1a22; }
+.qb__refused { border: 1px solid var(--warn); background: var(--warn-bg); color: var(--warn-ink); }
+.qb__rejected { border: 1px solid var(--danger); background: var(--danger-bg); color: var(--danger-ink); }
 .qb__refused strong, .qb__rejected strong { display: block; margin-bottom: 2px; }
 .qb__refused p, .qb__rejected p { margin: 0 0 4px; }
 
@@ -730,8 +730,8 @@ kbd {
 .facet__title > span:first-child { display: inline-flex; align-items: baseline; gap: 5px; }
 .facet__inferred {
   font-size: 9px; letter-spacing: 0.04em; text-transform: none;
-  color: var(--warn-ink, #6a4500); background: #fff8e5;
-  border: 1px solid #e6d3a3; border-radius: 3px; padding: 0 3px;
+  color: var(--warn-ink); background: var(--warn-bg);
+  border: 1px solid var(--warn-border); border-radius: 3px; padding: 0 3px;
 }
 .facet__n { font-family: var(--font-mono); text-transform: none; letter-spacing: 0; }
 /* an absence bucket states its cause; "unclassified · 3" otherwise reads as a bug */
@@ -766,13 +766,13 @@ kbd {
   min-width: 14rem;
 }
 /* the bad number is marked by border and label, not colour alone */
-.grade__tile.is-bad { border-color: #9a6700; background: #fff8e5; }
+.grade__tile.is-bad { border-color: var(--warn); background: var(--warn-bg); }
 .grade__num { font-family: var(--font-mono); font-size: 18px; color: var(--ink); }
 .grade__lbl { font-size: 11px; line-height: 1.4; color: var(--ink-subtle); }
 .scrollx { overflow-x: auto; }
 .grade__table { font-size: 11px; }
 .grade__table td { vertical-align: top; }
-.grade__row--bad td:first-child { box-shadow: inset 2px 0 0 #d1242f; }
+.grade__row--bad td:first-child { box-shadow: inset 2px 0 0 var(--danger); }
 .grade__tag {
   margin-left: 6px; font-family: var(--font-mono); font-size: 9px;
   border: 1px solid var(--hairline-strong); border-radius: 3px; padding: 0 3px;
@@ -1301,3 +1301,25 @@ kbd {
   border: 1px solid #e6d8b5;
   border-radius: var(--radius);
 }
+
+/* ── Mechanism tone ────────────────────────────────────────────────────────────────────
+   The rank control is where the two halves of retrieval are named, so it is where the
+   colours are taught. Hybrid is a gradient between the other two because that is what it
+   is: a weighted blend, not a third algorithm. Colour is carried on a 2px underline and the
+   text, never a fill — the results list below must stay the quiet reading surface it is. */
+.rank__btn { border-bottom: 2px solid transparent; }
+.rank__btn--exact.rank__btn--on   { color: var(--mech-exact);   border-bottom-color: var(--mech-exact); }
+.rank__btn--meaning.rank__btn--on { color: var(--mech-meaning); border-bottom-color: var(--mech-meaning); }
+.rank__btn--hybrid.rank__btn--on  { color: var(--ink); border-bottom-color: transparent;
+  border-image: linear-gradient(90deg, var(--mech-exact), var(--mech-meaning)) 1;
+  border-bottom-style: solid; }
+
+/* The three scores on an expanded card, each in the colour of the half that produced it.
+   `hybrid` stays ink: it is the blend, and giving it a hue of its own would imply a third
+   independent signal. */
+.card__scores dt:nth-of-type(2) { color: var(--mech-meaning); }
+.card__scores dt:nth-of-type(3) { color: var(--mech-exact); }
+
+/* Governed: every figure Cube computed. A hairline on the left of the panel, nothing more —
+   the number itself is never coloured, because a coloured number reads as a status. */
+.qb__json, .terms__caption { border-left: 2px solid var(--mech-governed); padding-left: 8px; }

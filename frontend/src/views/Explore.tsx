@@ -63,16 +63,19 @@ const EMPTY: Filters = {
 const RANKERS = [
   {
     name: 'Keyword',
+    tone: 'exact',
     alpha: 0,
     why: 'BM25 only. Finds the words you typed. Misses a deal that says the same thing differently.',
   },
   {
     name: 'Hybrid',
+    tone: 'hybrid',
     alpha: 0.5,
     why: 'Both, blended after each is normalised for this query. The default.',
   },
   {
     name: 'Meaning',
+    tone: 'meaning',
     alpha: 1,
     why: 'Embeddings only. Finds deals that read like yours, and will happily rank one that shares no words with it.',
   },
@@ -274,7 +277,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
                   type="button"
                   role="radio"
                   aria-checked={alpha === r.alpha}
-                  className={`rank__btn${alpha === r.alpha ? ' rank__btn--on' : ''}`}
+                  className={`rank__btn rank__btn--${r.tone}${alpha === r.alpha ? ' rank__btn--on' : ''}`}
                   onClick={() => setAlpha(r.alpha)}
                   title={r.why}
                 >
