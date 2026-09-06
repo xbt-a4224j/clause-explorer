@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from explorer.agent.dimension_values import dimension_values
-from explorer.agent.interpret import DEAL_POINT_TASK, classify_shape
+from explorer.agent.interpret import CHOOSE_PROMPT, DEAL_POINT_TASK, classify_shape
 from explorer.agent.pick_value import PICK_MODEL, pick_value
 from explorer.agent.select import Vocabulary, fetch_vocabulary, select_with_usage
 from explorer.agent.shape import SHAPES
@@ -142,22 +142,12 @@ def one_call_both(question: str, points: list[str], vocab: Vocabulary) -> Outcom
     )
 
 
-COMBINED_PROMPT = (
-    "You read a question about a corpus of public-target merger agreements and return two "
-    "things: the SHAPE of the answer, and which ABA deal point it is about.\n\n"
-    "SHAPE\n"
-    "distribution — how a negotiated TERM came out across the deals. The usual case. Covers "
-    "'what is market for X', 'is X usually A or B', 'how many deals have X', 'do agreements "
-    "include X', 'what share of deals X'.\n"
-    "median — a typical NUMBER for a term measured in days, months or percent.\n"
-    "count — how many agreements, with NO term named.\n"
-    "coverage — how many agreements we have an answer for on one term.\n\n"
-    "DEAL POINT\n"
-    "Terms of art map to their point: 'no-shop', 'fiduciary out', 'MAE carve-out', "
-    "'bringdown', 'tail period' each name one.\n\n"
-    "Return null for BOTH when this corpus cannot answer the question — it records negotiated "
-    "terms only, and holds no deal values in dollars, no fee amounts, and no adviser names."
-)
+# Imported, never re-typed. This was a separate literal from the one agent/interpret.py ships,
+# and they drifted: the shipped copy was a reflowed rewrite that folded "Return null for BOTH"
+# into another paragraph. It scored 23/24 here as one prompt and answered "what's the average
+# deal size in dollars" with 152 in production as another. A harness scoring a different
+# prompt than the product runs is measuring nothing.
+COMBINED_PROMPT = CHOOSE_PROMPT
 
 
 # ── variants of the winner ──────────────────────────────────────────────────────────────
@@ -317,11 +307,8 @@ def _one_call_confirmed(
     )
 
 
-CONFIRM_PROMPT = COMBINED_PROMPT + (
-    "\n\nAlso return `covers_the_question`: true only if the deal point you chose actually "
-    "answers what was asked. Choosing the closest available point and marking it false is the "
-    "right response when this taxonomy does not cover the question."
-)
+#: The self-check sentence now lives in the shipped prompt itself, so this is the same string.
+CONFIRM_PROMPT = CHOOSE_PROMPT
 
 STRATEGIES: dict[str, Strategy] = {
     "free-form (1 call)": free_form,
@@ -415,7 +402,7 @@ def grade(trials: int = 1, only: set[str] | None = None) -> None:
         )
 
     sys.stdout.flush()
-    print(f"{'strategy':<22} {'total /24':>11} {'answered /20':>13} {'$/run':>8} {'s/run':>7}")
+    print(f"{'strategy':<22} {'total':>11} {'answered /20':>13} {'$/run':>8} {'s/run':>7}")
     print("-" * 66)
     for name, totals, answered, cost, secs, _ in sorted(
         results, key=lambda r: sum(r[1]) / len(r[1])

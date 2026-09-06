@@ -58,6 +58,44 @@ Naming the missing terms in the prompt — "this taxonomy has no go-shop" — wo
 higher and would be **overfitting to this question set**. It would not survive a term nobody
 thought of, and it is the kind of thing that looks like a result and is not one.
 
+
+## Correction — the headline was measured with a broken metric
+
+**The 23/24 first published here was wrong**, and the way it was wrong is worth more than the
+number was.
+
+Grading checked only the **deal point** and ignored the **shape**. So a strategy that found the
+right term and then chose `coverage` instead of `distribution` scored as correct — while the
+deployed app returned `n=152`, the size of the corpus, instead of the split. A metric that reads
+half the output certifies half the system.
+
+Under shape-aware grading, on 27 questions (20 answerable, 7 that must decline), the same
+shipped prompt scores **7 of 27, with 5 of 20 answerable**. That is the honest baseline.
+
+Two prompt changes, each measured on its own:
+
+| | total /27 | answerable /20 |
+|---|---|---|
+| as first shipped | 7 | 5 |
+| drop the `coverage` shape | 8 | 6 |
+| **name `distribution` the DEFAULT and list its phrasings** | **17** | **15** |
+| **+ decline when the COMPUTATION is inexpressible** | **20** | **16** |
+
+`distribution` described merely as "the usual case" lost two thirds of the answerable questions
+to `count` and `coverage`. Naming it the default and enumerating the phrasings — "how many deals
+have X", "do agreements include X", "is X usually A or B" — more than doubled the score.
+
+The second clause covers a different kind of unanswerable: not absent DATA but absent
+COMPUTATION. "Which of these agreements is most off-market" needs a window function over a
+matters-grained score; a Cube selection describes one slice on one deal point. Before the clause
+that question returned **152**.
+
+Both are in the shipped prompt, and `evals/ask_bench.py` now imports it rather than holding its
+own copy — the two had already drifted once.
+
+**Still failing at 20/27**: one deal-point confusion (ordinary course efforts standard →
+Buyer consent requirement), two median/distribution mixups, and three of the seven declines.
+
 ## Temperature 0 is not determinism
 
 Three identical runs of the winning strategy, same prompt, same model, `temperature=0`:
@@ -74,7 +112,8 @@ runs there differed by **36 correct out of 1,704**.
 Temperature 0 is set anyway: narrowing the spread is worth having even when it does not close
 it, and a figure a partner cannot reproduce is worth less than one they can.
 
-**The honest headline is 22 ± 1 of 24, not 23.**
+**The honest headline is 20 of 27 under shape-aware grading** — see the correction above. The
+22 ± 1 figure came from the metric that ignored shape.
 
 ## What is not measured here
 

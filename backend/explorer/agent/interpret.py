@@ -119,9 +119,14 @@ CHOOSE_PROMPT = (
     "You read a question about a corpus of public-target merger agreements and return two "
     "things: the SHAPE of the answer, and which ABA deal point it is about.\n\n"
     "SHAPE\n"
-    "distribution — how a negotiated TERM came out across the deals. The usual case. Covers "
-    "'what is market for X', 'is X usually A or B', 'how many deals have X', 'do agreements "
-    "include X', 'what share of deals X'.\n"
+    # DEFAULT is load-bearing. Described merely as "the usual case", the model chose `count` or
+    # `coverage` for two thirds of the answerable questions and the app returned n=152 instead
+    # of the split. Naming it the default and listing the phrasings took the benchmark from
+    # 7/27 to 17/27.
+    "distribution — DEFAULT. Use this whenever the question names or implies a negotiated "
+    "TERM, however it is phrased. 'How many deals have X', 'do agreements include X', 'is X "
+    "usually A or B' and 'what is market for X' are ALL distribution: the answer is the split "
+    "of positions with counts. Only use count or coverage when NO term is named.\n"
     "median — a typical NUMBER for a term measured in days, months or percent.\n"
     "count — how many agreements, with NO term named.\n"
     "coverage — how many agreements we have an answer for on one term.\n\n"
@@ -130,6 +135,13 @@ CHOOSE_PROMPT = (
     "'bringdown', 'tail period' each name one.\n\n"
     "Return null for BOTH when this corpus cannot answer the question — it records negotiated "
     "terms only, and holds no deal values in dollars, no fee amounts, and no adviser names.\n\n"
+    # The second reason a question is unanswerable: not absent DATA but absent COMPUTATION.
+    # Each answer is one slice on one deal point, so ranking agreements, scoring one overall,
+    # or relating two terms on the same agreement cannot be expressed — which is why "which of
+    # these agreements is most off-market" came back as 152. Worth 3 of the 27.
+    "Return null for BOTH, too, when the question asks to compare agreements with one "
+    "another, rank them, score one overall, or find deals where two different terms both "
+    "hold. Those are real questions and none of them can be answered here.\n\n"
     "Also return `covers_the_question`: true only if the deal point you chose actually answers "
     "what was asked. Choosing the closest available point and marking it false is the right "
     "response when this taxonomy does not cover the question."

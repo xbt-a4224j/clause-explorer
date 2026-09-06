@@ -1,5 +1,5 @@
 {
-  "note": "Questions a transactional lawyer would ask of a public-target merger-agreement corpus. `deal_point` is a substring that must appear in the chosen ABA deal point; null means the corpus genuinely cannot answer, and declining is the correct behaviour. Written against the MAUD taxonomy, not against any implementation, so the same file grades every approach. Four substrings match several deal points on purpose: 'fiduciary out', 'publicly disclosed' and 'intervening event' are genuinely served by more than one ABA point, and picking any of them answers the question. Grading is substring containment for that reason.",
+  "note": "Questions a transactional lawyer would ask of a public-target merger-agreement corpus. `deal_point` is a substring that must appear in the chosen ABA deal point; null means the corpus genuinely cannot answer, and declining is the correct behaviour. Written against the MAUD taxonomy, not against any implementation, so the same file grades every approach. Four substrings match several deal points on purpose: 'fiduciary out', 'publicly disclosed' and 'intervening event' are genuinely served by more than one ABA point, and picking any of them answers the question. Grading is substring containment for that reason. Three questions were added 2026-09-06 after the app answered 'which of these 152 agreements is most off-market' with 152: they are unanswerable not because the DATA is missing but because the COMPUTATION is \u2014 ranking agreements against each other, scoring across deal points, and relating two deal points on the same agreement all need a grain or a self-join a Cube selection cannot express.",
   "questions": [
     {
       "q": "what's the ordinary course efforts standard in these deals",
@@ -118,6 +118,21 @@
     },
     {
       "q": "which law firms advised on these deals",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "which of these agreements is most off-market",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "rank the deals by how unusual their terms are",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "do all-cash deals have different fiduciary outs than all-stock deals",
       "deal_point": null,
       "shape": null
     }
