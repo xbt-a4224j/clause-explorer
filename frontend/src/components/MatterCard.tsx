@@ -224,7 +224,7 @@ function DealPoint({
     >
       {evidenceFor && (
         <p className="dp__evidence" data-testid="dp-evidence">
-          why this matter matched <strong>{evidenceFor}</strong>
+          matched on <strong>{evidenceFor}</strong>
         </p>
       )}
       <div className="dp__head">

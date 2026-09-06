@@ -190,7 +190,7 @@ kbd {
 .facet__values { display: flex; flex-direction: column; gap: 1px; }
 
 .facet__value {
-  display: flex; justify-content: space-between; gap: var(--pad-md); width: 100%;
+  display: flex; justify-content: space-between; gap: var(--pad-md); width: 100%; min-width: 0;
   padding: var(--pad-sm) var(--pad-sm);
   background: transparent; border: 0; border-radius: var(--radius);
   color: var(--ink); font-size: 13px; text-align: left; cursor: pointer;
@@ -219,13 +219,14 @@ kbd {
 .card.is-focused { box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
 .card__hit {
   display: flex; justify-content: space-between; align-items: center; gap: var(--pad-md);
+  flex-wrap: wrap; min-width: 0;
   width: 100%; padding: var(--pad-md) var(--pad-md);
   background: transparent; border: 0; color: var(--ink); text-align: left; cursor: pointer;
 }
 .card__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.card__title { font-size: 13px; }
+.card__title { font-size: 13px; min-width: 0; overflow-wrap: anywhere; flex: 1 1 18rem; }
 .card__acquirer { color: var(--ink-muted); }
-.card__meta { display: flex; align-items: center; gap: var(--pad-md); font-size: 11px; color: var(--ink-muted); }
+.card__meta { display: flex; align-items: center; gap: var(--pad-md); flex-wrap: wrap; min-width: 0; font-size: 11px; color: var(--ink-muted); }
 .card__date, .card__score { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 .tag { display: inline-flex; align-items: center; gap: var(--pad-sm); }
@@ -279,14 +280,27 @@ kbd {
 
 .dps { display: flex; flex-direction: column; gap: 1px; }
 .dp { padding: var(--pad-sm) 0; border-top: 1px solid var(--hairline); min-width: 0; }
+/* ── label-left / value-right rows, and the trap in all of them ───────────────────────────
+   These rows put a label beside a value that comes from the corpus, and corpus values are not
+   short: one MAUD answer reads "Capitalization-Other, Authority, Approval, Enforceability,
+   Organization, No MAE, Brokers' Fee, Takeover Statutes". A flex child with `white-space:
+   nowrap` and no `min-width` refuses to shrink, so the row's free space is taken entirely by
+   the value and the LABEL collapses to min-content, wrapping one character per line.
+
+   Giving only the label `min-width: 0` does not help: it makes the label shrinkable and the
+   value still unshrinkable, which is exactly how it fails. Both sides need a floor, the value
+   must be allowed to wrap, and the row must be able to break so a long value takes its own
+   line rather than squeezing its neighbour off the screen. This is the second sighting; the
+   first was the drill row on Deal Terms. */
 .dp__head {
   display: flex; justify-content: space-between; align-items: baseline;
-  gap: var(--pad-md); margin-bottom: 4px;
+  gap: var(--pad-md); margin-bottom: 4px; flex-wrap: wrap;
 }
-.dp__name { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.dp__name { font-size: 12px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; flex: 1 1 16rem; }
 .dp__position {
   font-family: var(--font-mono); font-size: 11px; color: var(--ink-subtle);
-  white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  min-width: 0; overflow-wrap: anywhere; text-align: right;
 }
 
 /* The clause is a verbatim slice of the agreement and can run to thousands of characters.
@@ -328,11 +342,12 @@ kbd {
 .term--absent { opacity: 0.72; }
 .term__hit {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--pad-md);
+  flex-wrap: wrap; min-width: 0;
   width: 100%; padding: var(--pad-md);
   background: transparent; border: 0; color: var(--ink); text-align: left; cursor: pointer;
 }
 .term__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.term__name { font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.term__name { font-size: 13px; min-width: 0; overflow-wrap: anywhere; flex: 1 1 18rem; }
 .term__figures { display: flex; align-items: baseline; gap: var(--pad-md); white-space: nowrap; }
 /* prevalence bar: a neutral second channel for the count. The WIDTH is a proportion; no figure is
    ever derived from it and the division lives in CSS, not in the view (see the DealTerms rule). */

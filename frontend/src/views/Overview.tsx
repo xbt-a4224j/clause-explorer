@@ -173,7 +173,7 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
           since thin slices are where label quality matters most and is least verifiable. And{' '}
           <strong>k-anonymity</strong> — an analyst who narrows until one matter remains has
           extracted a single party&rsquo;s negotiated term through the aggregate layer, around the
-          ethical wall, without retrieving a document. A confidentiality control, not a nicety.
+          ethical wall, without retrieving a document. It is a confidentiality control.
         </p>
       </section>
 

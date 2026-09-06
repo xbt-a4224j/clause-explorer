@@ -462,7 +462,7 @@ describe('explaining the loop (#33)', () => {
     expect(why).not.toHaveTextContent(/ranked first/i)
   })
 
-  it('gives a reason for an absent span rather than a bare line', async () => {
+  it('gives a reason for an absent span, without arguing about it', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
@@ -471,7 +471,10 @@ describe('explaining the loop (#33)', () => {
     fireEvent.click(button('Skip'))
 
     const missing = await screen.findByTestId('label-nospan')
-    expect(missing).toHaveTextContent(/whole agreement|not a failure|expected/i)
+    // the reason, stated: some deal points are answered from the agreement as a whole
+    expect(missing).toHaveTextContent(/agreement as a whole/i)
+    // and not defended. "expected, not a failure" argued with a reader who had not complained
+    expect(missing.textContent ?? '').not.toMatch(/not a failure|expected/i)
   })
 
   it('describes the buttons the tab actually has', async () => {

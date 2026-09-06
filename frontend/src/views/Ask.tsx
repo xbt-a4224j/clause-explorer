@@ -165,11 +165,9 @@ export function Ask() {
       <section className="sem__pane">
         <h3 className="sem__h">The comparison — what the other route looks like</h3>
         <p className="sem__sub" data-testid="freeform-note">
-          The freeform text-to-SQL arm is shown for contrast and{' '}
-          <strong>deliberately not run</strong>. The point is not that its SQL is wrong — it
-          is often right. The point is that there is no table like the one above for it: two
-          generated queries can be diffed against each other, never scored, so nothing tells
-          you whether the system is getting better.
+          The freeform text-to-SQL arm is shown for contrast and is not run. Its SQL is often
+          right; it has no table like the one above, because two generated queries can be diffed
+          against each other but not scored.
         </p>
         <div className="sem__cols">
           <div>

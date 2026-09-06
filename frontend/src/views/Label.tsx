@@ -190,10 +190,8 @@ export function Label() {
             <blockquote className="dp__clause">{item.quoted_text}</blockquote>
           ) : (
             <p className="dp__missing" data-testid="label-nospan">
-              No candidate span located — <strong>expected</strong>, not a failure. Some deal
-              points are answered from the agreement as a whole rather than one quotable clause.
-              Without a span you are judging the answer, not the quotation; open the matter if
-              you need the surrounding text.
+              No quotable clause: this deal point is answered from the agreement as a whole.
+              Open the matter for the surrounding text.
             </p>
           )}
 
@@ -205,7 +203,7 @@ export function Label() {
                 The two extractors <strong>disagree</strong> — the model answered{' '}
                 <span className="mono">{item.llm_prediction}</span>, the keyword baseline
                 answered <span className="mono">{item.deterministic_prediction}</span>. One of
-                them is wrong, which is why this is ranked first. Your decision settles it.
+                them is wrong.
               </>
             ) : (
               <>

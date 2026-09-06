@@ -381,8 +381,7 @@ function DisagreementChart({ labels }: { labels: CalibrationLabels | null }) {
             <>
               All {labels.labels_applied} recorded decisions. {differed} differed from the model.
               Of those, {overwroteCorrect} overwrote an answer that had been correct and{' '}
-              {differed - overwroteCorrect} swapped one wrong answer for another. The reviewer&rsquo;s
-              decision is graded rather than trusted, which is why the split is shown at all.
+              {differed - overwroteCorrect} swapped one wrong answer for another.
             </>
           )
         }
