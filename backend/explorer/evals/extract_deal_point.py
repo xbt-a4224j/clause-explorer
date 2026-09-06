@@ -20,16 +20,27 @@ from functools import lru_cache
 from typing import Any
 
 from explorer.api.logging import get_logger
+from explorer.evals.context import CONTEXT_CHARS, Passage, locate, prefix_passages, render
+from explorer.evals.fewshot import Example, as_messages
 from explorer.evals.pricing import cost_usd
 
 log = get_logger()
 
-# Contracts run 500KB+; sending one whole is neither affordable nor necessary for the y/n-style
-# points calibrated here, which are answered by defined-terms and boilerplate covenants that
-# are disproportionately front-loaded in a merger agreement. This is a real methodological
-# limitation, stated plainly rather than hidden: a deal point whose answer lives past this
-# window is not being fairly evaluated. See docs/results/calibration.md.
-CONTEXT_CHARS = 12000
+# #58: the window used to be `contract_text[:CONTEXT_CHARS]`, on the rationale that the answers
+# are "disproportionately front-loaded" in a merger agreement. Measurement did not support it —
+# on contract_10 that window is 1.6% of the agreement and contains none of the MAE definition
+# the question is about. The budget is unchanged at 12,000 characters; *which* 12,000 is now
+# decided by hybrid retrieval (`evals/context.py`). A caller that passes no passages still gets
+# the prefix, so the control run stays reproducible from this same code.
+__all__ = [
+    "CONTEXT_CHARS",
+    "Prediction",
+    "build_messages",
+    "decode_option",
+    "option_ids",
+    "predict",
+    "response_schema",
+]
 
 
 MODEL = "gpt-4o-mini"
@@ -44,6 +55,12 @@ class Prediction:
     span_start: int | None
     span_end: int | None
     tokens: int
+    # #58: what the model was actually shown, recorded per call, so a reader of the predictions
+    # file can tell a retrieval run from the prefix control without consulting the report.
+    context_mode: str = "prefix"
+    context_chars: int = 0
+    passage_count: int = 1
+    example_count: int = 0
     # #44: `tokens` alone (total) cannot be priced — gpt-4o-mini charges 4x for output, so a
     # total-token figure only bounds the cost between an all-input and an all-output extreme,
     # which is what the #28 run had to publish. Split counts make the dollar figure exact.
@@ -105,13 +122,35 @@ def decode_option(options: dict[str, str], option_id: str) -> str:
     return options.get(option_id, "")
 
 
-def _locate(contract_text: str, quote: str) -> tuple[int | None, int | None]:
-    if not quote:
-        return None, None
-    idx = contract_text.find(quote)
-    if idx == -1:
-        return None, None
-    return idx, idx + len(quote)
+def build_messages(
+    deal_point_name: str,
+    options: dict[str, str],
+    passages: list[Passage],
+    examples: list[Example] | None = None,
+) -> list[dict[str, str]]:
+    """The whole prompt, assembled without calling anything.
+
+    Order is system, then the worked examples as user/assistant pairs, then the contract under
+    test last. An example placed after the question reads as part of the document being
+    classified, which is the one arrangement that makes a few-shot prompt worse than none.
+    """
+    option_list = "\n".join(f"{key} = {value}" for key, value in options.items())
+    messages: list[dict[str, str]] = [
+        {
+            "role": "system",
+            "content": (
+                "You are labelling a merger agreement for the ABA-style deal point "
+                f'"{deal_point_name}". Choose exactly one position from the allowed set '
+                "below and answer with its id alone, then quote the exact sentence that "
+                "supports it, copied verbatim.\n\nThe agreement is supplied as excerpts, each "
+                "under the character range it was cut from. Quote only contract text, never a "
+                f"[chars ...] marker.\n\n{option_list}"
+            ),
+        }
+    ]
+    messages.extend(as_messages(examples or [], options))
+    messages.append({"role": "user", "content": render(passages)})
+    return messages
 
 
 def predict(
@@ -120,28 +159,21 @@ def predict(
     deal_point_name: str,
     allowed_positions: list[str],
     api_key: str,
+    passages: list[Passage] | None = None,
+    examples: list[Example] | None = None,
+    context_mode: str = "prefix",
 ) -> Prediction:
     client = _client(api_key)
-    context = contract_text[:CONTEXT_CHARS]
+    # No passages means the #44 behaviour, byte for byte: the first CONTEXT_CHARS characters.
+    shown = passages if passages is not None else prefix_passages(contract_text)
 
     options = option_ids(allowed_positions)
     schema = response_schema(options)
-    option_list = "\n".join(f"{key} = {value}" for key, value in options.items())
+    messages = build_messages(deal_point_name, options, shown, examples)
 
     response = client.chat.completions.create(
         model=MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are labelling a merger agreement for the ABA-style deal point "
-                    f'"{deal_point_name}". Choose exactly one position from the allowed set '
-                    "below and answer with its id alone, then quote the exact sentence that "
-                    f"supports it, copied verbatim.\n\n{option_list}"
-                ),
-            },
-            {"role": "user", "content": context},
-        ],
+        messages=messages,  # type: ignore[arg-type]
         response_format={
             "type": "json_schema",
             "json_schema": {"name": "deal_point_prediction", "schema": schema, "strict": True},
@@ -155,7 +187,7 @@ def predict(
     completion_tokens = usage.completion_tokens if usage else 0
     call_cost = cost_usd(MODEL, prompt_tokens, completion_tokens)
 
-    start, end = _locate(context, content.get("quote", ""))
+    start, end = locate(shown, contract_text, content.get("quote", ""))
     # The structured log is the audit trail the run's committed dollar figure is reconciled
     # against — CLAUDE.md requires each LLM call to log model, tokens, and cost.
     log.info(
@@ -169,6 +201,10 @@ def predict(
         completion_tokens=completion_tokens,
         cost_usd=call_cost,
         located=start is not None,
+        context_mode=context_mode,
+        context_chars=sum(p.end - p.start for p in shown),
+        passage_count=len(shown),
+        example_count=len(examples or []),
     )
     return Prediction(
         matter_id=matter_id,
@@ -178,6 +214,10 @@ def predict(
         span_start=start,
         span_end=end,
         tokens=tokens,
+        context_mode=context_mode,
+        context_chars=sum(p.end - p.start for p in shown),
+        passage_count=len(shown),
+        example_count=len(examples or []),
         model=MODEL,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,

@@ -58,6 +58,10 @@ class EmbeddingCache:
         self.path = path or CACHE_FILE
         self.api_key = api_key
         self.api_calls = 0
+        # #58: the calibration run embeds every passage of every holdout agreement, and its
+        # committed cost file has to say what that cost. Counted here because this is the only
+        # place that knows the API's own token count for the text it sent.
+        self.api_tokens = 0
         self._vectors: dict[str, np.ndarray] = _load(self.path)
         self._memory: dict[str, np.ndarray] = {}
 
@@ -104,6 +108,7 @@ class EmbeddingCache:
                 model=EMBED_MODEL, input=batch, dimensions=EMBED_DIMENSIONS
             )
             self.api_calls += 1
+            self.api_tokens += response.usage.total_tokens
             vectors.extend(np.asarray(item.embedding, dtype=EMBED_DTYPE) for item in response.data)
             get_logger().info(
                 "embeddings_created",

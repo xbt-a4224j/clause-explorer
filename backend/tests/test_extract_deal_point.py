@@ -17,7 +17,14 @@ Runs with `OPENAI_API_KEY` unset — these are pure functions, no call is made.
 
 from __future__ import annotations
 
-from explorer.evals.extract_deal_point import decode_option, option_ids, response_schema
+from explorer.evals.context import Passage
+from explorer.evals.extract_deal_point import (
+    build_messages,
+    decode_option,
+    option_ids,
+    response_schema,
+)
+from explorer.evals.fewshot import Example
 
 
 class TestOptionIds:
@@ -59,3 +66,42 @@ class TestDecodeOption:
         graded as wrong, which is what an unusable answer is."""
         assert decode_option(option_ids(["Yes"]), "p99") == ""
         assert decode_option(option_ids(["Yes"]), "") == ""
+
+
+class TestThePromptTheModelActuallyGets:
+    """#58 changed two things about the prompt: the contract text is retrieved rather than
+    truncated, and the option list is now preceded by worked examples. `build_messages` is
+    where both land, and it is pure, so the assembled prompt is checkable without a call."""
+
+    def _passages(self) -> list[Passage]:
+        return [Passage(328_710, 328_730, "Material Adverse")]
+
+    def test_with_no_examples_it_is_the_two_turn_shape_44_sent(self) -> None:
+        """The control has to remain expressible, or the before/after table compares a current
+        run against a remembered one."""
+        messages = build_messages(
+            "Some deal point", option_ids(["Yes", "No"]), self._passages(), examples=[]
+        )
+        assert [m["role"] for m in messages] == ["system", "user"]
+
+    def test_the_option_list_is_still_in_the_system_turn(self) -> None:
+        messages = build_messages("Some deal point", option_ids(["Yes", "No"]), self._passages())
+        assert "p01 = Yes" in messages[0]["content"]
+        assert "Some deal point" in messages[0]["content"]
+
+    def test_examples_come_before_the_contract_under_test(self) -> None:
+        """An example after the question reads as part of the document being classified."""
+        options = option_ids(["Yes", "No"])
+        example = Example("contract_130", "Yes", 0, 9, "some text", "some text")
+        messages = build_messages("Some deal point", options, self._passages(), [example])
+        assert [m["role"] for m in messages] == ["system", "user", "assistant", "user"]
+        assert "contract_130" in messages[1]["content"]
+        assert "Material Adverse" in messages[-1]["content"]
+
+    def test_the_contract_turn_carries_the_document_character_ranges(self) -> None:
+        """The excerpts are non-contiguous. Unmarked, three disjoint pieces of an agreement read
+        as one continuous passage."""
+        content = build_messages("Some deal point", option_ids(["Yes"]), self._passages())[-1][
+            "content"
+        ]
+        assert "328710" in content

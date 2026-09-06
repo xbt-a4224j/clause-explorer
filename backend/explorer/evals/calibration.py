@@ -50,7 +50,10 @@ import psycopg
 
 from explorer.api.logging import get_logger
 from explorer.api.settings import settings
+from explorer.evals.context import PassageIndex, retrieval_query
+from explorer.evals.fewshot import Example, select_examples
 from explorer.evals.pricing import PRICE_CHECKED_ON, PRICE_SOURCE, cost_usd
+from explorer.retrieval.embeddings import EMBED_MODEL, EmbeddingCache
 
 log = get_logger()
 
@@ -61,6 +64,19 @@ PREDICTIONS_FILE = ROOT / "docs" / "eval" / "calibration_predictions.json"
 LABEL_RESULTS_FILE = ROOT / "docs" / "results" / "calibration-labels.json"
 COST_FILE = ROOT / "docs" / "eval" / "calibration_cost.json"
 ACCURACY_FILE = ROOT / "docs" / "eval" / "calibration_accuracy.json"
+
+# The #44 run, kept as the control (#58). It is not deleted and not superseded: it is the
+# measurement of the same extractor shown the first 12,000 characters instead of the retrieved
+# ones, and the pair is only informative side by side.
+PREFIX_PREDICTIONS_FILE = ROOT / "docs" / "eval" / "calibration_predictions_prefix.json"
+PREFIX_COST_FILE = ROOT / "docs" / "eval" / "calibration_cost_prefix.json"
+PREFIX_ACCURACY_FILE = ROOT / "docs" / "eval" / "calibration_accuracy_prefix.json"
+
+# "prefix" is #44's `contract_text[:12000]`; "retrieval" is #58's hybrid-retrieved passages in
+# the same 12,000-character budget. Both run through the same harness, which is the only way
+# the two numbers are comparable.
+PREFIX_MODE = "prefix"
+RETRIEVAL_MODE = "retrieval"
 
 # Concurrency, not parallelism: these calls are I/O-bound (each waits on the OpenAI API), so
 # interleaving them is the whole win. Kept modest so a run cannot look like an attack on the
@@ -326,11 +342,44 @@ def run_cost(predictions: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def build_passage_index(text: str, cache: EmbeddingCache) -> PassageIndex:
+    """One matter's retrieval index, retried through the embedding rate limit (#58).
+
+    Embedding a single holdout agreement's passages is ~226,000 tokens. Twenty of them
+    back-to-back exceeded the org's 1,000,000 tokens-per-minute embedding limit and the first
+    full retrieval attempt died with a 429 after building four indexes — the same failure the
+    extraction loop already survives, in the one place that had no wrapper for it.
+
+    Retrying is cheap because `EmbeddingCache` keeps what already landed in memory: a second
+    attempt re-requests only the batch that failed, not the whole document.
+
+    Unlike a dropped prediction, a failure here is raised rather than swallowed. An index that
+    is missing or empty would send the model an empty contract and the run would report an
+    accuracy for a question nobody was asked.
+    """
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            return PassageIndex(text, cache=cache)
+        except Exception as failure:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            log.warning(
+                "calibration_index_retry",
+                attempt=attempt + 1,
+                error=type(failure).__name__,
+            )
+            time.sleep(2**attempt + random.random())
+    raise RuntimeError("unreachable: the loop above either returns or raises")
+
+
 def record_predictions(
     dsn: str | None = None,
     pairs: list[tuple[str, str]] | None = None,
     max_workers: int = MAX_WORKERS,
     resume: bool = False,
+    mode: str = RETRIEVAL_MODE,
+    predictions_file: Path = PREDICTIONS_FILE,
+    cost_file: Path = COST_FILE,
 ) -> list[dict[str, Any]]:
     """The only function here that calls out. Produces `calibration_predictions.json` and
     `calibration_cost.json`.
@@ -338,6 +387,11 @@ def record_predictions(
     `pairs` exists so a small, defensible sample can be run and committed when the full run's
     extrapolated cost has not been approved — the harness is the same either way, and the
     committed cost file says how many calls it actually paid for.
+
+    `mode` selects what the model is shown (#58). `RETRIEVAL_MODE` retrieves passages for the
+    deal point and adds MAUD few-shot examples from held-in matters; `PREFIX_MODE` reproduces
+    the #44 control exactly — the first 12,000 characters, zero-shot. Both write through the
+    same code, so the before/after pair compares two runs rather than a run and a memory.
     """
     from explorer.evals.extract_deal_point import predict
 
@@ -350,8 +404,8 @@ def record_predictions(
     # A resumed run keeps what already landed and prices only what it adds, so the committed
     # cost is the cost of the table rather than of one attempt at it.
     already: list[dict[str, Any]] = []
-    if resume and PREDICTIONS_FILE.is_file():
-        already = json.loads(PREDICTIONS_FILE.read_text())
+    if resume and predictions_file.is_file():
+        already = json.loads(predictions_file.read_text())
         scheduled = missing_pairs(scheduled, already)
 
     matter_ids = sorted({m for m, _ in scheduled})
@@ -391,6 +445,40 @@ def record_predictions(
 
     runnable = [(m, d) for m, d in scheduled if m in texts]
 
+    # #58. Both of these are built before the thread pool starts, deliberately:
+    #
+    # * one `PassageIndex` per matter, reused across that matter's ~90 deal points, because
+    #   rebuilding it per call would re-embed several hundred passages for identical vectors;
+    # * every query embedded once, up front, because `EmbeddingCache` is a plain dict and eight
+    #   workers arriving at the same uncached query would each pay for it.
+    examples_by_point: dict[str, list[Example]] = {}
+    indexes: dict[str, PassageIndex] = {}
+    queries: dict[str, str] = {}
+    cache = EmbeddingCache(api_key=api_key)
+    if mode == RETRIEVAL_MODE:
+        holdout = json.loads(SPLIT_FILE.read_text())["holdout_matter_ids"]
+        examples_by_point = select_examples(names, holdout, data_root=data_root, dsn=dsn)
+        log.info(
+            "calibration_examples_selected",
+            deal_points=len(names),
+            with_examples=sum(1 for v in examples_by_point.values() if v),
+            examples=sum(len(v) for v in examples_by_point.values()),
+        )
+        queries = {
+            name: retrieval_query(name, sorted(allowed_by_point.get(name, set()))) for name in names
+        }
+        cache.embed_many(sorted(set(queries.values())))
+        for matter_id in sorted({m for m, _ in runnable}):
+            started = time.time()
+            indexes[matter_id] = build_passage_index(texts[matter_id], cache=cache)
+            log.info(
+                "calibration_index_built",
+                matter_id=matter_id,
+                chars=len(texts[matter_id]),
+                passages=len(indexes[matter_id].passages),
+                seconds=round(time.time() - started, 2),
+            )
+
     def one(pair: tuple[str, str]) -> dict[str, Any] | None:
         """A call that will not come back is dropped, not faked.
 
@@ -401,9 +489,24 @@ def record_predictions(
         """
         matter_id, deal_point = pair
         allowed = sorted(allowed_by_point.get(deal_point, set()))
+        passages = (
+            indexes[matter_id].search(queries[deal_point]) if mode == RETRIEVAL_MODE else None
+        )
+        examples = examples_by_point.get(deal_point, [])
         for attempt in range(MAX_ATTEMPTS):
             try:
-                return asdict(predict(matter_id, texts[matter_id], deal_point, allowed, api_key))
+                return asdict(
+                    predict(
+                        matter_id,
+                        texts[matter_id],
+                        deal_point,
+                        allowed,
+                        api_key,
+                        passages=passages,
+                        examples=examples,
+                        context_mode=mode,
+                    )
+                )
             except Exception as failure:  # noqa: BLE001 - any API failure is retried then dropped
                 if attempt == MAX_ATTEMPTS - 1:
                     log.warning(
@@ -424,12 +527,19 @@ def record_predictions(
 
     predictions = already + fresh
     predictions.sort(key=lambda p: (p["matter_id"], p["deal_point_name"]))
-    PREDICTIONS_FILE.write_text(json.dumps(predictions, indent=2) + "\n")
+    predictions_file.write_text(json.dumps(predictions, indent=2) + "\n")
 
     cost = run_cost(predictions)
     cost["scheduled_pairs"] = len(scheduled) + len(already)
     cost["dropped_pairs"] = cost["scheduled_pairs"] - len(predictions)
-    COST_FILE.write_text(json.dumps(cost, indent=2) + "\n")
+    cost["context_mode"] = mode
+    # Retrieval is not free: every passage of every holdout agreement is embedded once. The
+    # token count is measured by the cache, and it is recorded next to the extraction cost
+    # rather than folded into it, because they are different models at different prices.
+    cost["embedding_model"] = EMBED_MODEL
+    cost["embedding_api_calls"] = cache.api_calls
+    cost["embedding_tokens"] = cache.api_tokens
+    cost_file.write_text(json.dumps(cost, indent=2) + "\n")
     return predictions
 
 
@@ -498,15 +608,20 @@ def write_report(
     return payload
 
 
-def write_accuracy_table(summary: dict[str, Any]) -> Path:
+def write_accuracy_table(summary: dict[str, Any], out_path: Path = ACCURACY_FILE) -> Path:
     """The machine-readable table `confidence_lookup()` and the Admin view both read, so the
-    number in the UI and the number in the gate cannot drift apart."""
+    number in the UI and the number in the gate cannot drift apart.
+
+    `out_path` is a parameter so the prefix control's table can be written beside the retrieval
+    one (#58). Only the default path is read by the app; the control is there to be compared
+    against, not to be served.
+    """
     payload = {
         key: value for key, value in summary.items() if key not in {"results", "deal_point_count"}
     }
     payload["results"] = [asdict(r) for r in summary["results"]]
-    ACCURACY_FILE.write_text(json.dumps(payload, indent=2) + "\n")
-    return ACCURACY_FILE
+    out_path.write_text(json.dumps(payload, indent=2) + "\n")
+    return out_path
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict
+from typing import ClassVar
 
 import psycopg
 import pytest
@@ -370,3 +371,54 @@ class TestOneRealCallIsPricedEndToEnd:
         cost = run_cost([asdict(prediction)])
         assert cost["cost_usd"] == pytest.approx(prediction.cost_usd, rel=1e-3)
         assert cost["unpriced_call_count"] == 0
+
+
+class TestIndexBuildingSurvivesARateLimit:
+    """#58's first full attempt died here, not in the extraction loop.
+
+    Embedding one holdout agreement's passages is ~226,000 tokens, and twenty of them
+    back-to-back exceeded the org's 1,000,000 tokens-per-minute embedding limit:
+
+        openai.RateLimitError: Error code: 429 - Rate limit reached for
+        text-embedding-3-small ... on tokens per min (TPM): Limit 1000000, Used 958214
+
+    The extraction loop already retried with jittered backoff for exactly this reason; index
+    building had no such wrapper, so one 429 threw away the whole run. Retrying is also cheap:
+    batches that already landed are in the cache, so only the failed remainder is re-requested.
+    """
+
+    def test_a_transient_failure_is_retried_and_then_succeeds(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from explorer.evals import calibration
+
+        attempts = {"n": 0}
+
+        class Built:
+            passages: ClassVar[list[object]] = []
+
+        def flaky(text: str, cache: object) -> Built:
+            attempts["n"] += 1
+            if attempts["n"] < 3:
+                raise RuntimeError("429")
+            return Built()
+
+        monkeypatch.setattr(calibration, "PassageIndex", flaky)
+        monkeypatch.setattr(calibration.time, "sleep", lambda _seconds: None)
+        assert isinstance(calibration.build_passage_index("text", cache=None), Built)  # type: ignore[arg-type]
+        assert attempts["n"] == 3
+
+    def test_a_permanent_failure_raises_rather_than_returning_an_empty_index(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An index with no passages would silently send the model an empty contract, and the
+        run would report an accuracy for a question nobody was asked."""
+        from explorer.evals import calibration
+
+        def always_fails(text: str, cache: object) -> None:
+            raise RuntimeError("429")
+
+        monkeypatch.setattr(calibration, "PassageIndex", always_fails)
+        monkeypatch.setattr(calibration.time, "sleep", lambda _seconds: None)
+        with pytest.raises(RuntimeError):
+            calibration.build_passage_index("text", cache=None)  # type: ignore[arg-type]

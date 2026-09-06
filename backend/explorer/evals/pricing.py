@@ -14,11 +14,15 @@ from __future__ import annotations
 from typing import Final
 
 PRICE_SOURCE: Final = "https://developers.openai.com/api/docs/pricing"
-PRICE_CHECKED_ON: Final = "2026-09-03"
+PRICE_CHECKED_ON: Final = "2026-09-05"
 
 # model -> (USD per 1M input tokens, USD per 1M output tokens), standard tier (not batch).
 PRICES_USD_PER_MTOK: Final[dict[str, tuple[float, float]]] = {
     "gpt-4o-mini": (0.15, 0.60),
+    # #58 embeds every passage of every holdout agreement, so the retrieval run has an
+    # embedding bill as well as an extraction one. Embeddings have no output side; 0.0 is the
+    # published price, not a placeholder.
+    "text-embedding-3-small": (0.02, 0.0),
 }
 
 
