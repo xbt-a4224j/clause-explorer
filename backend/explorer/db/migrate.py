@@ -1,38 +1,39 @@
 """Schema application and teardown.
 
-Plain SQL rather than Alembic: the schema is small, this is the only migration, and a
-single readable .sql file is easier to review than a generated revision chain. If the
-schema starts evolving across releases, swap this for Alembic then — not before.
+The schema itself is the platform's — `quorum/db/spine.sql` — and this module applies it plus
+this domain's own `db/domain.sql`. That split is the point of the extraction: `records`, `facts`
+and `categories` are what every corpus has, and `deal_value_usd` is what this one has.
 
-`python -m explorer.db.migrate up|down|reset`
+`python -m explorer.db.migrate up|down|reset`, or `quorum migrate` for the same thing.
 """
 
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 import psycopg
+from quorum.db import migrate as apply_spine
 
 from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings
+from explorer.domain import ROOT
 
-SCHEMA = Path(__file__).with_name("schema.sql")
-
+#: Drop order: dependents first, so foreign keys do not block teardown.
 TABLES = [
-    "deal_points",
+    "facts",
     "labels",
     "selection_corrections",
     "ingest_runs",
-    "matters",
-    "industries",
+    "records",
+    "categories",
+    "corpus_claim",
 ]
 
 
 def up(dsn: str | None = None) -> None:
     with psycopg.connect(dsn or settings.database_url, autocommit=True) as conn:
-        conn.execute(SCHEMA.read_text())
-    get_logger().info("migrate_up", tables=len(TABLES))
+        applied = apply_spine(conn, ROOT)
+    get_logger().info("migrate_up", applied=applied, tables=len(TABLES))
 
 
 def down(dsn: str | None = None) -> None:
@@ -40,24 +41,25 @@ def down(dsn: str | None = None) -> None:
     with psycopg.connect(dsn or settings.database_url, autocommit=True) as conn:
         for table in TABLES:
             conn.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
-        conn.execute("DROP FUNCTION IF EXISTS touch_updated_at() CASCADE")
     get_logger().info("migrate_down", tables=len(TABLES))
 
 
-def main() -> None:
-    configure_logging(settings.log_level, to_file=False)
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "up"
-    if cmd == "up":
-        up()
-    elif cmd == "down":
-        down()
-    elif cmd == "reset":
-        down()
-        up()
-    else:
-        print(f"unknown command: {cmd} (expected up|down|reset)", file=sys.stderr)
-        raise SystemExit(2)
+def reset(dsn: str | None = None) -> None:
+    down(dsn)
+    up(dsn)
+
+
+def main(argv: list[str] | None = None) -> int:
+    configure_logging()
+    args = argv if argv is not None else sys.argv[1:]
+    command = args[0] if args else "up"
+    actions = {"up": up, "down": down, "reset": reset}
+    if command not in actions:
+        print(f"usage: python -m explorer.db.migrate [{'|'.join(actions)}]", file=sys.stderr)
+        return 64
+    actions[command]()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

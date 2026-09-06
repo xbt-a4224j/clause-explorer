@@ -51,23 +51,23 @@
 
 cubes:
   - name: matters
-    sql_table: public.matters
+    sql_table: public.records
     description: >-
       One row per merger agreement — the comparable-deals universe a partner filters when
       asking "what have we got that looks like this deal?". 152 agreements from the MAUD
       corpus, signed between 2020-03-13 and 2021-11-21.
 
     refresh_key:
-      sql: SELECT MAX(updated_at) FROM public.matters
+      sql: SELECT MAX(updated_at) FROM public.records
 
     joins:
       - name: deal_points
         relationship: one_to_many
-        sql: "{CUBE}.id = {deal_points}.matter_id"
+        sql: "{CUBE}.id = {deal_points}.record_id"
 
       - name: industries
         relationship: many_to_one
-        sql: "{CUBE}.industry_code = {industries}.code"
+        sql: "{CUBE}.category_code = {industries}.code"
 
     dimensions:
       - name: id
@@ -125,7 +125,7 @@ cubes:
 
       - name: industry_code
         title: Industry code
-        sql: industry_code
+        sql: category_code
         type: string
         description: The matter's industry code, from the SIC crosswalk. Prefer
           industries.label for anything user-facing; codes are opaque identifiers.
@@ -141,7 +141,7 @@ cubes:
 
       - name: has_industry
         title: Has an industry
-        sql: "{CUBE}.industry_code IS NOT NULL"
+        sql: "{CUBE}.category_code IS NOT NULL"
         type: boolean
         description: >-
           Whether the matter could be classified at all — TRUE for 139 of 152. Use it to state
@@ -179,9 +179,9 @@ cubes:
       # actually asks about after industry — cash deals negotiate differently from stock.
       - name: consideration_type
         sql: >
-          (SELECT dp.position FROM public.deal_points dp
-            WHERE dp.matter_id = {CUBE}.id
-              AND dp.deal_point_name = 'Type of Consideration-Answer')
+          (SELECT dp.position FROM public.facts dp
+            WHERE dp.record_id = {CUBE}.id
+              AND dp.subject = 'Type of Consideration-Answer')
         type: string
         title: Consideration
         description: >
@@ -212,14 +212,14 @@ cubes:
           number that must accompany every figure the product reports. Unfiltered it is 152.
 
   - name: industries
-    sql_table: public.industries
+    sql_table: public.categories
     description: >-
       The industry vocabulary, joined to matters so the product facets on labels rather than
       opaque codes. Seeded from data/mappings/sic_to_folio.csv at ingest; 14 of its rows are
       carried by matters in this corpus.
 
     refresh_key:
-      sql: SELECT MAX(updated_at) FROM public.industries
+      sql: SELECT MAX(updated_at) FROM public.categories
 
     dimensions:
       - name: code

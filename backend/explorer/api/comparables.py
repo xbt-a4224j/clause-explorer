@@ -113,16 +113,16 @@ SELECT m.id,
        m.is_inferred_industry,
        to_char(m.signing_date, 'YYYY-MM-DD'),
        concat_ws(' · ',
-           m.source_contract_title,
+           m.source_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
            i.label,
            to_char(m.signing_date, 'YYYY')
        )
-FROM matters m
-LEFT JOIN industries i ON i.code = m.industry_code
+FROM records m
+LEFT JOIN categories i ON i.code = m.category_code
 -- explicit casts: Postgres cannot infer a parameter's type from `$1 IS NULL` alone and
 -- raises AmbiguousParameter. Every filter is still a bound parameter, never interpolated.
-WHERE (%(industry)s::text IS NULL OR m.industry_code = %(industry)s::text)
+WHERE (%(industry)s::text IS NULL OR m.category_code = %(industry)s::text)
   AND (%(signed_from)s::date IS NULL OR m.signing_date >= %(signed_from)s::date)
   AND (%(signed_to)s::date IS NULL OR m.signing_date <= %(signed_to)s::date)
   AND (%(band)s::text IS NULL OR %(band)s::text = 'unknown')
@@ -131,9 +131,9 @@ WHERE (%(industry)s::text IS NULL OR m.industry_code = %(industry)s::text)
   -- facet rail counts with; two definitions would let the rail and the list disagree, which is
   -- exactly what happened while this clause was missing.
   AND (%(consideration)s::text IS NULL OR EXISTS (
-        SELECT 1 FROM public.deal_points dp
-         WHERE dp.matter_id = m.id
-           AND dp.deal_point_name = 'Type of Consideration-Answer'
+        SELECT 1 FROM public.facts dp
+         WHERE dp.record_id = m.id
+           AND dp.subject = 'Type of Consideration-Answer'
            AND dp.position = %(consideration)s::text))
 ORDER BY m.id
 """
@@ -143,7 +143,7 @@ def _label_for(conn: psycopg.Connection, code: str | None) -> str | None:
     """The display label for a code, or None when the code is not in the vocabulary."""
     if not code:
         return None
-    row = conn.execute("SELECT label FROM industries WHERE code = %s", (code,)).fetchone()
+    row = conn.execute("SELECT label FROM categories WHERE code = %s", (code,)).fetchone()
     return str(row[0]) if row else None
 
 

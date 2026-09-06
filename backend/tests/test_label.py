@@ -25,7 +25,7 @@ DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM matters").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM records").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 

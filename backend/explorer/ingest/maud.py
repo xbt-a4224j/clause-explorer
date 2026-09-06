@@ -346,30 +346,30 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
 
 
 UPSERT_MATTER = """
-INSERT INTO matters (id, source_file, source_contract_title, corpus)
+INSERT INTO records (id, source_file, source_title, corpus)
 VALUES (%s, %s, %s, %s)
 ON CONFLICT (id) DO UPDATE SET
     source_file = EXCLUDED.source_file,
-    source_contract_title = EXCLUDED.source_contract_title,
+    source_title = EXCLUDED.source_title,
     corpus = EXCLUDED.corpus
-WHERE (matters.source_file, matters.source_contract_title, matters.corpus)
-  IS DISTINCT FROM (EXCLUDED.source_file, EXCLUDED.source_contract_title, EXCLUDED.corpus)
+WHERE (records.source_file, records.source_title, records.corpus)
+  IS DISTINCT FROM (EXCLUDED.source_file, EXCLUDED.source_title, EXCLUDED.corpus)
 """
 
 UPSERT_DEAL_POINT = """
-INSERT INTO deal_points
-    (matter_id, deal_point_name, position, numeric_value, source_span_start, source_span_end,
+INSERT INTO facts
+    (record_id, subject, position, numeric_value, source_span_start, source_span_end,
      span_kind, is_inferred)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-ON CONFLICT (matter_id, deal_point_name) DO UPDATE SET
+ON CONFLICT (record_id, subject) DO UPDATE SET
     position = EXCLUDED.position,
     numeric_value = EXCLUDED.numeric_value,
     source_span_start = EXCLUDED.source_span_start,
     source_span_end = EXCLUDED.source_span_end,
     span_kind = EXCLUDED.span_kind,
     is_inferred = EXCLUDED.is_inferred
-WHERE (deal_points.position, deal_points.numeric_value, deal_points.source_span_start,
-       deal_points.source_span_end, deal_points.span_kind, deal_points.is_inferred)
+WHERE (facts.position, facts.numeric_value, facts.source_span_start,
+       facts.source_span_end, facts.span_kind, facts.is_inferred)
   IS DISTINCT FROM
       (EXCLUDED.position, EXCLUDED.numeric_value, EXCLUDED.source_span_start,
        EXCLUDED.source_span_end, EXCLUDED.span_kind, EXCLUDED.is_inferred)

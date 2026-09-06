@@ -27,7 +27,7 @@ DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM industries").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM categories").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 
@@ -70,9 +70,9 @@ class TestTheLadderIsTwoTiers:
         from explorer.agent.resolve_filter_value import _industry_labels
 
         labels = _industry_labels(conn)
-        seeded = conn.execute("SELECT count(*) FROM industries").fetchone()[0]
+        seeded = conn.execute("SELECT count(*) FROM categories").fetchone()[0]
         carried = conn.execute(
-            "SELECT count(DISTINCT industry_code) FROM matters WHERE industry_code IS NOT NULL"
+            "SELECT count(DISTINCT category_code) FROM records WHERE category_code IS NOT NULL"
         ).fetchone()[0]
         assert len(labels) == carried
         assert carried < seeded

@@ -19,7 +19,7 @@ from explorer.ingest.maud_corpus import corpus_available as maud_available
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 
-TABLES = ("industries", "matters", "deal_points")
+TABLES = ("categories", "records", "facts")
 
 
 def _db_available() -> bool:
@@ -96,16 +96,16 @@ class TestIdempotency:
         """The other half: the guard must not be so tight that genuine edits go unnoticed."""
         with psycopg.connect(DSN) as conn:
             conn.execute(
-                "UPDATE deal_points SET position = position || ' (edited)' "
-                "WHERE id = (SELECT min(id) FROM deal_points)"
+                "UPDATE facts SET position = position || ' (edited)' "
+                "WHERE id = (SELECT min(id) FROM facts)"
             )
             conn.commit()
-            touched = conn.execute("SELECT max(updated_at) FROM deal_points").fetchone()[0]
-        assert touched > first_pass["deal_points"][1]
+            touched = conn.execute("SELECT max(updated_at) FROM facts").fetchone()[0]
+        assert touched > first_pass["facts"][1]
 
         run_source("maud")  # restores the row from the corpus
         with psycopg.connect(DSN) as conn:
-            restored = conn.execute("SELECT max(updated_at) FROM deal_points").fetchone()[0]
+            restored = conn.execute("SELECT max(updated_at) FROM facts").fetchone()[0]
         assert restored > touched
 
 

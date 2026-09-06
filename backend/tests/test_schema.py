@@ -47,7 +47,7 @@ def _columns(conn, table: str) -> dict[str, str]:
 class TestTablesExist:
     @pytest.mark.parametrize(
         "table",
-        ["matters", "deal_points", "industries", "labels", "ingest_runs"],
+        ["records", "facts", "categories", "labels", "ingest_runs"],
     )
     def test_table_exists(self, conn, table: str) -> None:
         assert _columns(conn, table), f"{table} is missing"
@@ -68,45 +68,45 @@ class TestDealPointsIsLong:
     """The extensibility invariant. If these fail, adding a deal point becomes a migration."""
 
     def test_has_a_deal_point_name_column(self, conn) -> None:
-        assert "deal_point_name" in _columns(conn, "deal_points")
+        assert "subject" in _columns(conn, "facts")
 
     def test_has_no_per_deal_point_columns(self, conn) -> None:
         """A wide schema would show up as columns named after specific deal points."""
-        cols = set(_columns(conn, "deal_points"))
+        cols = set(_columns(conn, "facts"))
         wide_smells = {"fiduciary_out", "ticking_fee", "go_shop", "has_fiduciary_exception"}
         assert not (cols & wide_smells), f"wide-shaped columns present: {cols & wide_smells}"
 
     def test_a_new_deal_point_needs_no_schema_change(self, conn) -> None:
         """Insert a deal point name that has never been seen; it must just be a row."""
         conn.execute(
-            "INSERT INTO matters (id, source_file, source_contract_title) "
+            "INSERT INTO records (id, source_file, source_title) "
             "VALUES ('t-long', 'test.txt', 'Test') ON CONFLICT (id) DO NOTHING"
         )
         conn.execute(
-            "INSERT INTO deal_points (matter_id, deal_point_name, position) "
+            "INSERT INTO facts (record_id, subject, position) "
             "VALUES ('t-long', 'A Deal Point Invented By This Test', 'present') "
-            "ON CONFLICT (matter_id, deal_point_name) DO NOTHING"
+            "ON CONFLICT (record_id, subject) DO NOTHING"
         )
         got = conn.execute(
-            "SELECT position FROM deal_points WHERE matter_id='t-long' "
-            "AND deal_point_name='A Deal Point Invented By This Test'"
+            "SELECT position FROM facts WHERE record_id='t-long' "
+            "AND subject='A Deal Point Invented By This Test'"
         ).fetchone()
         assert got is not None and got[0] == "present"
-        conn.execute("DELETE FROM deal_points WHERE matter_id='t-long'")
-        conn.execute("DELETE FROM matters WHERE id='t-long'")
+        conn.execute("DELETE FROM facts WHERE record_id='t-long'")
+        conn.execute("DELETE FROM records WHERE id='t-long'")
 
 
 class TestProvenanceAndInference:
     def test_matters_carry_provenance(self, conn) -> None:
-        cols = _columns(conn, "matters")
-        assert {"source_file", "source_contract_title"} <= set(cols)
+        cols = _columns(conn, "records")
+        assert {"source_file", "source_title"} <= set(cols)
 
     def test_inferred_fields_are_flagged(self, conn) -> None:
         """Industry codes come from the SIC crosswalk, so they are classifier output rather
         than ground truth. The schema says so."""
-        cols = set(_columns(conn, "matters"))
+        cols = set(_columns(conn, "records"))
         assert any(c.startswith("is_inferred") for c in cols), (
-            "no is_inferred_* column on matters; inferred data would be indistinguishable "
+            "no is_inferred_* column on records; inferred data would be indistinguishable "
             "from gold labels"
         )
 
@@ -114,17 +114,17 @@ class TestProvenanceAndInference:
 class TestUpdatedAt:
     """Cube's refresh_key (#14) is SELECT MAX(updated_at); every table needs one."""
 
-    @pytest.mark.parametrize("table", ["matters", "deal_points", "industries", "labels"])
+    @pytest.mark.parametrize("table", ["records", "facts", "categories", "labels"])
     def test_has_updated_at(self, conn, table: str) -> None:
         assert "updated_at" in _columns(conn, table)
 
     def test_updated_at_advances_on_write(self, conn) -> None:
         conn.execute(
-            "INSERT INTO matters (id, source_file, source_contract_title) "
+            "INSERT INTO records (id, source_file, source_title) "
             "VALUES ('t-touch', 'test.txt', 'Test') ON CONFLICT (id) DO NOTHING"
         )
-        before = conn.execute("SELECT updated_at FROM matters WHERE id='t-touch'").fetchone()[0]
-        conn.execute("UPDATE matters SET source_contract_title='Changed' WHERE id='t-touch'")
-        after = conn.execute("SELECT updated_at FROM matters WHERE id='t-touch'").fetchone()[0]
+        before = conn.execute("SELECT updated_at FROM records WHERE id='t-touch'").fetchone()[0]
+        conn.execute("UPDATE records SET source_title='Changed' WHERE id='t-touch'")
+        after = conn.execute("SELECT updated_at FROM records WHERE id='t-touch'").fetchone()[0]
         assert after > before, "updated_at did not advance; Cube refresh_key would go stale"
-        conn.execute("DELETE FROM matters WHERE id='t-touch'")
+        conn.execute("DELETE FROM records WHERE id='t-touch'")

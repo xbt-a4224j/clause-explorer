@@ -65,7 +65,7 @@ def allowed_positions(conn: psycopg.Connection, deal_point_name: str) -> list[st
     the read path cannot disagree about what a valid answer is.
     """
     rows = conn.execute(
-        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s", (deal_point_name,)
+        "SELECT DISTINCT position FROM facts WHERE subject = %s", (deal_point_name,)
     ).fetchall()
     return sorted({str(r[0]) for r in rows if r[0] is not None})
 
@@ -88,7 +88,7 @@ def queue() -> QueueResponse:
 
     with psycopg.connect(settings.database_url) as conn:
         source_rows = conn.execute(
-            "SELECT id, source_file FROM matters WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
+            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
         ).fetchall()
         labelled_row = conn.execute(
             "SELECT count(*) FROM labels WHERE target_kind = 'deal_point'"

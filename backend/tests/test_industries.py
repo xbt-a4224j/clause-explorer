@@ -68,16 +68,16 @@ class TestSeed:
     def test_seed_is_idempotent(self, conn) -> None:
         expected = len(industry_rows(SicIndustryMap.load()))
         seed_industries(conn)
-        first = conn.execute("SELECT count(*) FROM industries").fetchone()[0]
+        first = conn.execute("SELECT count(*) FROM categories").fetchone()[0]
         seed_industries(conn)
-        second = conn.execute("SELECT count(*) FROM industries").fetchone()[0]
+        second = conn.execute("SELECT count(*) FROM categories").fetchone()[0]
         assert first == second == expected
 
     def test_matters_join_on_the_code_not_the_label(self, conn) -> None:
         """The property the ontology was carrying, kept: the join key is opaque and stable."""
         seed_industries(conn)
         row = conn.execute(
-            "SELECT i.label FROM industries i WHERE i.code = %s",
+            "SELECT i.label FROM categories i WHERE i.code = %s",
             ("RCSG4k3ah1Pu5YgPexPgOmL",),
         ).fetchone()
         assert row is not None and row[0] == "Health Care Industry"
@@ -86,10 +86,10 @@ class TestSeed:
         """The failure this design prevents, asserted directly rather than described."""
         seed_industries(conn)
         by_label = conn.execute(
-            "SELECT count(*) FROM industries WHERE label = %s", ("Healthcare",)
+            "SELECT count(*) FROM categories WHERE label = %s", ("Healthcare",)
         ).fetchone()[0]
         by_code = conn.execute(
-            "SELECT count(*) FROM industries WHERE code = %s", ("RCSG4k3ah1Pu5YgPexPgOmL",)
+            "SELECT count(*) FROM categories WHERE code = %s", ("RCSG4k3ah1Pu5YgPexPgOmL",)
         ).fetchone()[0]
         assert (by_label, by_code) == (0, 1)
 
@@ -109,12 +109,18 @@ class TestOntologyIsGone:
         ).fetchone()[0]
         assert exists == 0, f"{table} still exists; migrate up did not drop it"
 
-    def test_matters_industry_column_is_renamed(self, conn) -> None:
+    def test_the_records_category_column_is_the_crosswalk_code(self, conn) -> None:
+        """Renamed twice, for two different reasons. #49 dropped the FOLIO ontology, so
+        `folio_industry_code` became `industry_code`; the platform extraction made the column
+        generic, so it is now `category_code` while the Cube MEMBER stays
+        `matters.industry_code` — the vocabulary a lawyer reads does not have to move because
+        the storage did."""
         cols = {
             r[0]
             for r in conn.execute(
-                "SELECT column_name FROM information_schema.columns WHERE table_name = 'matters'"
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'records'"
             )
         }
-        assert "industry_code" in cols
+        assert "category_code" in cols
         assert "folio_industry_code" not in cols
+        assert "industry_code" not in cols

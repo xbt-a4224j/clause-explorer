@@ -28,13 +28,13 @@ DEFAULT_ALPHA = float(os.getenv("HYBRID_ALPHA", "0.5"))
 MATTER_SUMMARY_SQL = """
 SELECT m.id,
        concat_ws(' · ',
-           m.source_contract_title,
+           m.source_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
            i.label,
            to_char(m.signing_date, 'YYYY')
        ) AS summary
-FROM matters m
-LEFT JOIN industries i ON i.code = m.industry_code
+FROM records m
+LEFT JOIN categories i ON i.code = m.category_code
 ORDER BY m.id
 """
 

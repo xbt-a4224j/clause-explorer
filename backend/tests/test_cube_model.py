@@ -407,7 +407,7 @@ class TestNewRowsAppearWithoutARestart:
 
         with psycopg.connect(dsn) as conn:
             conn.execute(
-                "INSERT INTO matters (id, source_file, source_contract_title, corpus, "
+                "INSERT INTO records (id, source_file, source_title, corpus, "
                 "target_name) VALUES (%s, 'probe', 'refresh_key probe (#14)', 'maud', "
                 "'REFRESH PROBE INC.')",
                 (probe,),
@@ -430,7 +430,7 @@ class TestNewRowsAppearWithoutARestart:
             assert rows[0]["matters.target_name"] == "REFRESH PROBE INC."
         finally:
             with psycopg.connect(dsn) as conn:
-                conn.execute("DELETE FROM matters WHERE id = %s", (probe,))
+                conn.execute("DELETE FROM records WHERE id = %s", (probe,))
                 conn.commit()
 
 

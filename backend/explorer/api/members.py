@@ -52,7 +52,7 @@ log = get_logger()
 #: The branch is kept as a guard against a corpus that grows past it, not as a live path.
 #:
 #:     docker exec clause-explorer-db-1 psql -U explorer -d explorer -Atc \
-#:       "select count(distinct position) from deal_points;"   ->  225
+#:       "select count(distinct position) from facts;"   ->  225
 CANDIDATE_LIMIT = 500
 
 #: Cube renders booleans as these two strings, and they are also what the dimension will accept

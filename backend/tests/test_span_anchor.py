@@ -175,8 +175,8 @@ class TestSpanKindPersists:
         with conn:
             upsert_maud(conn, [matter], [point])
             stored = conn.execute(
-                "SELECT span_kind FROM deal_points WHERE matter_id = %s", (matter.id,)
+                "SELECT span_kind FROM facts WHERE record_id = %s", (matter.id,)
             ).fetchone()
             assert stored is not None and stored[0] == "anchored"
-            conn.execute("DELETE FROM matters WHERE id = %s", (matter.id,))
+            conn.execute("DELETE FROM records WHERE id = %s", (matter.id,))
             conn.commit()

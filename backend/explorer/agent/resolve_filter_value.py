@@ -76,7 +76,7 @@ class UnresolvedFilterValue(RuntimeError):
 
 def _matter_count(conn: Connection, label: str) -> int:
     row = conn.execute(
-        "SELECT count(*) FROM matters m JOIN industries i ON i.code = m.industry_code "
+        "SELECT count(*) FROM records m JOIN categories i ON i.code = m.category_code "
         "WHERE i.label = %s",
         (label,),
     ).fetchone()
@@ -89,8 +89,8 @@ def _industry_labels(conn: Connection) -> list[str]:
     an industry nothing is tagged with must not be resolvable, because filtering on it returns
     zero rows that read as "no comparable deals"."""
     rows = conn.execute(
-        "SELECT DISTINCT i.label FROM matters m "
-        "JOIN industries i ON i.code = m.industry_code "
+        "SELECT DISTINCT i.label FROM records m "
+        "JOIN categories i ON i.code = m.category_code "
         "WHERE i.label IS NOT NULL ORDER BY i.label"
     ).fetchall()
     return [str(r[0]) for r in rows]

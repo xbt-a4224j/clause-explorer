@@ -85,7 +85,7 @@ class TestRefusingSomeoneElsesDatabase:
         """The whole point is to stop ahead of the write. A guard that reports the collision
         after 19,580 rows have landed has documented the accident, not prevented it."""
         claim_corpus(conn, name="claims-explorer")
-        before = conn.execute("SELECT count(*) FROM matters").fetchone()[0]
+        before = conn.execute("SELECT count(*) FROM records").fetchone()[0]
         with pytest.raises(ForeignCorpus):
             claim_corpus(conn)
-        assert conn.execute("SELECT count(*) FROM matters").fetchone()[0] == before
+        assert conn.execute("SELECT count(*) FROM records").fetchone()[0] == before

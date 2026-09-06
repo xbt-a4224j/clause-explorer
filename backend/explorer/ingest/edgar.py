@@ -313,9 +313,9 @@ def industry_rows(mapping: SicIndustryMap) -> list[tuple[str, str]]:
 
 
 SEED_INDUSTRY = """
-INSERT INTO industries (code, label) VALUES (%s, %s)
+INSERT INTO categories (code, label) VALUES (%s, %s)
 ON CONFLICT (code) DO UPDATE SET label = EXCLUDED.label
-WHERE industries.label IS DISTINCT FROM EXCLUDED.label
+WHERE categories.label IS DISTINCT FROM EXCLUDED.label
 """
 
 
@@ -617,15 +617,15 @@ def identify_registrant(
 
 
 UPDATE_MATTER = """
-UPDATE matters SET
+UPDATE records SET
     target_name = %s,
     acquirer_name = %s,
     signing_date = %s,
     sic_code = %s,
-    industry_code = %s,
+    category_code = %s,
     is_inferred_industry = %s
 WHERE id = %s
-  AND (target_name, acquirer_name, signing_date, sic_code, industry_code,
+  AND (target_name, acquirer_name, signing_date, sic_code, category_code,
        is_inferred_industry)
       IS DISTINCT FROM (%s, %s, %s, %s, %s, %s)
 """

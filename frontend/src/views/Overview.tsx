@@ -23,12 +23,15 @@ import { JOURNEYS, type Journey } from '../journeys'
 
 const COUNTED = [
   {
-    table: 'matters',
+    // The TABLE is the platform's generic name; the LABEL is what a lawyer calls it. That
+    // split is the whole point of the schema extraction — the storage stopped being about
+    // mergers and the vocabulary did not have to move with it.
+    table: 'records',
     label: 'matters',
     note: 'merger agreements, each with expert labels',
   },
   {
-    table: 'deal_points',
+    table: 'facts',
     label: 'deal points',
     note: 'the negotiated terms, modelled long',
   },

@@ -30,9 +30,9 @@ router = APIRouter(prefix="/tables")
 # Every browsable table, explicitly. Not "every table in the schema" — ingest metadata like
 # schema_migrations has no reason to be browsable here.
 ALLOWED_TABLES = {
-    "matters",
-    "deal_points",
-    "industries",
+    "records",
+    "facts",
+    "categories",
     "labels",
     "ingest_runs",
 }

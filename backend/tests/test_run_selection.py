@@ -437,7 +437,7 @@ class TestWhatActuallyReachesCube:
         Kept rather than deleted because the failure it guards against is real and the
         mechanism protecting against it changed.
         """
-        hostile = "All Cash'); DROP TABLE deal_points; --"
+        hostile = "All Cash'); DROP TABLE facts; --"
         from explorer.api import run_selection as rs
 
         # _capture stubs dimension_values to "open"; override it AFTER, not before

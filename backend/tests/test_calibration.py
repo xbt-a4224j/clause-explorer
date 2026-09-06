@@ -25,7 +25,7 @@ DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM deal_points").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM facts").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 
@@ -243,7 +243,7 @@ class TestFullVocabularyCoverage:
             labelled = {
                 (m, d)
                 for m, d in conn.execute(
-                    "SELECT matter_id, deal_point_name FROM deal_points WHERE matter_id = ANY(%s)",
+                    "SELECT record_id, subject FROM facts WHERE record_id = ANY(%s)",
                     (sorted(holdout),),
                 ).fetchall()
             }
@@ -346,13 +346,13 @@ class TestOneRealCallIsPricedEndToEnd:
         matter_id, deal_point = holdout_pairs()[0]
         with psycopg.connect(DSN) as conn:
             source_file = conn.execute(
-                "SELECT source_file FROM matters WHERE id = %s", (matter_id,)
+                "SELECT source_file FROM records WHERE id = %s", (matter_id,)
             ).fetchone()[0]
             allowed = sorted(
                 {
                     r[0]
                     for r in conn.execute(
-                        "SELECT DISTINCT position FROM deal_points WHERE deal_point_name = %s",
+                        "SELECT DISTINCT position FROM facts WHERE subject = %s",
                         (deal_point,),
                     ).fetchall()
                 }

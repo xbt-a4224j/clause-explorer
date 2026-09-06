@@ -77,7 +77,7 @@ VOCABULARY = Vocabulary(
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM industries").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM categories").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 

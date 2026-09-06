@@ -28,7 +28,7 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('Overview', () => {
   it('renders corpus counts from the API rather than hardcoded values', async () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 152, deal_points: 12937 }))
+    vi.stubGlobal('fetch', mockCounts({ records: 152, facts: 12937 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const strip = await screen.findByTestId('corpus-strip')
@@ -53,7 +53,7 @@ describe('Overview', () => {
   })
 
   it('exposes every diagram to assistive technology with a described mechanism', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ records: 1, facts: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     // Two, not three, since #45: `HybridRetrievalDiagram` was deleted along with the
@@ -76,7 +76,7 @@ describe('Overview', () => {
   // same claims for screen readers, so document-wide text queries here are ambiguous by
   // construction, not by accident. See the note in CLAUDE.md — three tests have broken this way.
   it('states the boundary — that this is not a document Q&A tool', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ records: 1, facts: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     const boundaries = screen.getByTestId('boundaries')
@@ -85,7 +85,7 @@ describe('Overview', () => {
   })
 
   it('explains min_n as a confidentiality control, not only a statistical one', () => {
-    vi.stubGlobal('fetch', mockCounts({ matters: 1, deal_points: 1 }))
+    vi.stubGlobal('fetch', mockCounts({ records: 1, facts: 1 }))
     render(<Overview onStartJourney={() => {}} />)
 
     // All three jobs, because naming only the statistical one is the misreading this

@@ -113,9 +113,7 @@ def wilson_interval(correct: int, n: int, z: float = 1.96) -> tuple[float, float
 def deal_point_vocabulary(dsn: str | None = None) -> list[str]:
     """Every deal point the corpus knows about, read from the data rather than hardcoded."""
     with psycopg.connect(dsn or settings.database_url) as conn:
-        rows = conn.execute(
-            "SELECT DISTINCT deal_point_name FROM deal_points ORDER BY deal_point_name"
-        ).fetchall()
+        rows = conn.execute("SELECT DISTINCT subject FROM facts ORDER BY subject").fetchall()
     return [r[0] for r in rows]
 
 
@@ -128,8 +126,8 @@ def holdout_pairs(dsn: str | None = None) -> list[tuple[str, str]]:
     holdout = json.loads(SPLIT_FILE.read_text())["holdout_matter_ids"]
     with psycopg.connect(dsn or settings.database_url) as conn:
         rows = conn.execute(
-            "SELECT matter_id, deal_point_name FROM deal_points WHERE matter_id = ANY(%(ids)s) "
-            "ORDER BY matter_id, deal_point_name",
+            "SELECT record_id, subject FROM facts WHERE record_id = ANY(%(ids)s) "
+            "ORDER BY record_id, subject",
             {"ids": holdout},
         ).fetchall()
     return [(m, d) for m, d in rows]
@@ -153,8 +151,8 @@ def actual_positions(
 ) -> dict[tuple[str, str], str]:
     with psycopg.connect(settings.database_url) as conn:
         rows = conn.execute(
-            "SELECT matter_id, deal_point_name, position FROM deal_points "
-            "WHERE matter_id = ANY(%(ids)s) AND deal_point_name = ANY(%(names)s)",
+            "SELECT record_id, subject, position FROM facts "
+            "WHERE record_id = ANY(%(ids)s) AND subject = ANY(%(names)s)",
             {"ids": matter_ids, "names": deal_point_names},
         ).fetchall()
     return {(m, d): p for m, d, p in rows}
@@ -359,13 +357,12 @@ def record_predictions(
 
     with psycopg.connect(dsn or settings.database_url) as conn:
         source_rows = conn.execute(
-            "SELECT id, source_file FROM matters WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
+            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
         ).fetchall()
         # One query for every deal point's position vocabulary, instead of one per call as the
         # #28 version did — at 1,700 calls that was 1,700 round trips for 92 distinct answers.
         position_rows = conn.execute(
-            "SELECT deal_point_name, position FROM deal_points "
-            "WHERE deal_point_name = ANY(%(names)s)",
+            "SELECT subject, position FROM facts WHERE subject = ANY(%(names)s)",
             {"names": names},
         ).fetchall()
 

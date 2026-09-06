@@ -187,9 +187,9 @@ def matter_detail(matter_id: str) -> MatterDetail:
         row = conn.execute(
             """
             SELECT m.id, m.target_name, m.acquirer_name, i.label, m.is_inferred_industry,
-                   m.signing_date, m.deal_value_usd, m.source_file, m.source_contract_title
-              FROM matters m
-              LEFT JOIN industries i ON i.code = m.industry_code
+                   m.signing_date, m.deal_value_usd, m.source_file, m.source_title
+              FROM records m
+              LEFT JOIN categories i ON i.code = m.category_code
              WHERE m.id = %(id)s
             """,
             {"id": matter_id},
@@ -203,11 +203,11 @@ def matter_detail(matter_id: str) -> MatterDetail:
 
         dp_rows = conn.execute(
             """
-            SELECT deal_point_name, position, is_inferred, numeric_value,
+            SELECT subject, position, is_inferred, numeric_value,
                    source_span_start, source_span_end
-              FROM deal_points
-             WHERE matter_id = %(id)s
-             ORDER BY deal_point_name
+              FROM facts
+             WHERE record_id = %(id)s
+             ORDER BY subject
             """,
             {"id": matter_id},
         ).fetchall()

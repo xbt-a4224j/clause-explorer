@@ -159,23 +159,21 @@ class TestLoad:
     def test_row_counts_match_what_was_parsed(self, loaded) -> None:
         matters, points = loaded
         with psycopg.connect(DSN) as conn:
-            assert conn.execute("SELECT count(*) FROM matters").fetchone()[0] == len(matters)
-            assert conn.execute("SELECT count(*) FROM deal_points").fetchone()[0] == len(points)
+            assert conn.execute("SELECT count(*) FROM records").fetchone()[0] == len(matters)
+            assert conn.execute("SELECT count(*) FROM facts").fetchone()[0] == len(points)
 
     def test_idempotent(self, loaded) -> None:
         matters, points = loaded
         with psycopg.connect(DSN) as conn:
-            before = conn.execute("SELECT count(*) FROM deal_points").fetchone()[0]
+            before = conn.execute("SELECT count(*) FROM facts").fetchone()[0]
             upsert_maud(conn, matters, points)
-            after = conn.execute("SELECT count(*) FROM deal_points").fetchone()[0]
+            after = conn.execute("SELECT count(*) FROM facts").fetchone()[0]
         assert after == before
 
     def test_deal_point_names_are_rows_not_columns(self, loaded) -> None:
         """The LONG-shape invariant, asserted against loaded data rather than the schema."""
         with psycopg.connect(DSN) as conn:
-            names = conn.execute(
-                "SELECT count(DISTINCT deal_point_name) FROM deal_points"
-            ).fetchone()[0]
+            names = conn.execute("SELECT count(DISTINCT subject) FROM facts").fetchone()[0]
         assert names == 92
 
 

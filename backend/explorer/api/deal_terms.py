@@ -417,13 +417,13 @@ def _run_drill_query(deal_point_name: str, matter_ids: list[str]) -> list[tuple[
     with psycopg.connect(settings.database_url) as conn:
         return conn.execute(
             """
-            SELECT dp.matter_id, m.target_name, dp.position,
+            SELECT dp.record_id, m.target_name, dp.position,
                    m.source_file, dp.source_span_start, dp.source_span_end
-              FROM deal_points dp
-              JOIN matters m ON m.id = dp.matter_id
-             WHERE dp.deal_point_name = %(name)s
-               AND dp.matter_id = ANY(%(ids)s)
-             ORDER BY dp.matter_id
+              FROM facts dp
+              JOIN records m ON m.id = dp.record_id
+             WHERE dp.subject = %(name)s
+               AND dp.record_id = ANY(%(ids)s)
+             ORDER BY dp.record_id
             """,
             {"name": deal_point_name, "ids": list(matter_ids)},
         ).fetchall()

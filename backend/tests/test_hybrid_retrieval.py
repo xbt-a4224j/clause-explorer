@@ -97,7 +97,7 @@ class TestTokenizer:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM matters").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM records").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 
@@ -115,7 +115,7 @@ class TestAgainstTheRealCorpus:
         index = HybridIndex.from_postgres(DSN, cache=EmbeddingCache(api_key=None))
         with psycopg.connect(DSN) as conn:
             matter_id, target, acquirer = conn.execute(
-                "SELECT id, target_name, acquirer_name FROM matters "
+                "SELECT id, target_name, acquirer_name FROM records "
                 "WHERE target_name IS NOT NULL AND acquirer_name IS NOT NULL ORDER BY id LIMIT 1"
             ).fetchone()
         top = index.search(f"{target} acquired by {acquirer}", limit=1)

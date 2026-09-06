@@ -22,7 +22,7 @@ DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:
 def _corpus_ready() -> bool:
     try:
         with psycopg.connect(DSN, connect_timeout=2) as conn:
-            return conn.execute("SELECT count(*) FROM matters").fetchone()[0] > 0
+            return conn.execute("SELECT count(*) FROM records").fetchone()[0] > 0
     except Exception:  # noqa: BLE001 - availability probe
         return False
 
@@ -41,7 +41,7 @@ class TestTableWhitelist:
         assert response.status_code == 404
 
     def test_sql_injection_in_the_table_name_is_rejected(self, client: TestClient) -> None:
-        response = client.get("/tables/matters%3B%20DROP%20TABLE%20matters/rows")
+        response = client.get("/tables/records%3B%20DROP%20TABLE%20matters/rows")
         assert response.status_code in (404, 422)
 
     # Needs the corpus, unlike its two siblings: rejecting an unknown *column* means knowing
@@ -49,19 +49,19 @@ class TestTableWhitelist:
     # assertion that runs without a database, and it is the one that matters for the whitelist.
     @needs_corpus
     def test_sorting_by_an_unknown_column_is_rejected(self, client: TestClient) -> None:
-        response = client.get("/tables/matters/rows", params={"sort": "id; DROP TABLE matters"})
+        response = client.get("/tables/records/rows", params={"sort": "id; DROP TABLE records"})
         assert response.status_code == 422
 
 
 @needs_corpus
 class TestBrowsing:
     def test_matters_returns_the_real_row_count(self, client: TestClient) -> None:
-        body = client.get("/tables/matters/rows", params={"limit": 5}).json()
+        body = client.get("/tables/records/rows", params={"limit": 5}).json()
         assert body["total_count"] == 152
         assert len(body["rows"]) == 5
 
     def test_pagination_never_returns_more_than_the_limit(self, client: TestClient) -> None:
-        body = client.get("/tables/deal_points/rows", params={"limit": 10, "offset": 20}).json()
+        body = client.get("/tables/facts/rows", params={"limit": 10, "offset": 20}).json()
         assert len(body["rows"]) == 10
 
     def test_a_limit_above_the_ceiling_is_rejected_not_silently_capped(
@@ -69,24 +69,24 @@ class TestBrowsing:
     ) -> None:
         """The AC: the frontend must never be able to load a whole table. A silent cap would
         let a client believe it asked for everything when it did not."""
-        response = client.get("/tables/deal_points/rows", params={"limit": 100000})
+        response = client.get("/tables/facts/rows", params={"limit": 100000})
         assert response.status_code == 422
 
     def test_sort_is_applied_server_side(self, client: TestClient) -> None:
         asc = client.get(
-            "/tables/matters/rows", params={"sort": "id", "dir": "asc", "limit": 3}
+            "/tables/records/rows", params={"sort": "id", "dir": "asc", "limit": 3}
         ).json()
         desc = client.get(
-            "/tables/matters/rows", params={"sort": "id", "dir": "desc", "limit": 3}
+            "/tables/records/rows", params={"sort": "id", "dir": "desc", "limit": 3}
         ).json()
         assert [r["id"] for r in asc["rows"]] != [r["id"] for r in desc["rows"]]
 
     def test_a_column_filter_narrows_the_total_count(self, client: TestClient) -> None:
-        all_rows = client.get("/tables/deal_points/rows", params={"limit": 1}).json()
+        all_rows = client.get("/tables/facts/rows", params={"limit": 1}).json()
         filtered = client.get(
-            "/tables/deal_points/rows",
+            "/tables/facts/rows",
             params={
-                "filter_column": "deal_point_name",
+                "filter_column": "subject",
                 "filter_value": "Ability to consummate",
                 "limit": 1,
             },
@@ -95,9 +95,9 @@ class TestBrowsing:
         assert filtered["total_count"] > 0
 
     def test_row_expansion_returns_the_full_record(self, client: TestClient) -> None:
-        listing = client.get("/tables/matters/rows", params={"limit": 1}).json()
+        listing = client.get("/tables/records/rows", params={"limit": 1}).json()
         row_id = listing["rows"][0]["id"]
-        full = client.get(f"/tables/matters/rows/{row_id}").json()
+        full = client.get(f"/tables/records/rows/{row_id}").json()
         assert full["id"] == row_id
         assert "source_file" in full
 
@@ -105,13 +105,13 @@ class TestBrowsing:
 @needs_corpus
 class TestSchema:
     def test_reports_column_type_and_null_count(self, client: TestClient) -> None:
-        body = client.get("/tables/matters/schema").json()
+        body = client.get("/tables/records/schema").json()
         col = next(c for c in body["columns"] if c["name"] == "deal_value_usd")
         assert col["type"]
         assert col["null_count"] == 152  # #9 open: every matter's deal value is NULL
 
     def test_row_count_is_on_the_schema_response_too(self, client: TestClient) -> None:
-        body = client.get("/tables/matters/schema").json()
+        body = client.get("/tables/records/schema").json()
         assert body["row_count"] == 152
 
 
@@ -120,7 +120,7 @@ class TestInferredFieldsAreFlagged:
     def test_the_schema_marks_which_columns_are_inferred(self, client: TestClient) -> None:
         """Consistent with the matter card (#20): is_inferred_industry etc. are flagged, same
         naming convention, read generically rather than hardcoded per table."""
-        body = client.get("/tables/matters/schema").json()
+        body = client.get("/tables/records/schema").json()
         inferred_cols = {c["name"] for c in body["columns"] if c["is_inferred_flag"]}
         assert "is_inferred_industry" in inferred_cols
         assert "target_name" not in inferred_cols

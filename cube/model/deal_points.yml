@@ -40,7 +40,7 @@
 
 cubes:
   - name: deal_points
-    sql_table: public.deal_points
+    sql_table: public.facts
     description: >-
       One row per matter per ABA deal point, as labelled by the expert annotators of the MAUD
       corpus. This is the grain for every "what was negotiated" question: how many deals took a
@@ -51,7 +51,7 @@ cubes:
     # to bump updated_at on a row whose content did not change (#11), so a no-op re-ingest
     # does not invalidate anything.
     refresh_key:
-      sql: SELECT MAX(updated_at) FROM public.deal_points
+      sql: SELECT MAX(updated_at) FROM public.facts
 
     # added in #13, once the matters cube existed. Without it Cube cannot find a join path
     # from deal_points to industries, so "fiduciary out, healthcare only" is not
@@ -59,7 +59,7 @@ cubes:
     joins:
       - name: matters
         relationship: many_to_one
-        sql: "{CUBE}.matter_id = {matters}.id"
+        sql: "{CUBE}.record_id = {matters}.id"
 
     dimensions:
       - name: id
@@ -71,7 +71,7 @@ cubes:
 
       - name: matter_id
         title: Matter
-        sql: matter_id
+        sql: record_id
         type: string
         description: >-
           The agreement this labelled deal point belongs to. Use with count_distinct_matters to
@@ -79,7 +79,10 @@ cubes:
 
       - name: deal_point_name
         title: Deal point
-        sql: deal_point_name
+        # The member keeps the legal name; the COLUMN is the platform's generic `subject`.
+        # This is the indirection working: the schema below is domain-free and the vocabulary a
+        # lawyer reads is domain-specific, and neither has to compromise for the other.
+        sql: subject
         type: string
         description: >-
           The ABA deal point being answered, e.g. "Fiduciary exception: Board determination
@@ -225,7 +228,7 @@ cubes:
       - name: count_distinct_matters
         title: Distinct agreements
         type: count_distinct
-        sql: matter_id
+        sql: record_id
         description: >-
           Exact number of distinct agreements in the selection. Use when a matter could appear
           more than once — for instance when several deal points are selected at once — and n
@@ -255,7 +258,7 @@ cubes:
       - name: matters_total
         title: Agreements in scope
         type: count_distinct
-        sql: matter_id
+        sql: record_id
         description: >-
           Alias of count_distinct_matters — "how many agreements sit in this slice". Introduced
           for the coverage grid, which #48 cut; it stays because the measure-selection eval's

@@ -33,7 +33,7 @@ services:
     depends_on:
       db: {condition: service_healthy}
     environment:
-      CLAUSE_EXPLORER_DB: postgresql://explorer:explorer@db:5432/explorer
+      QUORUM_DB: postgresql://explorer:explorer@db:5432/explorer
       CUBE_API_URL: http://cube:4000/cubejs-api/v1
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

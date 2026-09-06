@@ -1,7 +1,7 @@
 """Runtime configuration — this DEPLOYMENT, not this corpus.
 
 Every value here is env-overridable so the same image runs under compose, in CI, and locally.
-The env var names are the ones docker-compose already sets (CLAUSE_EXPLORER_DB, CUBE_API_URL),
+The env var names are the ones docker-compose already sets (QUORUM_DB, CUBE_API_URL),
 mapped explicitly rather than via a prefix convention that would silently rename both.
 
 ## What this object is no longer
@@ -72,9 +72,14 @@ class Settings(BaseSettings):
 
 def load_settings() -> Settings:
     return Settings(
-        database_url=os.getenv(
-            "CLAUSE_EXPLORER_DB",
-            "postgresql://explorer:explorer@localhost:5432/explorer",
+        # QUORUM_DB is the platform's name and what `quorum migrate` reads; CLAUSE_EXPLORER_DB
+        # is what this repo has set in compose, .env and people's shells for months. Honouring
+        # both is not indecision — the cost of breaking a working setup is paid by a person, and
+        # the benefit of a single name is paid to a document.
+        database_url=(
+            os.getenv("QUORUM_DB")
+            or os.getenv("CLAUSE_EXPLORER_DB")
+            or "postgresql://explorer:explorer@localhost:5432/explorer"
         ),
         cube_api_url=os.getenv("CUBE_API_URL", "http://localhost:4000/cubejs-api/v1"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),

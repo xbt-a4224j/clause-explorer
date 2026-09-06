@@ -31,13 +31,13 @@ from explorer.retrieval.embeddings import EmbeddingCache, content_key
 MATTER_SUMMARY_SQL = """
 SELECT m.id,
        concat_ws(' · ',
-           m.source_contract_title,
+           m.source_title,
            nullif(concat_ws(' / ', m.target_name, m.acquirer_name), ''),
            i.label,
            to_char(m.signing_date, 'YYYY')
        ) AS summary
-FROM matters m
-LEFT JOIN industries i ON i.code = m.industry_code
+FROM records m
+LEFT JOIN categories i ON i.code = m.category_code
 ORDER BY m.id
 """
 
@@ -54,8 +54,8 @@ SELECT m.target_name,
        m.acquirer_name,
        i.label AS industry,
        to_char(m.signing_date, 'YYYY') AS year
-FROM matters m
-LEFT JOIN industries i ON i.code = m.industry_code
+FROM records m
+LEFT JOIN categories i ON i.code = m.category_code
 WHERE m.target_name IS NOT NULL
   AND m.acquirer_name IS NOT NULL
   AND m.signing_date IS NOT NULL
@@ -70,8 +70,8 @@ PROBE_SAMPLE_SIZE = 30  # every nth qualifying matter, so the set is stable acro
 # free-text filter value against.
 INDUSTRY_LABEL_SQL = """
 SELECT DISTINCT i.label
-FROM matters m
-JOIN industries i ON i.code = m.industry_code
+FROM records m
+JOIN categories i ON i.code = m.category_code
 WHERE i.label IS NOT NULL
 """
 
