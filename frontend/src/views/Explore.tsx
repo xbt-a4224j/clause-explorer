@@ -53,6 +53,31 @@ const EMPTY: Filters = {
   consideration_type: null,
 }
 
+/**
+ * The three settings of one knob, named for what they do rather than for their algorithm.
+ *
+ * Both halves score the same candidate set and are min-max normalised per query before they
+ * are blended, because BM25 is unbounded and cosine sits in [0,1] — measured on this corpus,
+ * BM25's spread is about 25x cosine's, so blending the raw numbers makes alpha a decoration.
+ */
+const RANKERS = [
+  {
+    name: 'Keyword',
+    alpha: 0,
+    why: 'BM25 only. Finds the words you typed. Misses a deal that says the same thing differently.',
+  },
+  {
+    name: 'Hybrid',
+    alpha: 0.5,
+    why: 'Both, blended after each is normalised for this query. The default.',
+  },
+  {
+    name: 'Meaning',
+    alpha: 1,
+    why: 'Embeddings only. Finds deals that read like yours, and will happily rank one that shares no words with it.',
+  },
+] as const
+
 export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsumed }: Props) {
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [description, setDescription] = useState('')
@@ -62,6 +87,11 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
   const [error, setError] = useState<string | null>(null)
   const [cursor, setCursor] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
+  // The blend weight, exposed because a claim that hybrid retrieval helps is only worth
+  // something if the reader can turn each half off and watch the ranking move. The endpoint
+  // has always taken `alpha`; until now nothing on a user path sent it, so the two halves
+  // were an implementation detail rather than a thing anyone could check.
+  const [alpha, setAlpha] = useState<number>(0.5)
   const listRef = useRef<HTMLUListElement>(null)
 
   const activeCount = Object.values(filters).filter(Boolean).length
@@ -105,6 +135,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       signed_to: filters.signing_year ? `${filters.signing_year}-12-31` : null,
       deal_size_band: filters.deal_size_band,
       consideration_type: filters.consideration_type,
+      alpha,
       limit: 25,
     }
 
@@ -123,7 +154,7 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
       .finally(() => !controller.signal.aborted && setLoading(false))
 
     return () => controller.abort()
-  }, [filters, description])
+  }, [filters, description, alpha])
 
   // No client-side filtering: the server is the authority on what is in the slice, and dropping
   // rows here would put the visible list and `candidate_count` into disagreement.
@@ -228,6 +259,32 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
           <p className="explore__resolved" data-testid="resolved-query">
             {describeQuery(results, filters)}
           </p>
+        )}
+
+        {/* Only meaningful once there is a query to rank: with no description the endpoint
+            orders by matter id and every setting returns the same list, so a control that
+            appeared to do nothing would be worse than no control. */}
+        {description.trim() !== '' && (
+          <div className="rank" data-testid="rank-control">
+            <span className="rank__label">rank by</span>
+            <div className="rank__group" role="radiogroup" aria-label="ranking method">
+              {RANKERS.map((r) => (
+                <button
+                  key={r.alpha}
+                  type="button"
+                  role="radio"
+                  aria-checked={alpha === r.alpha}
+                  className={`rank__btn${alpha === r.alpha ? ' rank__btn--on' : ''}`}
+                  onClick={() => setAlpha(r.alpha)}
+                  title={r.why}
+                >
+                  {r.name}
+                  <span className="rank__alpha mono">α={r.alpha}</span>
+                </button>
+              ))}
+            </div>
+            <p className="rank__why">{RANKERS.find((r) => r.alpha === alpha)?.why}</p>
+          </div>
         )}
       </div>
 

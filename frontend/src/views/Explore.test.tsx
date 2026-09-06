@@ -380,3 +380,55 @@ describe('provenance at the point of display (#35)', () => {
     expect(await screen.findByText(/2020-03-13 to\s+2021-11-21/)).toBeInTheDocument()
   })
 })
+
+describe('the rank-by control', () => {
+  /**
+   * The repo's headline retrieval claim is that blending keyword and vector scoring beats
+   * either alone. Until this control existed the two halves were only visible as three
+   * numbers on an expanded card, which shows the arithmetic and not the consequence: nobody
+   * could turn a half off and watch the order change. These assert the control reaches the
+   * endpoint, because a knob that renders but sends nothing is the worse failure — it makes
+   * the claim look demonstrated when it is not.
+   */
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockApi())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('stays hidden until there is a description to rank', async () => {
+    const ref = createRef<HTMLInputElement>()
+    render(<Explore searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+    await screen.findByTestId('resolved-query')
+    expect(screen.queryByTestId('rank-control')).toBeNull()
+  })
+
+  it('sends the selected alpha to /comparables', async () => {
+    const ref = createRef<HTMLInputElement>()
+    render(<Explore searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+    await screen.findByTestId('resolved-query')
+
+    fireEvent.change(screen.getByLabelText('describe the deal'), {
+      target: { value: 'healthcare take-private' },
+    })
+    const control = await screen.findByTestId('rank-control')
+
+    // default is the blend
+    expect(within(control).getByRole('radio', { name: /Hybrid/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+
+    fireEvent.click(within(control).getByRole('radio', { name: /Keyword/ }))
+
+    await waitFor(() => {
+      const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls
+      const bodies = calls
+        .filter((c: unknown[]) => String(c[0]).includes('comparables'))
+        .map((c: unknown[]) => JSON.parse(String((c[1] as RequestInit).body)))
+      expect(bodies.at(-1).alpha).toBe(0)
+      expect(bodies.at(-1).description).toBe('healthcare take-private')
+    })
+  })
+})

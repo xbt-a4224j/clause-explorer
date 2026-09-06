@@ -1231,3 +1231,59 @@ kbd {
 /* A recorded decision is not a graded decision: calibration reads the labels table on its next
    run, so the reviewer is told the score has not moved yet rather than left to wonder. */
 .label__pending { color: var(--accent); }
+
+/* Explore · the rank-by control (hybrid retrieval, made visible).
+   Sits under the search box because it modifies that query and nothing else. Hidden until
+   there is a description, since ranking without one is by matter id. */
+.rank {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 2px;
+}
+.rank__label {
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
+.rank__group {
+  display: inline-flex;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.rank__btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-secondary);
+  background: var(--surface-1);
+  border: 0;
+  border-right: 1px solid var(--border-default);
+  cursor: pointer;
+}
+.rank__btn:last-child {
+  border-right: 0;
+}
+.rank__btn:hover {
+  background: var(--surface-2);
+}
+.rank__btn--on {
+  background: var(--surface-3);
+  color: var(--ink-primary);
+  font-weight: 600;
+}
+.rank__alpha {
+  font-size: 11px;
+  color: var(--ink-tertiary);
+}
+.rank__why {
+  flex: 1 1 240px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
