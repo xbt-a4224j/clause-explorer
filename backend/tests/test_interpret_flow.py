@@ -20,12 +20,9 @@ DEAL_POINTS = [
 
 
 def _run(question, shape, deal_point, points=DEAL_POINTS):
-    return interpret(
-        question,
-        classify=lambda q: shape,
-        pick=lambda raw, c: deal_point,
-        values=lambda d: points,
-    )
+    """One injected chooser: the winning strategy makes both choices in a single call, so the
+    test seam is one function rather than two."""
+    return interpret(question, choose=lambda q: (shape, deal_point))
 
 
 class TestALawyersQuestionBecomesASelection:
@@ -66,33 +63,40 @@ class TestDecliningIsAnAnswer:
     def test_no_vocabulary_means_decline_rather_than_guess(self) -> None:
         assert _run("anything", "distribution", None, points=[]) is None
 
-    def test_coverage_survives_without_a_deal_point(self) -> None:
-        """ "How many agreements are loaded" is answerable with no term named."""
-        s = _run("how many agreements do we have", "coverage", None)
-        assert s is not None
-        assert s["filters"] == []
+    def test_only_count_survives_without_a_deal_point(self) -> None:
+        """ "How many agreements are loaded" is the `count` shape and needs no term.
+
+        `coverage` without one used to be allowed and should not be: unfiltered it returns
+        12,937, the number of labelled ROWS, which reads as an agreement count and is not one.
+        A shape that silently changes what it counts is worse than a decline.
+        """
+        assert _run("how many agreements do we have", "count", None) is not None
+        assert _run("how many have an answer", "coverage", None) is None
 
 
 class TestTheChoicesAreClosed:
-    def test_the_deal_point_comes_from_the_corpus_not_the_model_text(self) -> None:
-        """The picker is offered exactly the corpus's own values, so a deal point that does not
-        exist is unrepresentable rather than merely discouraged."""
-        seen: list[list[str]] = []
+    def test_the_deal_point_enum_is_built_from_the_corpus(self) -> None:
+        """The guarantee, asserted on the schema itself with no call made: the model chooses
+        from the corpus's own deal points, so one that does not exist is undecodable."""
+        from explorer.agent.interpret import interpretation_schema
 
-        interpret(
-            "anything",
-            classify=lambda q: "distribution",
-            pick=lambda raw, c: seen.append(list(c)) or c[0],
-            values=lambda d: DEAL_POINTS,
-        )
-        assert seen == [DEAL_POINTS]
+        schema, _ = interpretation_schema({n: ["Yes", "No"] for n in DEAL_POINTS})
+        enum = schema["properties"]["deal_point"]["enum"]
+        assert set(DEAL_POINTS) <= set(enum)
+        assert None in enum, "declining must remain expressible"
 
-    def test_it_asks_for_the_deal_point_dimension_specifically(self) -> None:
-        asked: list[str] = []
-        interpret(
-            "anything",
-            classify=lambda q: "distribution",
-            pick=lambda raw, c: c[0],
-            values=lambda d: asked.append(d) or DEAL_POINTS,
-        )
-        assert asked == ["deal_points.deal_point_name"]
+    def test_a_quoted_name_is_sanitised_and_maps_back(self) -> None:
+        """`strict: true` rejects a double-quote inside an enum literal with a 400, and 16 of
+        the 92 ABA names contain one."""
+        from explorer.agent.interpret import interpretation_schema
+
+        quoted = 'War, terrorism, natural disasters, "acts of God" or force majeure-Answer'
+        schema, safe = interpretation_schema({quoted: ["Yes", "No"]})
+        enum = [e for e in schema["properties"]["deal_point"]["enum"] if e]
+        assert all('"' not in e for e in enum), "a quote in the enum is a 400 from the API"
+        assert safe[enum[0]] == quoted, "and it must map back to the real name"
+
+    def test_a_pick_the_model_says_does_not_cover_the_question_is_dropped(self) -> None:
+        """`covers_the_question: false` means the taxonomy has nothing for this — the closest
+        deal point is not an answer."""
+        assert _run("anything", "distribution", None) is None
