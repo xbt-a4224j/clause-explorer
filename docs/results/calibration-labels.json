@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-05T22:26:15+00:00",
+  "generated_at": "2026-09-06T01:58:06+00:00",
   "command": "PYTHONPATH=backend python -m explorer.evals.calibration",
   "prediction_count": 1701,
   "labels_applied": 0,

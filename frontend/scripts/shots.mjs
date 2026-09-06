@@ -21,7 +21,7 @@ const SHOTS = [
     tab: 'Overview',
     collapse: false,
     callouts: [
-      { sel: '.shell__tabgroup', text: 'the bar splits: the product, then the evidence' },
+      { sel: '.shell__tabgroup', text: 'the bar splits: the product, then the evidence for it' },
       { sel: '.jrn__who', text: 'each journey names who is asking' },
       { sel: '.jrn__run', text: 'lands on the first step, already filtered' },
     ],

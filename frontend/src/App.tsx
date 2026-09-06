@@ -74,10 +74,13 @@ export function App() {
         <nav className="shell__tabs" role="tablist" aria-label="views">
           {TABS.map((tab, i) => (
             <span key={tab.id} className="shell__tabslot">
-              {/* the divider marks where the product ends and its evidence begins */}
+              {/* The divider marks where the product ends and the evidence for it begins. It read
+                  "under the hood", which means implementation detail you may skip — the opposite
+                  of true here, since Trust is where a data owner decides whether to believe any
+                  of the four tabs to its left. */}
               {tab.group === 'under-the-hood' && TABS[i - 1]?.group === 'work' && (
                 <span className="shell__tabgroup" aria-hidden="true">
-                  under the hood
+                  evidence
                 </span>
               )}
               <button
