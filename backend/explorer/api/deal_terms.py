@@ -39,7 +39,7 @@ from typing import Any
 
 import psycopg
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from explorer.api.cube_client import CubeUnavailable
 from explorer.api.cube_client import query as cube_query
@@ -81,8 +81,23 @@ class DealTermsRequest(BaseModel):
 
 
 class DrillRequest(BaseModel):
-    record_ids: list[str] = Field(min_length=1)
+    """Either an explicit selection, or one answer of one subject across the whole corpus.
+
+    `record_ids` stays required for the Rollup path, where the selection is the thing being
+    characterized and the gate must see it. Ask has no selection — it asked a question of the
+    corpus — so it sends `position` instead and the gate counts the matters that gave that
+    answer, which is a tighter bound than the selection would have been.
+    """
+
+    record_ids: list[str] = Field(default_factory=list)
     subject: str
+    position: str | None = None
+
+    @model_validator(mode="after")
+    def _needs_a_scope(self) -> "DrillRequest":
+        if not self.record_ids and self.position is None:
+            raise ValueError("drill needs either record_ids or a position to scope the gate")
+        return self
 
 
 class Refusal(BaseModel):
@@ -180,8 +195,7 @@ def _selection_filter(record_ids: list[str]) -> list[dict[str, Any]]:
     return [{"member": MATTER_ID, "operator": "equals", "values": record_ids}]
 
 
-def _refusal(record_ids: list[str]) -> Refusal | None:
-    n = len(set(record_ids))
+def _refusal_for_n(n: int) -> Refusal | None:
     if n >= settings.min_n:
         return None
     return Refusal(
@@ -190,6 +204,10 @@ def _refusal(record_ids: list[str]) -> Refusal | None:
         threshold=settings.min_n,
         message=f"n={n} — insufficient to characterize (threshold {settings.min_n})",
     )
+
+
+def _refusal(record_ids: list[str]) -> Refusal | None:
+    return _refusal_for_n(len(set(record_ids)))
 
 
 @lru_cache(maxsize=1)
@@ -416,7 +434,31 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
     )
 
 
-def _run_drill_query(subject: str, record_ids: list[str]) -> list[tuple[Any, ...]]:
+def _position_n(subject: str, record_ids: list[str], position: str) -> int:
+    """How many of these matters actually gave this answer.
+
+    Counted before any text is fetched, because the gate has to see the slice it is protecting.
+    Passing a 152-matter selection and filtering the result to a two-matter answer would clear a
+    threshold of five and then return both matters' clause text, which is the failure
+    `_run_drill_query`'s isolation exists to prevent — one door down.
+    """
+    with psycopg.connect(settings.database_url) as conn:
+        row = conn.execute(
+            """
+            SELECT count(DISTINCT dp.record_id)
+              FROM facts dp
+             WHERE dp.subject = %(name)s
+               AND dp.position = %(position)s
+               AND (%(ids)s::text[] IS NULL OR dp.record_id = ANY(%(ids)s))
+            """,
+            {"name": subject, "position": position, "ids": list(record_ids) or None},
+        ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def _run_drill_query(
+    subject: str, record_ids: list[str], position: str | None = None
+) -> list[tuple[Any, ...]]:
     """Isolated so the min_n refusal above can be proven to run first, in tests, without a
     database — the refusal must never depend on this function having been reachable."""
     with psycopg.connect(settings.database_url) as conn:
@@ -427,10 +469,11 @@ def _run_drill_query(subject: str, record_ids: list[str]) -> list[tuple[Any, ...
               FROM facts dp
               JOIN records m ON m.id = dp.record_id
              WHERE dp.subject = %(name)s
-               AND dp.record_id = ANY(%(ids)s)
+               AND (%(ids)s::text[] IS NULL OR dp.record_id = ANY(%(ids)s))
+               AND (%(position)s::text IS NULL OR dp.position = %(position)s)
              ORDER BY dp.record_id
             """,
-            {"name": subject, "ids": list(record_ids)},
+            {"name": subject, "ids": list(record_ids) or None, "position": position},
         ).fetchall()
 
 
@@ -451,14 +494,17 @@ def drill(request: DrillRequest) -> DrillResponse:
     be decorative — nothing would stop clicking through to the individual clauses of the very
     matters the rollup declined to characterize.
     """
-    refusal = _refusal(request.record_ids)
+    refusal = _refusal(request.record_ids) if request.record_ids else None
+    if refusal is None and request.position is not None:
+        # The slice, not the selection it was drawn from. Counted with no text fetched.
+        refusal = _refusal_for_n(_position_n(request.subject, request.record_ids, request.position))
     if refusal is not None:
         log.info("deal_terms_drill_refused", selection_n=refusal.n, min_n=refusal.threshold)
         return DrillResponse(subject=request.subject, records=[], refused=True, refusal=refusal)
 
     records: list[DrillMatter] = []
     for record_id, target_name, position, source_file, start, end in _run_drill_query(
-        request.subject, request.record_ids
+        request.subject, request.record_ids, request.position
     ):
         sliced = slice_source(source_file, start, end)
         records.append(

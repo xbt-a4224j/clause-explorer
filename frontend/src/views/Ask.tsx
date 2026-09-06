@@ -7,7 +7,6 @@ import { QueryBuilder } from '../components/QueryBuilder'
 import { AskBox } from '@semantic-explorer-base/ui'
 import { SessionCost } from '@semantic-explorer-base/ui'
 import { Term } from '@semantic-explorer-base/ui'
-import { Grading } from '@semantic-explorer-base/ui'
 import { STRINGS } from '../strings'
 
 /**
@@ -296,18 +295,16 @@ export function Ask() {
         <QueryBuilder measures={catalog.measures} dimensions={catalog.dimensions} />
       </section>
 
-      <Grading />
-
       <section className="sem__pane">
-        <h3 className="sem__h">The comparison — what the other route looks like</h3>
+        <h3 className="sem__h">What a selection compiles to</h3>
         <p className="sem__sub" data-testid="freeform-note">
-          The freeform text-to-SQL arm is shown for contrast and is not run. Its SQL is often
-          right; it has no table like the one above, because two generated queries can be diffed
-          against each other but not scored.
+          The model never writes SQL. It picks four names from the catalog; Cube compiles those
+          to the query on the right. Both panes below are real — the SQL came from Cube&rsquo;s
+          own <code>/v1/sql</code> endpoint for exactly this selection.
         </p>
         <div className="sem__cols">
           <div>
-            <h4 className="sem__h4">Governed selection — what this app sends</h4>
+            <h4 className="sem__h4">What the model chose</h4>
             <pre className="qb__json">{`{
   "measures": ["deal_points.median_numeric_value"],
   "dimensions": [],
@@ -318,22 +315,21 @@ export function Ask() {
   }]
 }`}</pre>
             <p className="qb__hint">
-              Four names, all from the catalog. Wrong or right is one comparison against an
-              expected selection — which is the table above.
+              Four names, all from the catalog. Right or wrong is one comparison against an
+              expected selection, which is the table above.
             </p>
           </div>
           <div>
-            <h4 className="sem__h4">Freeform text-to-SQL — the usual approach</h4>
-            <pre className="qb__json">{`SELECT percentile_cont(0.5) WITHIN GROUP (
-         ORDER BY numeric_value)
-FROM deal_points
-WHERE deal_point_name =
-  'Initial matching rights period (COR)-Answer'
-  AND numeric_value IS NOT NULL;`}</pre>
+            <h4 className="sem__h4">What Cube ran</h4>
+            <pre className="qb__json">{`SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (
+         ORDER BY "deal_points".numeric_value)
+FROM public.facts AS "deal_points"
+WHERE ("deal_points".subject = $1)
+LIMIT 10000`}</pre>
             <p className="qb__hint">
-              Plausible, and probably right. But <code>avg</code> instead of{' '}
-              <code>percentile_cont</code> would look just as plausible and return a different
-              number — and grading that means diffing free text against free text.
+              <code>PERCENTILE_CONT</code>, never <code>avg</code> — the choice lives in the
+              model file, not in a prompt. The filter arrives as <code>$1</code>, a bound
+              parameter, so no part of the question reaches the database as text.
             </p>
           </div>
         </div>

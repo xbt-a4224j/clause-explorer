@@ -32,6 +32,17 @@ selectable:
   - comparable_deals
   - deal_points
 
+# Which slice of the corpus a question may be asked OF, as distinct from the deal point it is
+# asked ABOUT. "What are the cash-only deals in healthcare?" names both: Type of Consideration
+# is the subject, Health Care Industry is the slice. Before these existed the second half was
+# silently dropped and the corpus-wide split came back looking like the scoped answer.
+#
+# Both are closed vocabularies read from Cube, so a value is resolved against what the column
+# actually holds — a lawyer says "healthcare", the crosswalk says "Health Care Industry".
+scope_dimensions:
+  - comparable_deals.label
+  - comparable_deals.signing_year
+
 # A mean kept beside the median so a reader can see the two diverge. The dashboard wants it; the
 # agent selecting it would report the tail rather than the market.
 excluded_measures:

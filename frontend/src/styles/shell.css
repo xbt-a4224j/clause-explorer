@@ -1016,8 +1016,11 @@ kbd {
 .ask__cannotlist li { margin-bottom: 2px; }
 .ask__chipedit {
   min-width: 12ch;
-  max-width: 28ch;
-  padding: 2px 4px;
+  /* Deal point names run to 60+ characters. At 28ch the value clipped mid-word under the
+     select's own arrow, so the chip claimed a filter the reader could not finish reading. */
+  max-width: 44ch;
+  text-overflow: ellipsis;
+  padding: 2px 20px 2px 4px;
   border: 1px solid transparent;
   border-bottom-color: var(--hairline-strong);
   border-radius: 3px;

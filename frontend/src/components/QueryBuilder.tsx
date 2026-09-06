@@ -70,17 +70,17 @@ interface Example {
  */
 const EXAMPLES: Example[] = [
   {
-    question: 'How many of these agreements mention COVID-19 by name?',
+    question: 'Is a cash deal market, or do buyers pay in stock?',
     explains:
-      'Every deal point is a yes/no or graded answer a lawyer gave. This counts how many of the 152 agreements answered “present” for the pandemic-specific carve-out. The corpus is 2020–21, so this is the question the era forced into every negotiation.',
-    expect: '144 of 152',
-    measures: ['deal_points.n', 'deal_points.present_count'],
-    dimensions: [],
+      'The shape of every “what is market” question: count the agreements, split by the answer they gave, scoped to one deal point. It returns the whole distribution rather than a headline, so the disagreement stays visible — and the three rows total 149, not 152, because three agreements carry no answer on this point. The gap is shown, not absorbed into a percentage.',
+    expect: 'All Cash 89 · All Stock 39 · Mixed 21 (of 149 answered)',
+    measures: ['deal_points.n'],
+    dimensions: ['deal_points.position'],
     filters: [
       {
         member: 'deal_points.deal_point_name',
         operator: 'equals',
-        values: ['Pandemic or other public health event: Specific reference to COVID-19'],
+        values: ['Type of Consideration-Answer'],
       },
     ],
   },
@@ -100,13 +100,19 @@ const EXAMPLES: Example[] = [
     ],
   },
   {
-    question: 'How many deals do we have in each industry?',
+    question: 'What has to happen before a board can talk to another bidder?',
     explains:
-      'Industry comes from a checked-in SIC crosswalk, resolved from the SEC’s own code. Note the row with no label: 13 of 152 agreements could not be resolved to an industry at all, and they are shown rather than dropped.',
-    expect: 'Health Care 25 · Finance 25 · Manufacturing 22',
-    measures: ['comparable_deals.n'],
-    dimensions: ['comparable_deals.label'],
-    filters: [],
+      'A near-settled term, which is itself the finding: 143 of 151 agreements let the board engage on a proposal merely likely to become superior, not one that already is. The eight that demand an actual Superior Offer are the negotiated outliers — and they are the rows worth reading, which is why the answer is a distribution and not a majority verdict.',
+    expect: 'reasonably likely to be superior 143 · Acquisition Proposal only 8',
+    measures: ['deal_points.n'],
+    dimensions: ['deal_points.position'],
+    filters: [
+      {
+        member: 'deal_points.deal_point_name',
+        operator: 'equals',
+        values: ['Fiduciary exception: Board determination trigger (no shop)-Answer'],
+      },
+    ],
   },
   {
     question: 'What if I narrow it down to a single company?',

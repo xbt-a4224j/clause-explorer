@@ -205,10 +205,10 @@ describe('honesty about what the layer does not fix', () => {
     expect(caveat).toHaveTextContent(/wrong question|real number/i)
   })
 
-  it('explains that the freeform arm is not executed', async () => {
+  it('states that the model never writes SQL', async () => {
     mockCatalog()
     render(<Ask />)
-    expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/not (run|executed)/i)
+    expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/never writes SQL/i)
   })
 })
 
@@ -358,10 +358,10 @@ describe('worked examples (#37)', () => {
     render(<Ask />)
     const ex = await screen.findByTestId('qb-examples')
 
-    fireEvent.click(within(ex).getByText(/COVID-19 by name/i))
+    fireEvent.click(within(ex).getByText(/cash deal market/i))
 
-    expect(screen.getByTestId('qb-note')).toHaveTextContent(/lawyer gave|carve-out/i)
-    expect(screen.getByTestId('qb-query')).toHaveTextContent('deal_points.present_count')
+    expect(screen.getByTestId('qb-note')).toHaveTextContent(/what is market|distribution/i)
+    expect(screen.getByTestId('qb-query')).toHaveTextContent('deal_points.position')
     expect(screen.getByTestId('qb-filters')).toBeInTheDocument()
   })
 
@@ -464,82 +464,10 @@ describe('the question box and its running cost', () => {
  * five questions that should be refused; the corrections are whatever people actually asked.
  * One headline over both would hide what each is measuring.
  */
-describe('the grade over real corrections', () => {
-  function mockGrading(corrections: Record<string, unknown>) {
-    const fetchMock = vi.fn(async (url: string) => {
-      if (String(url).includes('corrections-grade')) {
-        return { ok: true, status: 200, json: async () => corrections } as Response
-      }
-      if (String(url).includes('/grading')) {
-        return { ok: true, status: 200, json: async () => GRADING } as Response
-      }
-      return { ok: true, status: 200, json: async () => CATALOG } as Response
-    })
-    vi.stubGlobal('fetch', fetchMock)
-  }
-
-  it('shows the authored row and the corrections row as two separate rows', async () => {
-    mockGrading({
-      corrections_count: 4,
-      corrections_agreed: 3,
-      corrections_accuracy: 0.75,
-      changed_field_counts: { filters: 1 },
-      note: 'Real confirmations recorded on Ask.',
-    })
-    render(<Ask />)
-    expect(await screen.findByTestId('grade-authored')).toHaveTextContent('13 of 20')
-    expect(await screen.findByTestId('grade-corrections')).toHaveTextContent('3 of 4')
-  })
-
-  it('names which part of a selection people corrected', async () => {
-    mockGrading({
-      corrections_count: 4,
-      corrections_agreed: 3,
-      corrections_accuracy: 0.75,
-      changed_field_counts: { filters: 1 },
-      note: 'Real confirmations recorded on Ask.',
-    })
-    render(<Ask />)
-    expect(await screen.findByTestId('grade-corrections')).toHaveTextContent(/filters/)
-  })
-
-  it('renders "not measured" rather than 0.00 when nothing has been recorded', async () => {
-    mockGrading({
-      corrections_count: 0,
-      corrections_agreed: 0,
-      corrections_accuracy: null,
-      changed_field_counts: {},
-      note: 'Real confirmations recorded on Ask.',
-    })
-    render(<Ask />)
-    const row = await screen.findByTestId('grade-corrections')
-    expect(row).toHaveTextContent(/not measured/i)
-    expect(row).not.toHaveTextContent('0.00')
-  })
-})
-
-describe('the offline grade (#36)', () => {
-  it('shows the grade computed from committed fixtures', async () => {
+describe('what a selection compiles to', () => {
+  it('shows the real compiled SQL, sourced from Cube rather than hand-written', async () => {
     mockCatalog()
     render(<Ask />)
-    expect(await screen.findByTestId('grade-answerable')).toHaveTextContent('13 of 20')
-  })
-
-  it('reports refusal accuracy separately rather than averaging it away', async () => {
-    mockCatalog()
-    render(<Ask />)
-    expect(await screen.findByTestId('grade-refusal')).toHaveTextContent('1 of 5')
-  })
-
-  it('states the bad refusal number as the finding, not a footnote', async () => {
-    mockCatalog()
-    render(<Ask />)
-    expect(await screen.findByTestId('grade-finding')).toHaveTextContent(/min_n|enforced in the API/i)
-  })
-
-  it('shows the freeform arm for contrast, marked as not run', async () => {
-    mockCatalog()
-    render(<Ask />)
-    expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/not run/i)
+    expect(await screen.findByTestId('freeform-note')).toHaveTextContent(/v1\/sql/i)
   })
 })

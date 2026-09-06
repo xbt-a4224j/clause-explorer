@@ -29,7 +29,7 @@ def _run(question, shape, deal_point, points=DEAL_POINTS, covers=None):
     pick as not covering the question. Pass it explicitly to exercise the decline paths.
     """
     covers = deal_point is not None if covers is None else covers
-    return interpret(question, choose=lambda q: (shape, deal_point, covers)).selection
+    return interpret(question, choose=lambda q: (shape, deal_point, covers, ())).selection
 
 
 class TestALawyersQuestionBecomesASelection:
@@ -79,7 +79,7 @@ class TestDecliningIsAnAnswer:
         """
         assert (
             interpret(
-                "how many agreements do we have", choose=lambda q: ("count", None, True)
+                "how many agreements do we have", choose=lambda q: ("count", None, True, ())
             ).selection
             is not None
         )
@@ -136,14 +136,14 @@ class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
         152, the size of the corpus.
         """
         result = interpret(
-            "what's the average deal size in dollars", choose=lambda q: ("count", None, False)
+            "what's the average deal size in dollars", choose=lambda q: ("count", None, False, ())
         )
         assert result.cannot_answer
         assert result.selection is None
 
     def test_a_genuine_count_question_still_answers(self) -> None:
         """The flag is about whether the CORPUS can answer, not whether a deal point exists."""
-        result = interpret("how many agreements are loaded", choose=lambda q: ("count", None, True))
+        result = interpret("how many agreements are loaded", choose=lambda q: ("count", None, True, ()))
         assert result.selection is not None
         assert result.selection["measures"] == ["comparable_deals.n"]
 
@@ -184,10 +184,16 @@ def test_the_prompt_assembled_from_the_manifest_is_the_benchmarked_one() -> None
     """
     from explorer.agent.interpret import CHOOSE_PROMPT
 
-    benchmarked = (
-        pathlib.Path(__file__).parent / "fixtures" / "benchmarked_prompt.txt"
-    ).read_text()
-    assert CHOOSE_PROMPT == benchmarked
+    fixtures = pathlib.Path(__file__).parent / "fixtures"
+    benchmarked = (fixtures / "benchmarked_prompt.txt").read_text()
+
+    # Two assertions, because the prompt grew a SCOPE section on 2026-09-06 and the honest
+    # statement is not "this is still the benchmarked prompt" — it is that the benchmarked text
+    # survives BYTE-FOR-BYTE as a prefix, and the appended block is new and separately pinned.
+    # 20/27 describes the prefix. It does not describe the SCOPE block, which has not been
+    # measured against the live path and must not inherit that number.
+    assert CHOOSE_PROMPT.startswith(benchmarked), "the measured text must survive unchanged"
+    assert CHOOSE_PROMPT == (fixtures / "scoped_prompt.txt").read_text()
 
 
 def test_the_domain_declares_a_separate_denominator_for_percentiles() -> None:

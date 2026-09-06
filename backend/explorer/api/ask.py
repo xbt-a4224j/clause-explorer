@@ -349,6 +349,14 @@ def _interpret_or_fall_back(
             ),
         )
 
+    if shaped.unresolved_scope:
+        # The question named a slice — "cryptocurrency deals" — that this corpus has no value
+        # for. Falling through to the wider path here answered with the corpus total, which is
+        # the same confident wrong number the `cannot_answer` branch above exists to prevent;
+        # the guard simply did not cover this second way of being unanswerable.
+        log.info("agent_ask_unresolved_scope", question=question)
+        raise HTTPException(status_code=422, detail=shaped.unresolved_scope)
+
     if shaped.selection is not None:
         # Two calls, so the reported cost is their SUM. Latency is measured around the whole
         # thing rather than summed from the parts, because that is what the user waited for.
