@@ -17,7 +17,7 @@ import statistics
 import sys
 from dataclasses import dataclass
 
-from explorer.api.settings import settings
+from explorer.domain import DOMAIN
 from explorer.ingest.maud import (
     ANCHOR_OUTCOMES,
     ANCHORED,
@@ -126,7 +126,7 @@ def report() -> str:
     spanless = [r for r in rows if r.recorded_width is None]
     recovered = sum(1 for r in spanless if r.outcome == ANCHORED)
     counts: collections.Counter[str] = collections.Counter(r.outcome for r in rows)
-    limit = settings.max_clause_chars
+    limit = DOMAIN.max_clause_chars
 
     recorded_widths = [r.recorded_width for r in spanned if r.recorded_width is not None]
     stored_widths: list[int] = []

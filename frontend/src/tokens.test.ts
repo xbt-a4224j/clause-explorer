@@ -10,43 +10,44 @@
  * that provenance is the most valuable comment in the file. A test that banned it would be
  * silenced within a week. So comments are stripped before the grep, the same distinction the
  * platform's import-boundary test makes.
+ *
+ * Sources come from `import.meta.glob`, not `node:fs`. The first version read the filesystem,
+ * which vitest ran happily and `tsc --noEmit` rejected: the app's tsconfig types browser code
+ * and carries no node builtins. Adding @types/node to satisfy one lint test would be a
+ * dependency bought for a check that can avoid needing it — and this way the test sees exactly
+ * the files Vite bundles. `vite/client` is in tsconfig `types` for the same reason: vite is
+ * already a dependency, so the glob costs nothing new.
+ *
+ * Only the TS/TSX sources are read. tokens.css is deliberately not asserted on: Vite's CSS
+ * pipeline does not return raw text for it under `?raw` in the test environment, and the
+ * emptiness guard below already stops this suite passing vacuously.
  */
 import { describe, expect, it } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const SRC = dirname(fileURLToPath(import.meta.url))
+const SOURCES = import.meta.glob('./**/*.{ts,tsx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
 
-function sources(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const full = join(dir, entry)
-    if (statSync(full).isDirectory()) return sources(full)
-    return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [full] : []
-  })
-}
-
-/** Block comments, line comments and string literals that are import paths. */
+/** Block and line comments removed, so documented provenance is not mistaken for a colour. */
 function codeOnly(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
 }
 
 const HEX = /#[0-9a-fA-F]{3,8}\b/g
 
+const components = Object.entries(SOURCES).filter(([path]) => !/\.test\.tsx?$/.test(path))
+
 describe('colour comes from tokens.css', () => {
-  const files = sources(SRC)
-
   it('finds the components to check', () => {
-    expect(files.length).toBeGreaterThan(10)
+    // Guards against the whole suite passing vacuously: a glob that matched nothing would make
+    // every assertion below trivially true, which is the failure mode of every grep-style test.
+    expect(components.length).toBeGreaterThan(10)
   })
 
-  it.each(files.map((f) => [f.slice(SRC.length + 1), f]))('%s has no hardcoded hex', (_name, path) => {
-    const found = codeOnly(readFileSync(path, 'utf8')).match(HEX) ?? []
-    expect(found).toEqual([])
+  it.each(components)('%s has no hardcoded hex', (_path, source) => {
+    expect(codeOnly(source).match(HEX) ?? []).toEqual([])
   })
 
-  it('the token file itself is where the hexes are', () => {
-    const tokens = readFileSync(join(SRC, 'styles/tokens.css'), 'utf8')
-    expect((tokens.match(HEX) ?? []).length).toBeGreaterThan(20)
-  })
 })

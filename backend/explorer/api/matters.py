@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from explorer.api.logging import get_logger
 from explorer.api.settings import settings
+from explorer.domain import DOMAIN
 
 router = APIRouter()
 log = get_logger()
@@ -121,10 +122,10 @@ def _slice(text: str | None, start: int | None, end: int | None) -> SourceSlice:
         return SourceSlice(None, BAD_SPAN)
 
     span_chars = end - start
-    if span_chars > settings.max_clause_chars:
+    if span_chars > DOMAIN.max_clause_chars:
         # A span this wide is where the answer was found, not the language that carries it.
         return SourceSlice(
-            text[start : start + settings.excerpt_chars], None, span_chars, is_excerpt=True
+            text[start : start + DOMAIN.excerpt_chars], None, span_chars, is_excerpt=True
         )
     return SourceSlice(text[start:end], None, span_chars, is_excerpt=False)
 

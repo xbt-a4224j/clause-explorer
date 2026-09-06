@@ -77,3 +77,22 @@ strings:
     it averages a column that holds several units at once — tail periods in months,
     matching-rights periods in business days, ownership thresholds in percent — so an unscoped
     percentile mixes them into a number with no unit
+
+# ── Presentation: facts about THIS corpus's documents, not about this deployment ──────────
+#
+# These lived in settings.py beside the database URL and the log level, which put a measurement
+# of MAUD's span lengths in the same object as a connection string. They are per-corpus and
+# identical on every machine, so they belong in the manifest and are not env-overridable.
+
+# Above this a recorded span is document-scale rather than clause-scale, and is shown as a
+# bounded excerpt labelled as one. Measured over this corpus: MAUD's span lengths have a median
+# of 4,658 characters and a 90th percentile of 238,949, because the annotations mark where in
+# the agreement an answer was found and for holistic deal points that is most of the document.
+# Rendering the raw slice as "the clause" showed a table of contents — the exact failure this
+# product exists to avoid, a wrong answer that looks like a finding. 6,000 sits just above the
+# median so genuinely clause-scale spans pass through whole.
+max_clause_chars: 6000
+
+# How much of a document-scale span is shown. Enough to see what kind of text the span covers;
+# short enough that nobody mistakes it for the operative language.
+excerpt_chars: 1200

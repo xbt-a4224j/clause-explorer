@@ -169,27 +169,27 @@ def test_clause_scale_span_is_returned_whole() -> None:
 
 def test_document_scale_span_is_truncated_and_flagged() -> None:
     from explorer.api.matters import _slice
-    from explorer.api.settings import settings
+    from explorer.domain import DOMAIN
 
     text = "z" * 300_000
-    span = settings.max_clause_chars + 50_000
+    span = DOMAIN.max_clause_chars + 50_000
     result = _slice(text, 0, span)
 
     assert result.is_excerpt is True
     assert result.span_chars == span
     assert result.text is not None
-    assert len(result.text) == settings.excerpt_chars
+    assert len(result.text) == DOMAIN.excerpt_chars
     # still text, not an error: the span is real, it is just not a clause
     assert result.unavailable is None
 
 
 def test_excerpt_boundary_is_inclusive_of_the_limit() -> None:
     from explorer.api.matters import _slice
-    from explorer.api.settings import settings
+    from explorer.domain import DOMAIN
 
-    text = "q" * (settings.max_clause_chars + 10)
-    exactly_at_limit = _slice(text, 0, settings.max_clause_chars)
+    text = "q" * (DOMAIN.max_clause_chars + 10)
+    exactly_at_limit = _slice(text, 0, DOMAIN.max_clause_chars)
 
     assert exactly_at_limit.is_excerpt is False
     assert exactly_at_limit.text is not None
-    assert len(exactly_at_limit.text) == settings.max_clause_chars
+    assert len(exactly_at_limit.text) == DOMAIN.max_clause_chars

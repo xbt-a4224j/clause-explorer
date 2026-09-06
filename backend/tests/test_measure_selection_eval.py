@@ -61,3 +61,34 @@ class TestScoringSeparatesAnswerableFromRefusal:
         answerable = [r for r in summary["results"] if not r.should_refuse]
         assert answerable
         assert all(r.measure_precision is not None for r in answerable)
+
+
+class TestTheBenchTracksTheProduct:
+    """The bench needs a key, so CI never runs it — and that is exactly why these exist.
+
+    `ask_bench.shipped()` reads the product's `Interpretation` and broke silently when the
+    platform extraction renamed a field on it: every gate stayed green, because the only code
+    that touched it was excluded from the gate. A harness that cannot run is a harness whose
+    results expire without anyone noticing.
+
+    These two run with no key and no network. They assert the wiring, not the accuracy.
+    """
+
+    def test_the_shipped_strategy_reads_the_fields_interpretation_actually_has(self) -> None:
+        from explorer.agent.interpret import Interpretation
+
+        result = Interpretation(selection={"measures": []}, shape="distribution", subject="X")
+        # The exact attribute access ask_bench.shipped() makes. A rename on either side fails
+        # here rather than at the next benchmark run, weeks later.
+        assert result.subject == "X"
+        assert result.shape == "distribution"
+        assert not hasattr(result, "deal_point"), (
+            "if this comes back, ask_bench must be updated with it"
+        )
+
+    def test_the_bench_imports_the_shipped_prompt_rather_than_copying_it(self) -> None:
+        from explorer.agent.interpret import CHOOSE_PROMPT
+        from explorer.evals.ask_bench import COMBINED_PROMPT, CONFIRM_PROMPT
+
+        assert CONFIRM_PROMPT is CHOOSE_PROMPT
+        assert COMBINED_PROMPT is CHOOSE_PROMPT

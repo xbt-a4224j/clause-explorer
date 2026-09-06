@@ -7,7 +7,20 @@ cannot answer them — deal value is NULL on all 152 matters, MAUD has no go-sho
 reverse-termination-fee amount, and no adviser names. Declining those is a right answer, and a
 strategy that invents a nearest match for them is worse than one that answers fewer.
 
+## The losing strategies are a RECORD, not a menu
+
+Eight of the ten entries in `STRATEGIES` lost. They stay because they are cheap — each is a
+small pure function, none runs unless named — and because a results table nobody can reproduce
+is an assertion rather than a measurement. `docs/results/ask-strategies.md` carries the numbers;
+this file is what produced them.
+
+Nothing here is a configuration option. `SHIPPED (interpret)` calls the product's own
+`interpret()` and is the only entry that describes what the app does. It IMPORTS the prompt
+rather than holding a copy, because the two drifted once: a tidied rewrite scored 23/24 here and
+then answered "what's the average deal size in dollars" with **152** on the deployed stack.
+
 Run:  PYTHONPATH=backend python -m explorer.evals.ask_bench
+Or one strategy:  ... ask_bench --only "SHIPPED (interpret)"
 """
 
 from __future__ import annotations
@@ -26,9 +39,9 @@ from explorer.agent.pick_value import PICK_MODEL, pick_value
 from explorer.agent.select import Vocabulary, fetch_vocabulary, select_with_usage
 from explorer.agent.shape import SHAPES
 from explorer.api.logging import get_logger
+from explorer.api.settings import settings
 
 log = get_logger()
-from explorer.api.settings import settings
 
 QUESTIONS = pathlib.Path(__file__).resolve().parents[3] / "docs/eval/ask_questions.json"
 DEAL_POINT_MEMBER = "deal_points.deal_point_name"
@@ -403,7 +416,7 @@ def shipped(question: str, points: list[str], vocab: Vocabulary) -> Outcome:
     usage: list[tuple[int, int]] = []
     result = interpret(question, settings.openai_api_key, usage=usage)
     return Outcome(
-        deal_point=result.deal_point,
+        deal_point=result.subject,
         shape=result.shape,
         declined=result.selection is None,
         usage=usage,
