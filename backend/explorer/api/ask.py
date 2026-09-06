@@ -311,6 +311,77 @@ def _usage(call: SelectionCall) -> AskUsage:
     )
 
 
+# ── the route, as named steps ─────────────────────────────────────────────────────────────
+#
+# This was one 130-line function doing eight things: fetch the vocabulary, check the key,
+# interpret, translate a rate limit, branch on cannot-answer, fall back, refuse a numeric leaf,
+# validate, resolve every filter value, collapse duplicates and assemble a response. Each step
+# reads fine; the sequence was impossible to see, which matters because the sequence is the
+# argument — names are guaranteed at decode time, values are resolved after, and the gate runs
+# last on whatever survived.
+#
+# Split now rather than later because these steps are exactly the seam along which the platform
+# extraction cuts: `interpret` and `resolve` are becoming semantic-quorum calls, and everything
+# else is this application.
+
+
+def _interpret_or_fall_back(
+    question: str, vocabulary: Vocabulary, usage: list[tuple[int, int]], started: float
+) -> tuple[dict[str, Any], SelectionCall]:
+    """Two closed choices, or the wider free-form path when no shape fits.
+
+    Raises HTTPException(422) when the corpus cannot answer at all — final, and deliberately not
+    a fallback. The free-form path answered "what's the average deal size in dollars" with 152,
+    a count of the corpus, after the shaped path had correctly refused. A fallback that turns a
+    refusal into a confident wrong number is not a safety net.
+    """
+    shaped = interpret(question, settings.openai_api_key, usage=usage)
+
+    if shaped.cannot_answer:
+        log.info("agent_ask_cannot_answer", question=question)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "This corpus cannot answer that. It records the negotiated terms of 152 "
+                "merger agreements and holds no deal values in dollars, no fee amounts and "
+                "no adviser names. Nothing needs repairing — the question is outside what "
+                "these documents record."
+            ),
+        )
+
+    if shaped.selection is not None:
+        # Two calls, so the reported cost is their SUM. Latency is measured around the whole
+        # thing rather than summed from the parts, because that is what the user waited for.
+        return shaped.selection, SelectionCall(
+            selection=shaped.selection,
+            model=PICK_MODEL,
+            prompt_tokens=sum(p for p, _ in usage),
+            completion_tokens=sum(c for _, c in usage),
+            latency_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
+
+    # Four shapes do not cover every answerable question — "how many deals are all cash"
+    # filters a consideration type, not a deal point — so a narrower path must not remove
+    # reach the wider one already had.
+    call = select_with_usage(question, vocabulary, settings.openai_api_key)
+    return call.selection, call
+
+
+def _refuse_a_stated_figure(selection: dict[str, Any]) -> None:
+    """The model selects; Postgres computes. A response carrying a number is refused rather
+    than stripped: one that stated a figure at all is not one to partially trust."""
+    numbers = numeric_leaves(selection)
+    if numbers:
+        log.warning("agent_ask_numeric_output", fields=numbers)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "The model returned a number, which it must never do — it selects, Postgres "
+                f"computes. Offending fields: {', '.join(numbers)}."
+            ),
+        )
+
+
 @router.post("/ask", response_model=AskResponse)
 def ask(request: AskRequest) -> AskResponse:
     try:
@@ -330,19 +401,15 @@ def ask(request: AskRequest) -> AskResponse:
             ),
         )
 
-    # Two small closed choices first — shape, then deal point. Measured 2026-09-06 on ten
-    # questions a transactional lawyer would actually ask: the free-form path below answered
-    # 0 of 10, this answers 6, and the four it declines are honest declines rather than a
-    # count served in place of a distribution. See agent/shape.py for why.
     started = time.perf_counter()
-    shaped_usage: list[tuple[int, int]] = []
+    usage: list[tuple[int, int]] = []
     try:
-        shaped = interpret(request.question, settings.openai_api_key, usage=shaped_usage)
+        selection, call = _interpret_or_fall_back(request.question, vocabulary, usage, started)
     except RateLimitError as limited:
-        # Surfaced as "an internal error occurred" until 2026-09-06, when the account's
-        # requests-per-day cap was reached mid-demo. That message is the worst one available:
-        # it is indistinguishable from a bug, so a reader retries, sees it again, and concludes
-        # the app is broken rather than that the provider is throttling.
+        # Surfaced as "an internal error occurred" until the account's requests-per-day cap was
+        # reached mid-demo. That is the worst message available here: indistinguishable from a
+        # bug, so a reader retries, sees it again, and concludes the app is broken rather than
+        # that the provider is throttling.
         log.warning("agent_ask_rate_limited", detail=str(limited)[:200])
         raise HTTPException(
             status_code=503,
@@ -354,65 +421,7 @@ def ask(request: AskRequest) -> AskResponse:
             ),
         ) from limited
 
-    if shaped.cannot_answer:
-        # Final. The free-form path would otherwise resurrect it: it answered "what's the
-        # average deal size in dollars" with 152 — a count of the corpus — after the shaped
-        # path had correctly refused. A fallback that turns a refusal into a confident wrong
-        # number is not a safety net.
-        log.info("agent_ask_cannot_answer", question=request.question)
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "This corpus cannot answer that. It records the negotiated terms of 152 "
-                "merger agreements and holds no deal values in dollars, no fee amounts and "
-                "no adviser names. Nothing needs repairing — the question is outside what "
-                "these documents record."
-            ),
-        )
-
-    if shaped.selection is not None:
-        selection = shaped.selection
-        # Two calls, so the reported cost is their SUM. Latency is not summed from the parts —
-        # it is measured around the whole thing below, because that is what the user waited.
-        prompt_tokens = sum(p for p, _ in shaped_usage)
-        completion_tokens = sum(c for _, c in shaped_usage)
-        call = SelectionCall(
-            selection=shaped.selection or {},
-            model=PICK_MODEL,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            latency_ms=round((time.perf_counter() - started) * 1000, 1),
-        )
-    else:
-        # Falls back rather than refusing: the four shapes do not cover every answerable
-        # question — "how many deals are all cash" filters a consideration type, not a deal
-        # point — and a narrower path must not remove reach the wider one already had.
-        try:
-            call = select_with_usage(request.question, vocabulary, settings.openai_api_key)
-        except RateLimitError as limited:
-            log.warning("agent_ask_rate_limited", detail=str(limited)[:200])
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "The model provider returned a rate limit, so this question was not "
-                    "interpreted. Nothing is wrong with the corpus or the query — the same "
-                    "question will work once the limit resets."
-                ),
-            ) from limited
-        selection = call.selection
-
-    numbers = numeric_leaves(selection)
-    if numbers:
-        # The model answered instead of selecting. Refuse rather than strip: a response that
-        # carried a figure at all is not one to partially trust.
-        log.warning("agent_ask_numeric_output", fields=numbers)
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "The model returned a number, which it must never do — it selects, Postgres "
-                f"computes. Offending fields: {', '.join(numbers)}."
-            ),
-        )
+    _refuse_a_stated_figure(selection)
 
     try:
         validate_selection(selection, vocabulary)
