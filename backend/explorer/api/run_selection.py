@@ -37,7 +37,14 @@ router = APIRouter(prefix="/agent")
 log = get_logger()
 
 #: the measure whose value is the denominator on every deal-point rollup
-COUNT_MEASURE = "deal_points.n"
+# Every count measure in the vocabulary, widest-grain first. Both namespaces call theirs `n`,
+# so a single hardcoded key silently disabled the gate on whichever one it was not — which is
+# how a slice of one came back carrying target and acquirer names with `refused: false`.
+COUNT_MEASURES = (
+    "comparable_deals.n",  # one row per agreement
+    "deal_points.count_distinct_matters",  # agreements, counted explicitly
+    "deal_points.n",  # one row per ANSWER: over-counts agreements ~89x
+)
 
 
 class Filter(BaseModel):
@@ -62,15 +69,38 @@ class RunSelectionResponse(BaseModel):
     refused: bool = False
     threshold: int | None = None
     message: str | None = None
+    #: cells dropped for being below `min_n`. Declared rather than silent: a reader who
+    #: believes they are seeing the whole distribution will find the denominators do not add
+    #: up, which is a worse failure than being told a cell was withheld.
+    suppressed: int = 0
+
+
+def _row_clears(row: dict[str, Any], threshold: int) -> bool:
+    """Whether one cell is big enough to be characterized. A row carrying no count at all
+    clears: there is no denominator to gate on, and inventing one to suppress by would be a
+    claim about a sample size nobody measured."""
+    n = _n_from([row])
+    return n is None or n >= threshold
 
 
 def _n_from(rows: list[dict[str, Any]]) -> int | None:
-    """The count measure, if it was selected. Absent when the user picked only a median — in
-    which case there is no denominator to gate on and none is claimed."""
-    if not rows:
-        return None
-    value = rows[0].get(COUNT_MEASURE)
-    return int(value) if value is not None else None
+    """The smallest agreement count anywhere in the result, or None if none was selected.
+
+    SMALLEST, on two axes, because both were holes:
+
+    * across ROWS — a grouped result is a set of cells and the gate protects each one.
+      Reading `rows[0]` served a fourth cell of n=3 behind a first cell of 89, a cell that
+      refuses instantly when requested on its own.
+    * across MEASURES — `deal_points.n` counts answers, not agreements: healthcare is 26
+      agreements but 2,245 answers. Taking the minimum prefers whichever selected measure is
+      closest to an agreement count, so the gate cannot be walked past by selecting the
+      inflated one.
+
+    None when no count was selected at all (a median on its own), where there is no
+    denominator to gate on and none is claimed.
+    """
+    counts = [int(row[m]) for row in rows for m in COUNT_MEASURES if row.get(m) is not None]
+    return min(counts) if counts else None
 
 
 @router.post("/run-selection", response_model=RunSelectionResponse)
@@ -98,6 +128,33 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
         rows = cube_query(payload)
     except CubeUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Per-CELL suppression, before the whole-result gate. A grouped result is a set of
+    # independent claims and each is gated on its own: refusing all four cells of a
+    # consideration split because the fourth is n=3 answers nothing, and published deal-point
+    # studies do exactly this — report the categories with enough sample, say the rest were
+    # too thin. The cost, accepted knowingly: a reader can infer a suppressed cell exists and
+    # is small. Every disclosure-control system makes that trade.
+    suppressed = 0
+    if request.dimensions:
+        kept = [r for r in rows if _row_clears(r, settings.min_n)]
+        suppressed = len(rows) - len(kept)
+        if suppressed and kept:
+            log.info("run_selection_suppressed", suppressed=suppressed, kept=len(kept))
+            return RunSelectionResponse(
+                query=payload,
+                rows=kept,
+                n=_n_from(kept),
+                refused=False,
+                threshold=settings.min_n,
+                suppressed=suppressed,
+                message=(
+                    f"{suppressed} of {len(rows)} rows suppressed: below the threshold of "
+                    f"{settings.min_n}. The remaining rows are unchanged; the distribution "
+                    "shown is therefore incomplete."
+                ),
+            )
+        rows = kept or rows
 
     n = _n_from(rows)
     if n is not None and n < settings.min_n:

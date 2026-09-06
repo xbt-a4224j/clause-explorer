@@ -253,6 +253,56 @@ describe('the query builder', () => {
     expect(refused).toHaveTextContent('3')
     expect(screen.queryByTestId('qb-rows')).not.toBeInTheDocument()
   })
+
+  it('says so when cells were suppressed, rather than showing a quietly incomplete table', async () => {
+    /**
+     * A partial distribution rendered as if it were whole is worse than a refusal: the
+     * reader trusts it, and the denominators silently stop adding up. The notice must be on
+     * screen with the rows, and above them — a reader who reaches the numbers first has
+     * already formed the wrong impression of what they are looking at.
+     */
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/grading')) {
+        return { ok: true, status: 200, json: async () => GRADING } as Response
+      }
+      if (String(url).includes('run-selection')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            query: {},
+            rows: [
+              { 'deal_points.position': 'All Cash', 'deal_points.n': '89' },
+              { 'deal_points.position': 'All Stock', 'deal_points.n': '39' },
+            ],
+            n: 39,
+            refused: false,
+            threshold: 5,
+            suppressed: 1,
+            message:
+              '1 of 3 rows suppressed: below the threshold of 5. The remaining rows are unchanged; the distribution shown is therefore incomplete.',
+          }),
+        } as Response
+      }
+      return { ok: true, status: 200, json: async () => CATALOG } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Ask />)
+    const qb = await screen.findByTestId('query-builder')
+
+    fireEvent.click(within(qb).getByRole('button', { name: /^N deal_points\.n$/ }))
+    fireEvent.click(within(qb).getByRole('button', { name: /run against postgres/i }))
+
+    const note = await screen.findByTestId('qb-suppressed')
+    expect(note).toHaveTextContent(/suppressed/i)
+    expect(note).toHaveTextContent('5')
+    // the rows are still served: suppression is not refusal
+    expect(await screen.findByTestId('qb-rows')).toHaveTextContent('All Cash')
+    // and the notice precedes them in document order
+    expect(note.compareDocumentPosition(screen.getByTestId('qb-rows'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
 })
 
 describe('worked examples (#37)', () => {

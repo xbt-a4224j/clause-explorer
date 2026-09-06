@@ -727,6 +727,11 @@ export function AskBox({ onAsked }: { onAsked?: (costUsd: number) => void } = {}
                   <>no denominator selected</>
                 )}
               </p>
+              {result.suppressed > 0 && (
+                <p className="qb__suppressed" data-testid="ask-suppressed">
+                  {result.message}
+                </p>
+              )}
               <pre className="qb__json" data-testid="ask-rows">
                 {JSON.stringify(result.rows, null, 2)}
               </pre>

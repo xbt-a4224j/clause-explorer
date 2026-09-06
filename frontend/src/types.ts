@@ -287,6 +287,12 @@ export interface RunSelectionResponse {
   refused: boolean
   threshold: number | null
   message: string | null
+  /**
+   * Cells dropped for sitting below `min_n`. Never render the rows without rendering this:
+   * a reader who believes they are seeing the whole distribution will find the denominators
+   * do not add up, which is a worse failure than being told a cell was withheld.
+   */
+  suppressed: number
 }
 
 /** `GET /agent/grading` (#36) — the offline grade over recorded model output. */

@@ -338,6 +338,11 @@ export function QueryBuilder({
                   <>no denominator selected — add <code>n</code> to gate on one</>
                 )}
               </p>
+              {result.suppressed > 0 && (
+                <p className="qb__suppressed" data-testid="qb-suppressed">
+                  {result.message}
+                </p>
+              )}
               <pre className="qb__json" data-testid="qb-rows">
                 {JSON.stringify(result.rows, null, 2)}
               </pre>
