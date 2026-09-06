@@ -296,7 +296,7 @@ error before changing anything.
 
 ## The demo scripts are the acceptance test
 
-`docs/demo-scripts.md` defines three walkthroughs. Every implementation decision is judged by
+`docs/demo-scripts.md` defines two walkthroughs. Every implementation decision is judged by
 whether it makes one of them land. A feature serving none of them is out of scope; a rough
 edge on one of their paths is a bug, not polish.
 

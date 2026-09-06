@@ -230,10 +230,15 @@ Finish with what makes the table possible:
 
 ### Beat 5 — if there is time (30 s)
 
-**Coverage**: `33 of 45` cells refuse, `12` are reportable.
+**Explore**, the facet rail: values with `n=0` render disabled rather than disappearing.
 
-> "A gap is more actionable than a strength you already knew about, so the thin cells are the
-> loud ones. Two thirds of this grid declines to answer."
+> "What the corpus does not have is information. A facet value that vanishes when it hits zero
+> teaches you nothing; one that stays and greys out tells you we looked and there was nothing
+> there."
+
+The Coverage tab used to carry this beat, with `33 of 45` cells refusing. #48 cut the tab — a
+gap being a finding is the same argument the rollup makes when it refuses a thin slice, and
+three surfaces making one argument read as a suite rather than a product.
 
 ### End on
 
