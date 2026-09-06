@@ -1,201 +1,478 @@
 # Clause Explorer
 
 A comparable-deals workbench for transactional contract work. Find deals like the one in front of
-you, see what was negotiated across them, and know where your experience is thin.
+you, see what was negotiated across them, and see the evidence for every number before you repeat
+it to a partner.
 
-![Overview — three journeys, each with the path it takes through the app](docs/img/overview.png)
+Every figure in this file came from a command that ran against a live instance. The commands are
+here too, so you can re-run them and disagree with me.
 
-*The landing tab. Three questions, the person who asks each one, what it costs them today, and the
-clicks that answer it. **Run this** lands on the first step already filtered. The tab bar splits
-after Coverage: four tabs are the product, four are the evidence that its answers are trustworthy.*
+![Overview — two journeys, each with the path it takes through the app](docs/img/overview.png)
 
-## Three journeys
+*The landing tab. Two questions, the person who asks each one, what it costs them today, and the
+clicks that answer it. **Run this** lands on the first step already filtered. The tab bar splits:
+four tabs are the product, two are the evidence that its answers are trustworthy.*
 
-**1 · The comparables request.** *A knowledge-management analyst: "Partner is pitching a healthcare
-target tomorrow, all cash. What did boards get on fiduciary outs?"* Today: search the document
-system by keyword, open eight agreements, read each no-shop section, build a table by hand.
-
-![Explore — faceted comparable-deal search over 152 real merger agreements](docs/img/explore.png)
-
-*Explore. A plain-English description plus one facet narrows 152 agreements to 25, ranked by hybrid
-retrieval. Add the All Cash facet and it is 20. Note the header: **139 filterable**, not 152. Thirteen
-matters have no industry at all, and the count says what the dimension can actually narrow. Every row is badged **INFERRED**, because
-industry is derived from the SEC's coarse self-assigned code rather than a lawyer's label.*
-
-![Deal Terms — the rollup, in counts rather than percentages](docs/img/deal-terms.png)
-
-*Deal Terms. The comparison an associate builds by hand from a stack of agreements: 90 deal points
-answered across n=20, two answered by none of them. Nothing renders as a percentage below n=30,
-because a percentage implies a precision the sample cannot support. Each row carries its full
-answer distribution, since "21 of 21 present" would hide the disagreement that matters — on this
-slice, specific performance is "entitled to" in 19 and "entitled to seek" in one.*
-
-![The drill-through, naming a document-scale span for what it is](docs/img/deal-terms-drill.png)
-
-*The drill-through, and the honest half of it. MAUD records where in the agreement an answer was
-found, which for holistic deal points is most of the document — the span here is 238,751 characters.
-Presenting that under the word "clause" showed a table of contents, so a span wider than
-`max_clause_chars` is labelled a document-scale span and shown as a bounded excerpt.*
-
-**2 · Is that actually market?** *An associate: "A partner said everyone is doing commercially
-reasonable efforts now. Is that true?"* On the healthcare all-cash slice it is not: flat covenant 9,
-commercially reasonable 8, reasonable best 3, across n=20. Narrow it further and the gate takes
-over.
-
-![Semantic Layer — the query builder refusing a slice of one](docs/img/refusal.png)
-
-*Semantic Layer. The agent selects from named measures and dimensions and nothing else — there is no
-free-text box in the builder, which is the point. Here a query has been narrowed to a single company,
-and the server **refuses**: `n=1, threshold 5`. That gate is server-side, so a raw `curl` gets the
-same answer.*
-
-![Coverage — thin cells styled prominently](docs/img/coverage.png)
-
-*Coverage. Where the corpus is thick or thin. The sparse cells are the prominent ones, because a gap
-is a finding about the corpus rather than something to smooth over.*
-
-**3 · Where can the extractor be trusted?** *A data manager: "Before this runs over our own
-precedents, where is it weak?"* Admin publishes accuracy per deal point on held-out gold; Label
-queues the disagreements, and the next calibration run grades those decisions in place of the
-model's, so the accuracy table moves.
-
-![Label — the review queue, ranked by extractor disagreement](docs/img/label.png)
-
-*Label. Two extractors read the same contract: a language model and a keyword baseline. Where they
-disagree, at least one is wrong, which is the cheapest useful ranking signal available before any
-calibrated confidence score exists. Decisions are graded into the next calibration run, and on the
-six recorded so far they lower the score rather than raise it.*
+---
 
 ## The problem
 
-A partner pitching a healthcare private-equity sponsor needs, by tomorrow: *our comparable deals
-(healthcare, sponsor-side, $200M–1B, last five years), with what was negotiated in each, and a
-paragraph for the pitch deck.*
+A partner pitching a healthcare private-equity sponsor needs, by tomorrow: *our comparable deals,
+what was negotiated in each, and a paragraph for the pitch deck.*
 
 Today that takes a knowledge-management professional days, across three systems, and the answer
-comes back incomplete. It's one of the most-complained-about problems in law firm KM, and it's the
-reason legal-matter taxonomies exist at all — you cannot answer "healthcare PE deals" unless matters
-are described consistently.
+comes back incomplete. The ABA produces its Public Target Deal Points Studies by hand, annually, by
+committee — because knowing what's market genuinely matters and nobody made it queryable.
 
-## What it does
+This makes it queryable with the discipline the manual version has and most AI tools drop: every
+figure carries its sample size, drills through to the text behind it, and the system refuses to
+characterize a slice too thin to support a claim.
 
-The four tabs an analyst uses:
+## The corpus
 
-| | |
-|---|---|
-| **Explore** | Faceted comparable-deal search. Filter by industry, signing year and consideration type; facet counts recompute live against whatever is left. Ranked by hybrid retrieval. |
-| **Deal Terms** | Rollup across the selected set, with the full answer distribution per row, drilling through to the source text at a character range in the filing. |
-| **Coverage** | Where experience is thick or thin. Thin cells are the signal — a gap is more actionable than a strength you already know about. |
-| **Overview** | The three journeys above, each runnable from the card. |
+```bash
+docker compose exec -T db psql -U explorer -d explorer -c "
+  SELECT (SELECT count(*) FROM matters)                                   AS matters,
+         (SELECT count(*) FROM deal_points)                               AS deal_points,
+         (SELECT count(DISTINCT deal_point_name) FROM deal_points)        AS distinct_points,
+         (SELECT count(*) FROM matters WHERE industry_code IS NOT NULL)   AS with_industry,
+         (SELECT min(signing_date) FROM matters)                          AS first_signing,
+         (SELECT max(signing_date) FROM matters)                          AS last_signing;"
+```
 
-And the four behind the divider, which are the evidence rather than the product:
+```
+ matters | deal_points | distinct_points | with_industry | first_signing | last_signing
+     152 |       12937 |              92 |           139 |    2020-03-13 |   2021-11-21
+```
 
-| | |
-|---|---|
-| **Semantic Layer** | The vocabulary the agent may select from, read live from Cube, with a query builder that has no free-text box and an offline grade of the selections. |
-| **Tables / Admin** | Browsable raw data, ingest status, the calibration tables, eval results, and live structured logs. |
-| **Label** | A review queue ranked by disagreement between two extractors. Decisions feed the next calibration run. Honest caveat: every queued item is a held-out matter that already has a lawyer's answer, so reviewing it teaches the system nothing gold did not; the mechanism earns its keep on un-annotated documents. |
+152 real merger agreements from [MAUD](https://www.atticusprojectai.org/maud/), carrying 12,937
+lawyer-written answers across the 92 ABA Public Target Deal Points. Industry comes from a checked-in
+SIC crosswalk over EDGAR, and resolves on 139 of the 152. Health Care is the largest group at 26.
 
-## Why it refuses to answer sometimes
+---
 
-Slice a few hundred deals by industry × size × term and cells get thin fast. Reporting a median over
-three deals as "market" is the failure this domain punishes, so below a configurable `min_n` the
-answer is `n=3 — insufficient to characterize`, not a confident number. Every figure carries its
-denominator; counts render as "6 of 8" rather than "75%" when the sample can't support a percentage.
+# 1 · Retrieval, and how to check it
 
-That threshold does three jobs at once: statistical honesty, extraction-confidence gating, and
-**k-anonymity** — because an analyst who can filter until n=1 has extracted a single client's
-negotiated term through the aggregate layer without ever retrieving a document.
+Explore ranks the filtered set with a blend of two retrievers: BM25 over the matter summary, and
+cosine similarity over an embedding of it. The claim that blending beats either alone is only worth
+something if you can turn each half off, so the blend weight is a control under the search box.
 
-## Why a semantic layer
+![The rank-by control at α=0, beside a card whose own two scores disagree](docs/img/retrieval.png)
 
-An agent answering analytical questions has two independent ways to be wrong: the number, and the
-*definition* of the number. Text-to-SQL leaves both open and is hard to grade — you end up diffing
-freeform queries.
+*Keyword-only ranking on the Health Care slice. Dicerna is first on a perfect BM25 match with a
+vector score of 0.178 — the words matched, the meaning did not.*
 
-Putting [Cube Core](https://cube.dev) (Apache-2.0) between the agent and the warehouse means metrics
-are defined once in versioned YAML, and the agent selects from *named measures* over a metadata
-endpoint. The number is computed by Postgres, never generated by the model. Correctness becomes
-discrete. Did it pick the right measure and filters? That is gradeable offline, with no database
-and no LLM in the loop.
+## Run it yourself
 
-The risk doesn't vanish, it relocates: a wrong *selection* returns a real number for the wrong
-question. So the resolved query is shown above every answer (`median RTF · healthcare · $200M–1B ·
-n=8`), putting a misinterpretation in front of the one person qualified to catch it.
+```bash
+for A in 0 0.5 1; do
+  curl -s localhost:8000/comparables -H 'content-type: application/json' -d "{
+    \"description\": \"healthcare take-private with a go-shop\",
+    \"folio_industry_code\": \"RCSG4k3ah1Pu5YgPexPgOmL\",
+    \"alpha\": $A, \"limit\": 3}"
+done
+```
+
+Three settings of one knob over the same 26 candidates. Each cell is the matter and its own two
+scores as `bm25 / vector`, the same pair every time, so the columns compare:
+
+| | 1st | 2nd | 3rd |
+|---|---|---|---|
+| **Keyword** α=0 | Dicerna `1.000 / 0.178` | GenMark `0.940 / 1.000` | Constellation `0.825 / 0.225` |
+| **Meaning** α=1 | GenMark `0.940 / 1.000` | Magellan **`0.000`** ` / 0.827` | Varian **`0.000`** ` / 0.817` |
+| **Hybrid** α=0.5 | GenMark `0.940 / 1.000` | Viela `0.806 / 0.734` | Five Prime `0.547 / 0.645` |
+
+Two things the table shows and prose cannot. Keyword alone puts **Dicerna** first on a perfect word
+match against a vector score of 0.178. Meaning alone surfaces **Magellan and Varian at bm25 exactly
+0.000** — they share no query terms at all. The blend keeps what both halves agree on, and Dicerna
+falls from 1st to 4th.
+
+## Why both halves are normalized first
+
+BM25 is unbounded; cosine sits in [0, 1]. On this corpus BM25's spread is roughly 25× cosine's, so
+blending the raw numbers makes `alpha` decorative — the keyword half wins at every setting. Both are
+min–max normalized **per query** before the blend.
+
+```python
+# backend/explorer/retrieval/hybrid.py
+
+def normalize(scores: np.ndarray) -> np.ndarray:
+    """Min-max to [0, 1]. A flat distribution maps to zeros, not to NaN — every document
+    being equally (ir)relevant must not poison the blend with division by zero."""
+    if scores.size == 0:
+        return scores
+    low, high = float(scores.min()), float(scores.max())
+    if high - low < 1e-12:                       # every score identical
+        return np.zeros_like(scores, dtype=np.float32)
+    return ((scores - low) / (high - low)).astype(np.float32)
+
+
+class HybridIndex:
+    def search(self, query: str, alpha: float = DEFAULT_ALPHA, limit: int = 10) -> list[Scored]:
+        bm25_raw = np.asarray(self.bm25.get_scores(tokenize(query)), dtype=np.float32)
+
+        query_vector = np.asarray(self.cache.embed(query), dtype=np.float32)
+        norm = np.linalg.norm(query_vector)
+        vector_raw = self.matrix @ (query_vector / (norm if norm else 1.0))
+
+        # normalize BOTH before combining — raw BM25 would dominate at every alpha
+        bm25 = normalize(bm25_raw)
+        vector = normalize(vector_raw)
+        blended = alpha * vector + (1.0 - alpha) * bm25
+
+        order = np.argsort(-blended)[:limit]
+        return [
+            Scored(
+                matter_id=self.ids[i],
+                score=float(blended[i]),
+                vector_score=float(vector[i]),   # both halves travel to the UI, so a
+                bm25_score=float(bm25[i]),       # ranking can be argued with
+            )
+            for i in order
+        ]
+```
+
+## Filter before rank, never after
+
+Ranking the corpus and then dropping out-of-filter results is the obvious implementation and it is
+wrong twice: a request for ten healthcare comparables comes back with three, and the scores that
+survive were normalized against a corpus nobody asked about. The industry filter runs in Postgres
+first; the index is built over exactly the survivors.
+
+![Explore — faceted comparable-deal search over 152 real merger agreements](docs/img/explore.png)
+
+*Note the header: **139 filterable**, not 152. Thirteen matters have no industry at all, and the
+count says what the dimension can actually narrow. Every row is badged **INFERRED**, because industry
+is derived from the SEC's coarse self-assigned code rather than a lawyer's label.*
+
+---
+
+# 2 · The semantic layer, and why the model never writes SQL
+
+An agent answering analytical questions has two independent ways to be wrong: **the number**, and
+**the definition of the number**. Text-to-SQL leaves both open and is hard to grade — you end up
+diffing freeform queries.
+
+[Cube Core](https://cube.dev) sits between the agent and Postgres. Metrics are defined once in
+versioned YAML, and the model selects from *named measures* rather than generating SQL. The number
+is computed by Postgres. Correctness becomes discrete: did it pick the right measure and filters?
+That is gradeable offline, with no database and no model in the loop.
+
+## The vocabulary is read live, and becomes a JSON-schema enum
+
+```bash
+curl -s localhost:8000/agent/catalog | jq '{measures: (.measures|length),
+                                            dimensions: (.dimensions|length),
+                                            label_space}'
+```
+
+```json
+{ "measures": 11, "dimensions": 18, "label_space": 29 }
+```
+
+Those 29 names are not a prompt instruction. They are the `enum` in the structured-output schema, so
+an invalid name **cannot be decoded** — not merely discouraged.
+
+```python
+# backend/explorer/agent/select.py
+
+@dataclass(frozen=True)
+class Vocabulary:
+    measures: tuple[str, ...]
+    dimensions: tuple[str, ...]
+
+    def as_json_schema_properties(self) -> dict[str, Any]:
+        """The structured-output schema: measure/dimension NAMES are enums, so an invalid
+        name cannot be decoded — not merely discouraged by instructions in the prompt."""
+        return {
+            "measures": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(self.measures)},
+            },
+            "dimensions": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(self.dimensions)},
+            },
+            "filters": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "member": {"type": "string",
+                                   "enum": list(self.measures + self.dimensions)},
+                        "operator": {"type": "string",
+                                     "enum": ["equals", "contains", "gt", "lt"]},
+                        "values": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["member", "operator", "values"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+def select_with_usage(question: str, vocabulary: Vocabulary, api_key: str) -> SelectionCall:
+    """The only function in this module that calls out. Everything else is pure and
+    testable with no key."""
+    response = OpenAI(api_key=api_key).chat.completions.create(
+        model=SELECT_MODEL,
+        messages=[{"role": "system", "content": SYSTEM_PROMPT},
+                  {"role": "user",   "content": question}],
+        response_format={
+            "type": "json_schema",
+            # strict=True is what makes the enum binding rather than advisory
+            "json_schema": {"name": "cube_selection", "schema": schema, "strict": True},
+        },
+    )
+```
+
+![Ask — the vocabulary the model may select from, and the selection it emits](docs/img/semantic-layer.png)
+
+*Ask. The vocabulary panel is Cube's `/meta`, read live rather than checked in — a stale copy could
+disagree with the YAML, and then any selection failure becomes an unfalsifiable argument.*
+
+## Three requests that show the whole mechanism
+
+**A name outside the vocabulary is rejected before Cube is touched.**
+
+```bash
+curl -s localhost:8000/agent/run-selection -H 'content-type: application/json' \
+  -d '{"measures":["deal_points.n"],"dimensions":["matters.industry_label"],"filters":[]}'
+```
+```json
+{"error": {"code": "validation_error",
+           "message": "'matters.industry_label' is not a known dimension."}}
+```
+
+**A valid selection returns the exact Cube payload alongside the rows.** Fiduciary exception, board
+determination trigger, across the whole corpus:
+
+```json
+"rows": [
+  {"deal_points.position": "Superior Offer, or Acquisition Proposal reasonably likely/expected
+                            to result in a Superior Offer", "deal_points.n": "143"},
+  {"deal_points.position": "Acquisition Proposal only",     "deal_points.n": "8"}
+]
+```
+
+Add `comparable_deals.label = "Health Care Industry"` and it is 26, all one way.
+
+**Narrow to a single deal and the server refuses.**
+
+```json
+{"rows": [], "n": 1, "refused": true, "threshold": 5,
+ "message": "n=1 — insufficient to characterize (threshold 5). The same gate applies to the
+             dashboard and to a direct API call."}
+```
+
+![The query builder refusing a slice of one](docs/img/refusal.png)
+
+## The refusal is a shape, not an empty list
+
+```python
+# backend/explorer/api/run_selection.py
+
+n = _n_from(rows)
+if n is not None and n < settings.min_n:
+    # Refusal is its own shape, never an empty row list with a 200 — "we will not answer
+    # this" and "there is nothing here" are different statements about different things.
+    log.info("run_selection_refused", n=n, threshold=settings.min_n)
+    return RunSelectionResponse(
+        query=payload,
+        rows=[],                       # suppressed, and said so
+        n=n,
+        refused=True,
+        threshold=settings.min_n,
+        message=(
+            f"n={n} — insufficient to characterize (threshold {settings.min_n}). "
+            "The same gate applies to the dashboard and to a direct API call."
+        ),
+    )
+```
+
+`min_n` does three jobs at once. Statistical honesty; extraction-confidence gating; and
+**k-anonymity** — an attorney who can filter until n=1 has extracted one client's negotiated term
+through the analytics layer, around the ethical wall, without ever retrieving a document. It is a
+confidentiality control, not a nicety.
+
+---
+
+# 3 · The rollup, and the drill-through
+
+![Deal Terms — the rollup, in counts rather than percentages](docs/img/deal-terms.png)
+
+*The comparison an associate builds by hand from a stack of agreements. Nothing renders as a
+percentage below n=30, because a percentage implies a precision the sample cannot support. Each row
+carries its full answer distribution, since "21 of 21 present" would hide the disagreement that
+matters.*
+
+![The drill-through, naming a document-scale span for what it is](docs/img/deal-terms-drill.png)
+
+*The honest half. MAUD records where in the agreement an answer was found, which for holistic deal
+points is most of the document. Presenting that under the word "clause" showed a table of contents,
+so a span wider than `max_clause_chars` is labelled a document-scale span and shown as a bounded
+excerpt.*
+
+---
+
+# 4 · Trust: what the extractor may answer, and what it must decline
+
+MAUD's annotations **are** the product data — we do not re-extract what lawyers already labelled.
+Extraction is a separate calibration experiment: run our extractor over a held-out slice, compare to
+the labels, publish accuracy per deal point.
+
+![Trust — accuracy per deal point on held-out gold](docs/img/trust.png)
+
+```bash
+make eval        # writes docs/results/
+curl -s localhost:8000/admin/calibration | jq '{vocabulary_size, measured_deal_point_count,
+                                                reportable_count, min_extraction_confidence}'
+```
+```json
+{ "vocabulary_size": 92, "measured_deal_point_count": 90,
+  "reportable_count": 5,  "min_extraction_confidence": 0.7 }
+```
+
+**5 of 90 measured deal points clear the gate.** Median accuracy is 0.25; six score zero. 1,701
+predictions on 20 held-out matters cost **$0.854442** on `gpt-4o-mini`, summed from each call's own
+`response.usage`. This is not a flattering number and it is published rather than buried.
+
+The gate reads the **lower** bound of the 95% Wilson interval, not the point estimate, so a thin
+sample cannot be flattered past it — 3 of 4 correct reads as 0.75 but its interval reaches 0.30.
+
+```python
+# backend/explorer/evals/calibration.py
+
+def wilson_interval(correct: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson score interval — stable at small n and at accuracy near 0 or 1, unlike
+    the normal approximation, which can produce bounds outside [0, 1]."""
+    if n == 0:
+        return 0.0, 0.0
+    phat = correct / n
+    denom = 1 + z**2 / n
+    center = phat + z**2 / (2 * n)
+    margin = z * math.sqrt((phat * (1 - phat) + z**2 / (4 * n)) / n)
+    return max(0.0, (center - margin) / denom), min(1.0, (center + margin) / denom)
+
+
+def holdout_pairs(dsn: str | None = None) -> list[tuple[str, str]]:
+    """The (matter, deal point) pairs to predict: exactly those MAUD labelled on the holdout.
+
+    This is the unit of cost. Scheduling the full cross product instead would buy
+    predictions that cannot be graded, at the same price per call.
+    """
+```
+
+Thirteen deal points have a point estimate at or above 0.70; eight of those have intervals too wide
+to clear it. That is the gate working, not a rounding quarrel.
+
+## The review loop, and the fact that it reports losses
+
+![Label — the review queue, ranked by extractor disagreement](docs/img/label.png)
+
+*Two extractors read the same contract: a language model and a keyword baseline. Where they disagree
+at least one is wrong, which is the cheapest useful ranking signal available before any calibrated
+confidence score exists. The queue holds 1,701 items across 90 deal points.*
+
+Calibration prefers a Label-tab decision over the model's answer for the same pair, then grades it
+against MAUD like any other answer — a **substitution**, not a correction.
+
+```
+$ PYTHONPATH=backend python -m explorer.evals.calibration
+correct 569 of 1701 before, 565 of 1701 after; 6 labels applied, 5 differing
+```
+
+**The number went down, and that is the mechanism working.** The extractor happened to be right on
+four of the six pairs a reviewer touched, and those four labels are wrong against MAUD. A loop that
+could only report improvement would be a loop worth distrusting.
+
+What this does *not* show: every holdout matter already has a lawyer's answer, so a reviewer here
+can at best reproduce gold. The loop earns its keep on documents with **no** gold — firm precedents,
+where the reviewer's decision is the only answer there is.
+
+---
+
+## Architecture
+
+```
+MAUD (152 merger agreements · 12,937 expert labels · 92 ABA deal points · CC BY 4.0)
+EDGAR (SIC industry · dates · parties, for the same 152)
+SIC crosswalk (data/mappings/sic_to_folio.csv — 120 rows, checked in, auditable)
+   │
+   ▼  idempotent ingest, provenance recorded
+Postgres ──► Cube Core (11 measures + 18 dimensions, defined once in YAML)
+   │              │
+   │         ┌────┴────┐
+   │         ▼         ▼
+   │    Dashboard   Agent (reads /meta, emits a selection — never SQL)
+   │         └── same governed numbers ──┘
+   ▼
+Hybrid retrieval (BM25 + vector) ── comparable-deal ranking; NOT via Cube
+```
+
+Cube's footprint is bounded on purpose. It powers facet counts and the deal-terms rollup. It does
+not do retrieval, ranking, record fetch, or generation.
+
+## The tabs
+
+| | | |
+|---|---|---|
+| **Overview** | product | the two journeys, each runnable from its card |
+| **Ask** | product | a question becomes a governed selection and a number, or a refusal |
+| **Explore** | product | faceted comparable search, hybrid ranking, the blend on a control |
+| **Deal Terms** | product | the rollup over the selected set, drilling to the source text |
+| **Trust** | evidence | accuracy per deal point on held-out gold; ingest and logs below it |
+| **Label** | evidence | the review queue, ranked by disagreement; decisions are graded in |
 
 ## Data
 
 | Source | What | License |
 |---|---|---|
-| [MAUD](https://www.atticusprojectai.org/maud/) | 152 real merger agreements, 47k+ expert annotations across the 92 ABA Public Target Deal Points | CC BY 4.0 |
-| [FOLIO](https://github.com/alea-institute/FOLIO) | 18,000+ legal concepts in OWL — the dimension vocabulary | CC BY |
-| SEC EDGAR | industry (SIC), dates and parties for the same agreements, matched to the deal's target | public |
-
-MAUD's expert annotations are the product data — we don't re-extract what lawyers already labeled.
-Extraction is a separate **calibration experiment**: run the extractor over a held-out MAUD slice,
-compare against the labels, publish the accuracy per deal point. That's what makes the claim
-"usable on documents nobody annotated" testable rather than asserted.
+| [MAUD](https://www.atticusprojectai.org/maud/) | 152 merger agreements, 12,937 expert answers across 92 ABA deal points | CC BY 4.0 |
+| SEC EDGAR | SIC industry, dates and parties for the same agreements, matched to the deal's target | public |
+| `data/mappings/sic_to_folio.csv` | 120-row SIC → industry crosswalk. Checked in because it is curation, not code | CC BY, labels from FOLIO |
 
 ## Limitations
 
-Every figure below comes from a command that ran. What the product does not do, stated here
-rather than discovered later.
+What the product does not do, stated here rather than discovered later.
 
-- **Industry is inferred, on every matter.** A checked-in SIC to FOLIO crosswalk over the SEC's
-  self-assigned code resolves 139 of 152. The registrant is constrained to the deal's *target*
-  using MAUD's own deal name, so the buyer's industry can no longer land on the seller's deal,
-  and a matter whose target does not resolve keeps NULL rather than being filled from whoever
-  filed. A 20-matter hand check found the registrant was the target in 19 and NULL in 1, with no
-  acquirers; the previous rule scored 14 target, 3 acquirer, 2 wrong entity and 1 NULL on the
-  same 20, and across all 152 it picked the acquirer 15 times. The grouping is ours: it puts
-  pharma, biotech, devices and CROs under Health Care, which is 26 matters.
-- **Deal value is empty** for all 152 matters. EDGAR's company endpoints do not carry
-  transaction value, so there is no size filter (#46). Consideration type, a MAUD expert label,
-  is the third facet instead.
-- **The corpus is 20 months**, 2020-03-13 to 2021-11-21.
-- **Most recorded spans are not clauses, and anchoring did not change that.** Over the 12,442
-  deal points with a span, the median width is 4,658 characters and the 90th percentile is
-  238,949: MAUD marks where an answer was found, which for a holistic deal point is most of the
-  agreement. Ingest now locates each annotation's own quoted text inside its span and stores it
-  as `anchored` where it appears exactly once, which is 7,476 of 12,937. Every one of those
-  landed on a span byte-identical to the one it replaced, so 4,966 stay `recorded` and anything
-  wider than 6,000 characters still renders as a labelled excerpt rather than as the clause. A
-  further 495 have no span at all; searching those against the whole document recovered none. An
-  excerpt found more than once is a miss, never a guess, and no offset is ever approximated.
-- **Closing the review loop made the score worse.** Calibration prefers a Label-tab decision over
-  the model's answer for the same matter and deal point, then grades it against MAUD like any
-  other answer. On the six decisions recorded so far that moves 569 correct to 565 out of 1,701,
-  because the extractor was right on four of the pairs a reviewer touched. A label substitutes,
-  it does not correct, which is what stops the loop being a ratchet that can only report
-  improvement.
-- **The extractor is mostly below its own gate.** Of 90 measured deal points, 5 clear 0.70 and 77
-  fall below it; median accuracy is 0.25 and six score zero. Two more of the 92 in the vocabulary
-  cannot be measured on this holdout and report as not measured rather than as zero. The gate
-  reads the lower confidence bound, so a thin sample cannot be flattered past it, and it never
-  applies to MAUD's own labels.
+- **Industry is inferred, on every matter.** The crosswalk resolves 139 of 152. The registrant is
+  constrained to the deal's *target* via MAUD's own deal name, so the buyer's industry cannot land
+  on the seller's deal. A 20-matter hand check found the registrant was the target in 19 and NULL
+  in 1, with no acquirers; the previous rule scored 14 target, 3 acquirer, 2 wrong entity, 1 NULL
+  on the same 20, and across all 152 it picked the acquirer 15 times.
+- **Deal value is empty** for all 152. EDGAR's company endpoints do not carry transaction value, so
+  there is no size filter ([#46](https://github.com/xbt-a4224j/clause-explorer/issues/46)).
+  Consideration type, a MAUD expert label, is the third facet instead.
+- **The corpus is 20 months**, 2020-03-13 to 2021-11-21. It is not a time series.
+- **Most recorded spans are not clauses.** Median width 4,658 characters, 90th percentile 238,949.
+  Ingest locates each annotation's quoted text inside its span and stores it as `anchored` where it
+  appears exactly once — 7,476 of 12,937. An excerpt found more than once is a miss, never a guess,
+  and no offset is ever approximated.
+- **The extractor is mostly below its own gate**, as published above. It never applies to MAUD's own
+  labels: all 12,937 product rows are lawyer annotations, and gating them on a 0.25-median
+  extractor accuracy would suppress gold on the strength of a number describing something else.
+- **The retrieval improvements are measured but unmerged.**
+  [#58](https://github.com/xbt-a4224j/clause-explorer/issues/58) shows raising the extractor's
+  context budget from 12,000 to 200,000 characters moves evidence coverage from 40.2% to 89.2% for
+  about $13. Coverage is not accuracy, and the paid comparison has not been run.
 
 ## Stack
 
-Python 3.12 · FastAPI · Postgres 16 · Cube Core · React + TypeScript + Vite · rdflib · rank-bm25 ·
-structlog. All open source. Retrieval, facets, coverage, and every table view work **without an API
-key**; the key is needed only for generation and fresh embeddings.
+Python 3.12 · FastAPI · Postgres 16 · Cube Core (Apache-2.0) · React + TypeScript + Vite ·
+rank-bm25 · structlog. Everything open source except the model.
 
-## Walkthrough
-
-Worked examples with real observed output from the running stack:
-[`docs/walkthrough.md`](docs/walkthrough.md). The three journeys above, narrated end to end with
-every figure verified against a live instance: [`docs/demo-scripts.md`](docs/demo-scripts.md).
-
-The annotated screenshots in this README are generated, not captured by hand:
-`cd frontend && node scripts/shots.mjs` re-shoots the whole set against a running app, locating
-each callout by CSS selector, so they cannot silently drift from the UI.
+**An API key is required.** Embeddings, extraction and measure selection all call out. The app used
+to boot without one, which cost nothing while nothing in it called a model — and cost a great deal
+once the model sat on the user's path in Ask. Tests that make a real call are marked `needs_key` and
+excluded from CI, which is a property of the test suite rather than a promise about the product.
 
 ## Quickstart
 
 ```bash
-cp .env.example .env      # OPENAI_API_KEY optional — most of the app runs without it
+cp .env.example .env      # set OPENAI_API_KEY
 docker compose up --build
-make ingest               # FOLIO -> MAUD -> EDGAR enrich, idempotent
+make ingest               # MAUD -> EDGAR enrich, idempotent
 ```
 
 - App → http://localhost:5173
@@ -207,11 +484,27 @@ make ingest               # FOLIO -> MAUD -> EDGAR enrich, idempotent
 ```bash
 make test     # everything that runs with no API key
 make check    # ruff, mypy, tsc, tests — what CI enforces
-make eval     # eval + calibration harnesses; writes docs/results/
+make eval     # calibration + measure-selection harnesses; writes docs/results/
 make logs     # tail structured logs
 ```
 
+```
+$ pytest backend/tests -q -m "not needs_key"
+462 passed, 3 deselected in 210.43s
+
+$ cd frontend && npx vitest run
+Test Files  12 passed (12)
+     Tests  224 passed (224)
+```
+
+The annotated screenshots above are generated, not captured by hand:
+`cd frontend && node scripts/shots.mjs` re-shoots the whole set against a running app, locating each
+callout by CSS selector, so they cannot silently drift from the UI.
+
+A longer hands-on tour, with the code beside each screen:
+[`docs/walkthrough.md`](docs/walkthrough.md).
+
 ## License
 
-Code MIT. Corpora are CC BY (MAUD, FOLIO) — attribution and provenance, including download
-commands and checksums, in `docs/provenance.md`.
+Code MIT. MAUD is CC BY 4.0. Attribution and provenance — download commands, byte sizes and
+checksums — in `docs/provenance.md`.
