@@ -163,9 +163,12 @@ describe('accuracy across the deal-point vocabulary', () => {
   it('separates the point-estimate count from the gate the product enforces', async () => {
     mockApi()
     render(<Trust />)
-    // 5 reportable is the Wilson lower bound, not the count of rows at or above 0.70
+    // The caption used to say "5 of 90 ... 77 below the gate", two different populations in one
+    // sentence, so the numbers did not add up and a reader could not tell what was measured.
+    // The three buckets have to reconcile to the total, and the confidence argument sits below.
     const frame = await screen.findByTestId('trust-accuracy')
-    expect(frame).toHaveTextContent(/lower bound/i)
+    expect(frame).toHaveTextContent(/split three ways/i)
+    expect(frame).toHaveTextContent(/lower end of the confidence interval/i)
   })
 
   it('gives every bar a hover layer carrying its interval and n', async () => {

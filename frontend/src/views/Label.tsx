@@ -26,6 +26,7 @@ export function Label() {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [labelledThisSession, setLabelledThisSession] = useState(0)
+  const [skippedThisSession, setSkippedThisSession] = useState(0)
   const [lastDecision, setLastDecision] = useState<Decision | null>(null)
   const [queueError, setQueueError] = useState<string | null>(null)
 
@@ -79,6 +80,7 @@ export function Label() {
 
   function skip() {
     setEditing(false)
+    setSkippedThisSession((n) => n + 1)
     setCursor((c) => c + 1)
   }
 
@@ -160,8 +162,16 @@ export function Label() {
       {queue && (
         <p className="label__progress" data-testid="label-progress">
           <span className="mono">{queue.queue_size.toLocaleString('en-US')}</span> in the queue ·{' '}
-          <span className="mono">{cursor}</span> reviewed since this page loaded ·{' '}
-          <span className="mono">{queue.labelled_count}</span> recorded in the database
+          <span className="mono">{labelledThisSession}</span> decided,{' '}
+          <span className="mono">{skippedThisSession}</span> skipped by you ·{' '}
+          <span className="mono">{queue.labelled_count + labelledThisSession}</span> recorded in
+          the database
+          {labelledThisSession > 0 && (
+            <span className="label__pending" data-testid="label-pending">
+              {' '}
+              · not graded yet: scored on the next calibration run
+            </span>
+          )}
         </p>
       )}
 
@@ -173,8 +183,8 @@ export function Label() {
           {/* Same two scope words as the progress line above, so the same number does not go
               by two different names on one screen. */}
           <p className="state__body">
-            {labelledThisSession} reviewed since this page loaded, {queue.labelled_count}{' '}
-            recorded in the database.
+            {labelledThisSession} decided and {skippedThisSession} skipped since this page
+            loaded; {queue.labelled_count + labelledThisSession} recorded in the database.
           </p>
         </div>
       )}

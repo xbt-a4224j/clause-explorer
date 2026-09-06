@@ -120,13 +120,44 @@ describe('the queue', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<Label />)
 
-    // Three counts over three different scopes: the whole queue, this page load, and the
-    // database. They shared a sentence once, and a lifetime row count beside a session-scoped
-    // position read as one figure.
+    // Four counts over different scopes: the whole queue, decisions and skips this page load,
+    // and the database. "Reviewed" used to cover both deciding and skipping, so a reviewer who
+    // skipped saw "1 reviewed · 0 recorded" and reasonably read it as broken.
     const progress = await screen.findByTestId('label-progress')
     expect(progress).toHaveTextContent(/2 in the queue/)
-    expect(progress).toHaveTextContent(/0 reviewed since this page loaded/)
+    expect(progress).toHaveTextContent(/0 decided/)
+    expect(progress).toHaveTextContent(/0 skipped by you/)
     expect(progress).toHaveTextContent(/3 recorded in the database/)
+  })
+
+  it('counts a skip as a skip, and a decision as recorded, not as one number', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Skip'))
+    const progress = await screen.findByTestId('label-progress')
+    expect(progress).toHaveTextContent(/0 decided/)
+    expect(progress).toHaveTextContent(/1 skipped by you/)
+    // a skip records nothing, so the database total must not move
+    expect(progress).toHaveTextContent(/3 recorded in the database/)
+    expect(screen.queryByTestId('label-pending')).toBeNull()
+  })
+
+  it('says a recorded decision is not yet graded', async () => {
+    const { fetchMock } = mockApi()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<Label />)
+    await ready()
+
+    fireEvent.click(button('Accept'))
+    // the database total includes what was just written, rather than the figure fetched on load
+    expect(await screen.findByTestId('label-progress')).toHaveTextContent(
+      /4 recorded in the database/,
+    )
+    // and the reviewer is told the score has not moved yet, because calibration runs offline
+    expect(screen.getByTestId('label-pending')).toHaveTextContent(/next calibration run/i)
   })
 })
 

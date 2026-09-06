@@ -201,6 +201,10 @@ function AccuracyChart({ calibration }: { calibration: CalibrationResponse | nul
   const clearingGate = measured.filter((r) => (r.accuracy ?? 0) >= gate).length
   const belowGate = measured.length - clearingGate
   const zeros = measured.filter((r) => r.accuracy === 0).length
+  // How many agreements each deal point was tested on. Read from the data rather than hardcoded:
+  // a deal point is scored on every holdout matter that carries an answer for it, so the largest
+  // n across the vocabulary is the holdout size.
+  const holdoutMatters = measured.reduce((m, r) => Math.max(m, r.n), 0)
   const unmeasured = rows.length - measured.length
   const best = measured[0]
 
@@ -218,21 +222,29 @@ function AccuracyChart({ calibration }: { calibration: CalibrationResponse | nul
     <section className="trust__section">
       <ChartFrame
         testId="trust-accuracy"
-        title="Accuracy by deal point"
+        title="Which questions could run without a lawyer?"
         note={
           <>
+            Each bar is one of the ABA&rsquo;s deal-point questions; its length is how often an
+            automated extractor got it right on {holdoutMatters} agreements lawyers had already
+            answered. Point it at documents nobody has annotated and{' '}
             <strong>
-              {calibration.reportable_count} of {measured.length} deal points are trusted enough
-              to answer
+              {calibration.reportable_count} of {measured.length} questions could be answered by
+              machine
             </strong>
-            ; {belowGate} sit below the {gate.toFixed(2)} gate. Best first.
+            . For the other {measured.length - (calibration.reportable_count ?? 0)}, a person has
+            to read the agreement.
           </>
         }
         footnote={
           <>
-            {clearingGate} reach {gate.toFixed(2)} on the point estimate but only{' '}
-            {calibration.reportable_count} clear the gate, which tests the Wilson lower bound so a
-            deal point cannot be flattered by a sample too small to tell from a coin flip.{' '}
+            The {measured.length} split three ways, which is why no two numbers here add up to it
+            on their own: <strong>{belowGate}</strong> score below {gate.toFixed(2)} outright,{' '}
+            <strong>{clearingGate - (calibration.reportable_count ?? 0)}</strong> score above it but on
+            too few samples to prove it, and <strong>{calibration.reportable_count}</strong> clear
+            the bar the product enforces. That bar is the lower end of the confidence interval, not
+            the score, so a deal point cannot be flattered by a sample too small to tell from a coin
+            flip. At {holdoutMatters} agreements that is demanding: roughly 18 of 19 correct.{' '}
             {zeros} score exactly 0.00, and {unmeasured} read “not measured”, a coverage gap
             rather than a failed extraction.
           </>

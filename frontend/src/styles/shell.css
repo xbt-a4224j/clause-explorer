@@ -1227,3 +1227,7 @@ kbd {
   margin: 0 0 2px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--accent);
 }
+
+/* A recorded decision is not a graded decision: calibration reads the labels table on its next
+   run, so the reviewer is told the score has not moved yet rather than left to wonder. */
+.label__pending { color: var(--accent); }
