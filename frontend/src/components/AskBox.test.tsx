@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AskBox } from '@quorum/ui'
 import type { AskResponse, MembersResponse } from '@quorum/ui'
+import { STRINGS } from '../strings'
 
 /**
  * The free-text box (#47).
@@ -27,7 +28,7 @@ const ASKED: AskResponse = {
           method: 'embedding',
           resolved: 'Health Care Industry',
           similarity: 0.6021,
-          matter_count: 26,
+          record_count: 26,
           candidates: [],
           note: null,
         },
@@ -43,7 +44,7 @@ const ASKED: AskResponse = {
           method: 'verbatim',
           resolved: 'All Cash',
           similarity: null,
-          matter_count: null,
+          record_count: null,
           candidates: [],
           note: 'Not an industry label, so the resolution ladder has no vocabulary to check it against.',
         },
@@ -83,7 +84,7 @@ const UNRESOLVED: AskResponse = {
           method: 'unresolved',
           resolved: null,
           similarity: null,
-          matter_count: null,
+          record_count: null,
           candidates: ['Manufacturing Industry', 'Transportation Industry'],
           note: 'The corpus carries no industry by this name.',
         },
@@ -223,7 +224,7 @@ async function ask(question = 'healthcare cash deals') {
 describe('a question becomes a selection, not an answer', () => {
   it('renders each measure, dimension and filter as its own chip', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     expect(within(chips).getAllByTestId('chip-measure')).toHaveLength(2)
@@ -240,7 +241,7 @@ describe('a question becomes a selection, not an answer', () => {
 
   it('shows how each filter value was resolved, and its match method', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const filters = within(chips).getAllByTestId('chip-filter')
@@ -256,7 +257,7 @@ describe('a question becomes a selection, not an answer', () => {
 
   it('renders no figure — the model selected, nothing was computed', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
     expect(within(chips).queryByTestId('ask-rows')).not.toBeInTheDocument()
   })
@@ -265,14 +266,14 @@ describe('a question becomes a selection, not an answer', () => {
 describe('nothing executes until the user confirms', () => {
   it('does not call run-selection when the interpretation arrives', async () => {
     const calls = mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(calls.some((c) => c.includes('run-selection'))).toBe(false)
   })
 
   it('runs only on the confirm click, and through the existing run-selection path', async () => {
     const calls = mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
 
     fireEvent.click(screen.getByRole('button', { name: /run the confirmed selection/i }))
@@ -301,7 +302,7 @@ describe('the chips are editable before anything runs', () => {
       } as Response
     })
     vi.stubGlobal('fetch', fetchMock)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const measures = within(chips).getAllByTestId('chip-measure')
@@ -322,7 +323,7 @@ describe('the chips are editable before anything runs', () => {
 
   it('lets a filter value be changed, and marks the chip as changed by a person', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const filter = within(chips).getAllByTestId('chip-filter')[0]
@@ -340,7 +341,7 @@ describe('the chips are editable before anything runs', () => {
 describe('an unresolved value fails loudly rather than returning zero rows', () => {
   it('blocks the run and names what could not be resolved', async () => {
     mockApi(UNRESOLVED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask('aerospace deals')
 
     expect(screen.getByTestId('ask-blocked')).toHaveTextContent(/aerospace/)
@@ -349,7 +350,7 @@ describe('an unresolved value fails loudly rather than returning zero rows', () 
 
   it('offers the near misses the corpus does carry', async () => {
     mockApi(UNRESOLVED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask('aerospace deals')
 
     const filter = within(chips).getAllByTestId('chip-filter')[0]
@@ -358,7 +359,7 @@ describe('an unresolved value fails loudly rather than returning zero rows', () 
 
   it('picking a near miss unblocks the run', async () => {
     mockApi(UNRESOLVED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask('aerospace deals')
 
     const filter = within(chips).getAllByTestId('chip-filter')[0]
@@ -380,7 +381,7 @@ describe('an unresolved value fails loudly rather than returning zero rows', () 
 describe('the cost line', () => {
   it('renders model, tokens in and out, latency and dollars', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
 
     const usage = screen.getByTestId('ask-usage')
@@ -393,14 +394,14 @@ describe('the cost line', () => {
 
   it('separates thousands, because these are read as evidence', async () => {
     mockApi({ ...ASKED, usage: { ...ASKED.usage, prompt_tokens: 2104 } })
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.getByTestId('ask-usage')).toHaveTextContent('2,104 in')
   })
 
   it('appears before any run, because the cost was incurred at the question', async () => {
     const calls = mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.getByTestId('ask-usage')).toBeInTheDocument()
     expect(calls.some((c) => c.includes('run-selection'))).toBe(false)
@@ -408,7 +409,7 @@ describe('the cost line', () => {
 
   it('states the date the price table was checked, so the dollars are falsifiable', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.getByTestId('ask-usage')).toHaveTextContent('2026-09-03')
   })
@@ -430,7 +431,7 @@ describe('confirming records the pair', () => {
   it('records an unchanged run as an agreement', async () => {
     mockApi(ASKED)
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     fireEvent.click(screen.getByRole('button', { name: /run the confirmed selection/i }))
 
@@ -443,7 +444,7 @@ describe('confirming records the pair', () => {
   it('sends the model selection and the edited one, so the server can name the difference', async () => {
     mockApi(ASKED)
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const filter = within(chips).getAllByTestId('chip-filter')[0]
@@ -460,7 +461,7 @@ describe('confirming records the pair', () => {
 
   it('records nothing before the confirm click — asking is not confirming', async () => {
     const calls = mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(calls.some((c) => c.includes('selection-correction'))).toBe(false)
   })
@@ -469,7 +470,7 @@ describe('confirming records the pair', () => {
 describe('designed states', () => {
   it('reports a failed interpretation rather than an empty selection', async () => {
     mockApi({ error: { message: 'OPENAI_API_KEY is not set.' } }, 503)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const box = screen.getByTestId('ask-question')
     fireEvent.change(box, { target: { value: 'anything' } })
     fireEvent.click(screen.getByRole('button', { name: /interpret/i }))
@@ -486,7 +487,7 @@ describe('designed states', () => {
       filters: [],
       model_selection: { measures: [], dimensions: [], filters: [], timeDimensions: [] },
     })
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask('something unanswerable')
     expect(screen.getByTestId('ask-empty')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /run the confirmed selection/i })).toBeDisabled()
@@ -494,7 +495,7 @@ describe('designed states', () => {
 
   it('will not run without a measure — there is nothing to compute', async () => {
     mockApi({ ...ASKED, measures: [] })
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.getByRole('button', { name: /run the confirmed selection/i })).toBeDisabled()
   })
@@ -510,7 +511,7 @@ describe('designed states', () => {
 describe('a chip a person can actually read', () => {
   it('names the member by its catalog title, not its bare suffix', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const measures = within(chips).getAllByTestId('chip-measure')
@@ -522,7 +523,7 @@ describe('a chip a person can actually read', () => {
 
   it('carries the catalog description, on hover and on expansion', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const measure = within(chips).getAllByTestId('chip-measure')[1]
@@ -537,7 +538,7 @@ describe('a chip a person can actually read', () => {
 
   it('falls back to the member name when the catalog cannot be read', async () => {
     mockApi(ASKED, 200, MEMBERS, 503)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     expect(within(chips).getAllByTestId('chip-measure')[1]).toHaveTextContent('deal_points.n')
@@ -554,7 +555,7 @@ describe('a duplicate selection is collapsed, not drawn twice', () => {
       dimensions: [],
       filters: [],
     })
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
     expect(within(chips).getAllByTestId('chip-measure')).toHaveLength(1)
   })
@@ -563,7 +564,7 @@ describe('a duplicate selection is collapsed, not drawn twice', () => {
 describe('a closed vocabulary is a select, never a text box', () => {
   it('offers the values the corpus actually holds', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const control = within(chips).getByLabelText('value for Comparable Deals Label')
@@ -580,14 +581,14 @@ describe('a closed vocabulary is a select, never a text box', () => {
 
   it('leaves no free-text control anywhere in the chip row', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
     expect(within(chips).queryAllByRole('textbox')).toHaveLength(0)
   })
 
   it('an unresolved value opens on a placeholder rather than a wrong guess', async () => {
     mockApi(UNRESOLVED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask('aerospace deals')
 
     const control = within(chips).getByLabelText('value for Comparable Deals Label')
@@ -599,14 +600,14 @@ describe('a closed vocabulary is a select, never a text box', () => {
 describe('"edited by you" means a person changed something', () => {
   it('says nothing when the value came back from the model untouched', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
     expect(within(chips).getAllByTestId('chip-filter')[0]).not.toHaveTextContent(/edited by you/i)
   })
 
   it('stops saying it when the value is put back to what the model chose', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask()
 
     const control = within(chips).getByLabelText('value for Comparable Deals Label')
@@ -664,7 +665,7 @@ describe('saying the corpus cannot answer', () => {
 
   it('states it, and names why, instead of handing back a selection to repair', async () => {
     mockApi(DEAL_SIZE, 200, EMPTY_MEMBERS)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask("what's the average deal size for healthcare")
 
     const refusal = await screen.findByTestId('ask-cannot-answer')
@@ -675,7 +676,7 @@ describe('saying the corpus cannot answer', () => {
 
   it('will not run a selection the corpus cannot answer', async () => {
     mockApi(DEAL_SIZE, 200, EMPTY_MEMBERS)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask("what's the average deal size for healthcare")
 
     await screen.findByTestId('ask-cannot-answer')
@@ -684,7 +685,7 @@ describe('saying the corpus cannot answer', () => {
 
   it('runs again once the member the corpus cannot answer with is removed', async () => {
     mockApi(DEAL_SIZE, 200, EMPTY_MEMBERS)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask("what's the average deal size for healthcare")
 
     await screen.findByTestId('ask-cannot-answer')
@@ -696,7 +697,7 @@ describe('saying the corpus cannot answer', () => {
 
   it('says nothing when every selected member has data behind it', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.queryByTestId('ask-cannot-answer')).not.toBeInTheDocument()
   })
@@ -728,7 +729,7 @@ describe('a filter value the corpus does not carry', () => {
             method: 'verbatim',
             resolved: 'All Cash Deal',
             similarity: null,
-            matter_count: null,
+            record_count: null,
             candidates: [],
             note: 'Not an industry label, so the resolution ladder has no vocabulary for it.',
           },
@@ -739,7 +740,7 @@ describe('a filter value the corpus does not carry', () => {
 
   it('is cleared rather than left in a control that cannot show it', async () => {
     mockApi(OFF_VOCABULARY)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask('how many all-cash deals are there')
 
     await waitFor(() =>
@@ -751,7 +752,7 @@ describe('a filter value the corpus does not carry', () => {
 
   it('blocks the run instead of returning zero rows', async () => {
     mockApi(OFF_VOCABULARY)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask('how many all-cash deals are there')
 
     await waitFor(() =>
@@ -761,7 +762,7 @@ describe('a filter value the corpus does not carry', () => {
 
   it('names what the model wrote and what the field actually holds', async () => {
     mockApi(OFF_VOCABULARY)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask('how many all-cash deals are there')
 
     const note = await screen.findByTestId('ask-off-vocabulary')
@@ -772,7 +773,7 @@ describe('a filter value the corpus does not carry', () => {
 
   it('does not accuse the user of editing a value they never touched', async () => {
     mockApi(OFF_VOCABULARY)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     const chips = await ask('how many all-cash deals are there')
 
     await waitFor(() => expect(screen.getByTestId('ask-off-vocabulary')).toBeInTheDocument())
@@ -781,7 +782,7 @@ describe('a filter value the corpus does not carry', () => {
 
   it('says nothing when the model picked a value the corpus does hold', async () => {
     mockApi(ASKED)
-    render(<AskBox />)
+    render(<AskBox strings={STRINGS} />)
     await ask()
     expect(screen.queryByTestId('ask-off-vocabulary')).not.toBeInTheDocument()
   })

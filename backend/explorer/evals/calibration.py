@@ -299,7 +299,7 @@ def score(
     return {
         "vocabulary_size": len(results),
         "deal_point_count": len(results),
-        "measured_deal_point_count": len(measured),
+        "measured_subject_count": len(measured),
         "reportable_count": sum(1 for r in measured if r.reportable),
         "prediction_count": len(predictions),
         "total_tokens": sum(int(p["tokens"]) for p in predictions),

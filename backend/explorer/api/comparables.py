@@ -99,7 +99,7 @@ class AppliedFilters(BaseModel):
 
 
 class ComparablesResponse(BaseModel):
-    matters: list[ComparableMatter]
+    records: list[ComparableMatter]
     candidate_count: int
     returned_count: int
     applied_filters: AppliedFilters
@@ -233,7 +233,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
     )
 
     return ComparablesResponse(
-        matters=matters,
+        records=matters,
         candidate_count=len(rows),
         returned_count=len(matters),
         applied_filters=applied,

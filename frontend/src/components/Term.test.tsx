@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { GLOSSARY, Term } from '@quorum/ui'
+import { Term } from '@quorum/ui'
+import { GLOSSARY } from '../glossary'
 
 /**
  * #35 — jargon was unlearnable from the app. What earns a test is that a term is defined
@@ -9,13 +10,13 @@ import { GLOSSARY, Term } from '@quorum/ui'
  */
 describe('inline glossary', () => {
   it('defines a term in place, without navigating away', () => {
-    render(<Term>MAUD</Term>)
+    render(<Term glossary={GLOSSARY}>MAUD</Term>)
     fireEvent.click(screen.getByRole('button', { name: 'MAUD' }))
     expect(screen.getByRole('note')).toHaveTextContent(/Merger Agreement Understanding Dataset/)
   })
 
   it('renders unknown words unchanged rather than swallowing them', () => {
-    render(<Term>not a term</Term>)
+    render(<Term glossary={GLOSSARY}>not a term</Term>)
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.getByText('not a term')).toBeInTheDocument()
   })

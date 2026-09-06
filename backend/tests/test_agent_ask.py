@@ -236,7 +236,7 @@ class TestFilterValuesFailLoudly:
     """The nastiest failure mode in the design: a value the corpus does not carry becomes a
     filter that returns zero rows, which reads as "we have no comparable deals"."""
 
-    def test_an_exact_industry_label_resolves_and_carries_its_matter_count(
+    def test_an_exact_industry_label_resolves_and_carries_its_record_count(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch, no_cube: list[dict]
     ) -> None:
         stub_model(
@@ -258,7 +258,7 @@ class TestFilterValuesFailLoudly:
         resolution = body["filters"][0]["resolutions"][0]
         assert resolution["method"] == "exact"
         assert resolution["resolved"] == "Health Care Industry"
-        assert resolution["matter_count"] == 26
+        assert resolution["record_count"] == 26
         assert body["runnable"] is True
 
     def test_a_near_miss_resolves_by_embedding_and_reports_its_similarity(

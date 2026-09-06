@@ -265,7 +265,7 @@ class TestFullVocabularyCoverage:
         assert unmeasured.accuracy is None
         assert unmeasured.reportable is False
         assert summary["vocabulary_size"] == 2
-        assert summary["measured_deal_point_count"] == 1
+        assert summary["measured_subject_count"] == 1
 
     @pytest.mark.skipif(not _corpus_ready(), reason="corpus not loaded")
     def test_results_are_sorted_worst_first_with_unmeasured_last(self, wrong_predictions) -> None:  # type: ignore[no-untyped-def]

@@ -128,8 +128,8 @@ class DealTermsResponse(BaseModel):
     percentage_threshold: int
     min_extraction_confidence: float
     rows: list[DealTermRow]
-    answered_deal_point_count: int
-    absent_deal_point_count: int
+    answered_subject_count: int
+    absent_subject_count: int
     scope_note: str = SCOPE_NOTE
     refused: bool = False
     refusal: Refusal | None = Field(
@@ -170,7 +170,7 @@ class DrillMatter(BaseModel):
 
 class DrillResponse(BaseModel):
     subject: str
-    matters: list[DrillMatter]
+    records: list[DrillMatter]
     scope_note: str = SCOPE_NOTE
     refused: bool = False
     refusal: Refusal | None = None
@@ -307,8 +307,8 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
             percentage_threshold=threshold,
             min_extraction_confidence=settings.min_extraction_confidence,
             rows=[],
-            answered_deal_point_count=0,
-            absent_deal_point_count=0,
+            answered_subject_count=0,
+            absent_subject_count=0,
             refused=True,
             refusal=refusal,
         )
@@ -411,8 +411,8 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
         percentage_threshold=threshold,
         min_extraction_confidence=settings.min_extraction_confidence,
         rows=rows,
-        answered_deal_point_count=len(answered_names),
-        absent_deal_point_count=len(absent),
+        answered_subject_count=len(answered_names),
+        absent_subject_count=len(absent),
     )
 
 
@@ -454,14 +454,14 @@ def drill(request: DrillRequest) -> DrillResponse:
     refusal = _refusal(request.record_ids)
     if refusal is not None:
         log.info("deal_terms_drill_refused", selection_n=refusal.n, min_n=refusal.threshold)
-        return DrillResponse(subject=request.subject, matters=[], refused=True, refusal=refusal)
+        return DrillResponse(subject=request.subject, records=[], refused=True, refusal=refusal)
 
-    matters: list[DrillMatter] = []
+    records: list[DrillMatter] = []
     for record_id, target_name, position, source_file, start, end in _run_drill_query(
         request.subject, request.record_ids
     ):
         sliced = slice_source(source_file, start, end)
-        matters.append(
+        records.append(
             DrillMatter(
                 record_id=record_id,
                 target_name=target_name,
@@ -479,10 +479,10 @@ def drill(request: DrillRequest) -> DrillResponse:
     log.info(
         "deal_terms_drill",
         subject=request.subject,
-        matters=len(matters),
-        located=sum(1 for m in matters if m.clause_text),
+        records=len(records),
+        located=sum(1 for m in records if m.clause_text),
     )
-    return DrillResponse(subject=request.subject, matters=matters)
+    return DrillResponse(subject=request.subject, records=records)
 
 
 def _as_float(value: Any) -> float | None:

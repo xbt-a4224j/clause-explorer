@@ -89,7 +89,7 @@ class TestCalibrationReport:
                 {
                     "min_extraction_confidence": 0.7,
                     "vocabulary_size": 2,
-                    "measured_deal_point_count": 1,
+                    "measured_subject_count": 1,
                     "reportable_count": 0,
                     "cost": {"cost_usd": 1.23, "call_count": 4},
                     "results": [

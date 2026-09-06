@@ -29,7 +29,7 @@ function mockHealth(status = 'ok', cube = 'ok') {
             groups: [],
             total_n: 0,
             unfiltered_n: 0,
-            corpus: { matters: 0, deal_points: 0, industries: 0 },
+            corpus: { records: 0, facts: 0, categories: 0 },
           }),
       })
     }

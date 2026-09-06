@@ -4,6 +4,8 @@ import { createRef } from 'react'
 import { Explore } from '@quorum/ui'
 import type { ComparablesResponse, FacetsResponse } from '@quorum/ui'
 import { RECORD_RENDERERS } from '../recordRenderers'
+import { STRINGS } from '../strings'
+import { corpusStrip } from '../corpusStrip'
 
 /**
  * Explore (#19), against a mocked API.
@@ -17,7 +19,7 @@ import { RECORD_RENDERERS } from '../recordRenderers'
 const FACETS: FacetsResponse = {
   unfiltered_n: 152,
   total_n: 152,
-  corpus: { matters: 152, deal_points: 12937, industries: 14 },
+  corpus: { records: 152, facts: 12937, categories: 14 },
   groups: [
     {
       key: 'industry',
@@ -59,7 +61,7 @@ const COMPARABLES: ComparablesResponse = {
     signed_to: null,
     ranked_by: 'matter id (no description given)',
   },
-  matters: [
+  records: [
     {
       record_id: 'contract_1',
       target_name: 'ACCELERON PHARMA INC.',
@@ -95,11 +97,11 @@ const MATTER_DETAIL = {
   signing_date: '2021-09-29',
   deal_value_usd: null,
   source_file: 'maud/data/contracts/contract_1.txt',
-  source_contract_title: 'ACCELERON PHARMA INC. - Agreement and Plan of Merger',
-  deal_point_count: 1,
+  source_title: 'ACCELERON PHARMA INC. - Agreement and Plan of Merger',
+  subject_count: 1,
   located_count: 1,
   summary: 'summary (n=1)',
-  deal_points: [
+  facts: [
     {
       subject: 'Fiduciary exception to COR covenant',
       position: 'Yes',
@@ -136,7 +138,9 @@ function renderExplore() {
   // correct behaviour, since the platform card does not know this corpus has an industry.
   return render(
     <Explore
+      strings={STRINGS}
       render={RECORD_RENDERERS}
+      corpusStrip={corpusStrip(STRINGS.glossary)}
       searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
     />,
   )
@@ -245,9 +249,9 @@ describe('filter before rank', () => {
       mockApi({
         comparables: {
           ...COMPARABLES,
-          matters: [
-            COMPARABLES.matters[0],
-            { ...COMPARABLES.matters[1], industry: 'Manufacturing Industry' },
+          records: [
+            COMPARABLES.records[0],
+            { ...COMPARABLES.records[1], industry: 'Manufacturing Industry' },
           ],
         },
       }),
@@ -271,7 +275,7 @@ describe('journey pre-filter', () => {
     const onConsumed = vi.fn()
     const ref = createRef<HTMLInputElement>()
     render(
-      <Explore
+      <Explore strings={STRINGS}
         searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
         seedFilters={{
           filters: {
@@ -354,7 +358,7 @@ describe('designed states', () => {
   it('an empty result says which filters produced it and offers to clear', async () => {
     vi.stubGlobal(
       'fetch',
-      mockApi({ comparables: { ...COMPARABLES, matters: [], candidate_count: 0 } }),
+      mockApi({ comparables: { ...COMPARABLES, records: [], candidate_count: 0 } }),
     )
     renderExplore()
     expect(await screen.findByText(/No comparable deals in this slice/)).toBeInTheDocument()
@@ -372,20 +376,35 @@ describe('designed states', () => {
 
 describe('provenance at the point of display (#35)', () => {
   it('names the corpus behind each headline count', async () => {
-    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    render(<Explore
+      strings={STRINGS}
+      corpusStrip={corpusStrip(STRINGS.glossary)}
+      searchRef={{ current: null }}
+      onSelectionChange={() => {}}
+    />)
     const corpus = await screen.findByText(/matters ·/)
     expect(corpus).toHaveTextContent(/MAUD/)
     expect(corpus).toHaveTextContent(/SIC crosswalk/)
   })
 
   it('says the industry figure is inferred, beside the figure', async () => {
-    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    render(<Explore
+      strings={STRINGS}
+      corpusStrip={corpusStrip(STRINGS.glossary)}
+      searchRef={{ current: null }}
+      onSelectionChange={() => {}}
+    />)
     const corpus = await screen.findByText(/matters ·/)
     expect(corpus).toHaveTextContent(/inferred/)
   })
 
   it('states the corpus date range so nobody says "the last five years"', async () => {
-    render(<Explore searchRef={{ current: null }} onSelectionChange={() => {}} />)
+    render(<Explore
+      strings={STRINGS}
+      corpusStrip={corpusStrip(STRINGS.glossary)}
+      searchRef={{ current: null }}
+      onSelectionChange={() => {}}
+    />)
     expect(await screen.findByText(/2020-03-13 to\s+2021-11-21/)).toBeInTheDocument()
   })
 })
@@ -408,14 +427,14 @@ describe('the rank-by control', () => {
 
   it('stays hidden until there is a description to rank', async () => {
     const ref = createRef<HTMLInputElement>()
-    render(<Explore searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+    render(<Explore strings={STRINGS} searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
     await screen.findByTestId('resolved-query')
     expect(screen.queryByTestId('rank-control')).toBeNull()
   })
 
   it('sends the selected alpha to /comparables', async () => {
     const ref = createRef<HTMLInputElement>()
-    render(<Explore searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+    render(<Explore strings={STRINGS} searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
     await screen.findByTestId('resolved-query')
 
     fireEvent.change(screen.getByLabelText('describe the deal'), {

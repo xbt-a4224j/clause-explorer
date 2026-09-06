@@ -59,7 +59,7 @@ class TestFiltering:
     def test_industry_filter_constrains_the_candidate_set(self, client: TestClient) -> None:
         body = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE}).json()
         assert body["candidate_count"] == 26
-        assert {m["industry"] for m in body["matters"]} == {"Health Care Industry"}
+        assert {m["industry"] for m in body["records"]} == {"Health Care Industry"}
 
     def test_an_out_of_filter_matter_never_appears(
         self, client: TestClient, cached_query: str
@@ -74,8 +74,8 @@ class TestFiltering:
                 "limit": 25,
             },
         ).json()
-        assert body["matters"], "filtering must not empty the result"
-        assert all(m["industry"] == "Health Care Industry" for m in body["matters"])
+        assert body["records"], "filtering must not empty the result"
+        assert all(m["industry"] == "Health Care Industry" for m in body["records"])
 
     def test_the_filter_matches_a_code_not_a_display_label(self, client: TestClient) -> None:
         """The property the ontology was earning, kept after #49 removed it: a filter carries
@@ -150,15 +150,15 @@ class TestRanking:
             "/comparables",
             json={"description": cached_query, "limit": 10},
         ).json()
-        top = body["matters"][0]
+        top = body["records"][0]
         assert top["score"] is not None
         assert top["vector_score"] is not None and top["bm25_score"] is not None
 
     def test_ranking_actually_reorders(self, client: TestClient, cached_query: str) -> None:
         ranked = client.post(
             "/comparables", json={"description": cached_query, "limit": 10}
-        ).json()["matters"]
-        unranked = client.post("/comparables", json={"limit": 10}).json()["matters"]
+        ).json()["records"]
+        unranked = client.post("/comparables", json={"limit": 10}).json()["records"]
         assert [m["record_id"] for m in ranked] != [m["record_id"] for m in unranked]
 
     def test_alpha_is_accepted_per_request(self, client: TestClient, cached_query: str) -> None:
@@ -184,7 +184,7 @@ class TestAppliedFiltersAreReported:
 
     def test_inferred_industry_is_flagged_on_every_matter(self, client: TestClient) -> None:
         body = client.post("/comparables", json={"folio_industry_code": HEALTH_CARE}).json()
-        assert all(m["is_inferred_industry"] for m in body["matters"])
+        assert all(m["is_inferred_industry"] for m in body["records"])
 
 
 @needs_corpus

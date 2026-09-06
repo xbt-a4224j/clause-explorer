@@ -69,10 +69,10 @@ class MatterDetail(BaseModel):
     signing_date: str | None
     deal_value_usd: float | None
     source_file: str | None
-    source_contract_title: str | None
-    deal_point_count: int
+    source_title: str | None
+    subject_count: int
     located_count: int
-    deal_points: list[DealPointDetail]
+    facts: list[DealPointDetail]
     summary: str
 
 
@@ -166,9 +166,9 @@ def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
 
     return (
         f"{parties} — {industry}{signed}. {value}. "
-        f"Negotiated terms (n={matter.deal_point_count}, {matter.located_count} traced to a "
+        f"Negotiated terms (n={matter.subject_count}, {matter.located_count} traced to a "
         f"source span): {terms}. "
-        f"Source: {matter.source_contract_title or matter.record_id} "
+        f"Source: {matter.source_title or matter.record_id} "
         f"({matter.source_file or 'file not recorded'}). "
         f"Deal-point labels are MAUD expert annotations (CC BY 4.0)."
     )
@@ -239,10 +239,10 @@ def matter_detail(record_id: str) -> MatterDetail:
         signing_date=row[5].isoformat() if row[5] else None,
         deal_value_usd=float(row[6]) if row[6] is not None else None,
         source_file=source_file,
-        source_contract_title=row[8],
-        deal_point_count=len(deal_points),
+        source_title=row[8],
+        subject_count=len(deal_points),
         located_count=sum(1 for dp in deal_points if dp.source_span_start is not None),
-        deal_points=deal_points,
+        facts=deal_points,
         summary="",
     )
     detail.summary = _summary(detail, deal_points[:SUMMARY_TERMS])
@@ -250,7 +250,7 @@ def matter_detail(record_id: str) -> MatterDetail:
     log.info(
         "matter_detail",
         record_id=record_id,
-        deal_point_count=detail.deal_point_count,
+        subject_count=detail.subject_count,
         located_count=detail.located_count,
         source_text_available=text is not None,
     )

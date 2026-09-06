@@ -117,7 +117,7 @@ class FilterResolution(BaseModel):
     method: str
     resolved: str | None = None
     similarity: float | None = None
-    matter_count: int | None = None
+    record_count: int | None = None
     #: near misses, populated only when `method` is "unresolved"
     candidates: list[str] = Field(default_factory=list)
     note: str | None = None
@@ -257,7 +257,7 @@ def _resolve_values(
                     method=resolution.method,
                     resolved=resolution.resolved,
                     similarity=resolution.similarity,
-                    matter_count=resolution.matter_count,
+                    record_count=resolution.record_count,
                 )
             )
     return resolved_values, resolutions, blockers

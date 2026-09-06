@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
-import { Explore, Label, Rollup, Trust, ignoreAbort, useKeyboard } from '@quorum/ui'
+import { Explore, Label, Rollup, RollupDiagram, Trust, ignoreAbort, useKeyboard } from '@quorum/ui'
 import type { JourneySeed } from '@quorum/ui'
 import type { Journey } from './journeys'
 import { Ask } from './views/Ask'
@@ -8,6 +8,8 @@ import { Overview } from './views/Overview'
 // How this corpus draws a record: `target ← acquirer`, the inferred-industry chip, the date.
 // The card owns everything else — expansion, scores, drill-through, the provenance line.
 import { RECORD_RENDERERS } from './recordRenderers'
+import { STRINGS } from './strings'
+import { corpusStrip } from './corpusStrip'
 import './styles/shell.css'
 
 type Health = { status: string; db: string; cube: string; version: string }
@@ -143,6 +145,8 @@ export function App() {
           // Deal Terms must roll up the set the partner actually chose rather than defaulting
           // to the whole corpus.
           <Explore
+            strings={STRINGS}
+            corpusStrip={corpusStrip(STRINGS.glossary)}
             render={RECORD_RENDERERS}
             searchRef={searchRef}
             onSelectionChange={setSelection}
@@ -150,11 +154,44 @@ export function App() {
             onSeedConsumed={() => setSeed(null)}
           />
         ) : active === 'terms' ? (
-          <Rollup selection={selection} />
+          <Rollup
+            selection={selection}
+            strings={STRINGS}
+            scopeFallback="Comparable PUBLIC deals from the MAUD study of SEC-filed merger agreements — not this firm's own matter history."
+            diagram={
+              <RollupDiagram
+                description={
+                  '152 merger agreements were each read by lawyers who answered the same 92 ' +
+                  "questions, the American Bar Association's public target deal points. Those " +
+                  'answers are stored one row per agreement per question, which is why a new ' +
+                  'question costs nothing to add. Selecting a set of deals in Explore rolls ' +
+                  'those rows up into a count per question. Below a sample size of 30 the ' +
+                  'answer renders as a count rather than a percentage, and every row drills ' +
+                  'back to the clause language in the source file.'
+                }
+              />
+            }
+          />
         ) : active === 'label' ? (
-          <Label />
+          <Label strings={STRINGS} />
         ) : active === 'trust' ? (
-          <Trust />
+          <Trust
+                strings={STRINGS}
+                accuracyChartCopy={({ heldOut, reportable, total }) => ({
+                  title: 'Which questions could run without a lawyer?',
+                  note: (
+                    <>
+                      Each bar is one of the ABA&rsquo;s deal-point questions; its length is how
+                      often an automated extractor got it right on {heldOut} agreements lawyers
+                      had already answered. Point it at documents nobody has annotated and{' '}
+                      <strong>
+                        {reportable} of {total} questions could be answered by machine
+                      </strong>
+                      . For the other {total - reportable}, a person has to read the agreement.
+                    </>
+                  ),
+                })}
+              />
         ) : active === 'ask' ? (
           <Ask />
         ) : (

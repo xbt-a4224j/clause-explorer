@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RecordCard } from '@quorum/ui'
 import type { Matter, MatterDetail } from '../types'
 import { RECORD_RENDERERS } from '../recordRenderers'
+import { STRINGS } from '../strings'
 
 /**
  * The matter card (#20).
@@ -33,15 +34,15 @@ const DETAIL: MatterDetail = {
   signing_date: '2021-09-29',
   deal_value_usd: null,
   source_file: 'maud/data/contracts/contract_1.txt',
-  source_contract_title: 'ACCELERON PHARMA INC. - Agreement and Plan of Merger',
-  deal_point_count: 89,
+  source_title: 'ACCELERON PHARMA INC. - Agreement and Plan of Merger',
+  subject_count: 89,
   located_count: 80,
   summary:
     'MERCK SHARP & DOHME CORP. / ACCELERON PHARMA INC. — Health Care Industry (inferred from ' +
     'SIC, not an expert label), signed 2021-09-29. deal value not available. Negotiated terms ' +
     '(n=89, 80 traced to a source span): Fiduciary exception: Yes. Source: ACCELERON PHARMA ' +
     'INC. - Agreement and Plan of Merger (maud/data/contracts/contract_1.txt).',
-  deal_points: [
+  facts: [
     // deliberately NOT first: the evidence for an applied filter has to be lifted to the top,
     // and a fixture that already had it there would not prove that
     {
@@ -84,7 +85,7 @@ function mockDetail(overrides: Partial<MatterDetail> = {}) {
 function renderCard(props: Partial<Parameters<typeof RecordCard>[0]> = {}) {
   return render(
     <ul>
-      <RecordCard
+      <RecordCard strings={STRINGS}
       render={RECORD_RENDERERS}
         record={MATTER}
         focused={false}

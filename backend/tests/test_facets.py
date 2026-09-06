@@ -171,11 +171,11 @@ class TestCorpusCountsAreVisibleBeforeAnyInteraction:
         self, client: TestClient, cube: StubCube
     ) -> None:
         body = client.post("/facets", json={}).json()
-        assert body["corpus"]["matters"] == 152
-        assert body["corpus"]["deal_points"] == 12937
+        assert body["corpus"]["records"] == 152
+        assert body["corpus"]["facts"] == 12937
         # 2, not 3: "unclassified" is a bucket rather than an industry, and Educational
         # Services has n=0 — an industry the corpus holds nothing in is not one it covers
-        assert body["corpus"]["industries"] == 2
+        assert body["corpus"]["categories"] == 2
 
 
 class TestZeroCounts:

@@ -58,7 +58,7 @@ class Resolution:
     resolved: str
     method: str  # "exact" | "model" | "embedding"
     #: None when the dimension is not industry — only industry carries a matter count
-    matter_count: int | None = None
+    record_count: int | None = None
     similarity: float | None = None
 
 
@@ -74,7 +74,7 @@ class UnresolvedFilterValue(RuntimeError):
         )
 
 
-def _matter_count(conn: Connection, label: str) -> int:
+def _record_count(conn: Connection, label: str) -> int:
     row = conn.execute(
         "SELECT count(*) FROM records m JOIN categories i ON i.code = m.category_code "
         "WHERE i.label = %s",
@@ -115,7 +115,7 @@ def resolve_filter_value(conn: Connection, cache: EmbeddingCache, raw: str) -> R
     exact = next((label for label in labels if label.strip().lower() == needle), None)
     if exact is not None:
         result = Resolution(
-            raw=raw, resolved=exact, method="exact", matter_count=_matter_count(conn, exact)
+            raw=raw, resolved=exact, method="exact", record_count=_record_count(conn, exact)
         )
         log.info("filter_value_resolved", raw=raw, resolved=exact, method="exact", similarity=None)
         return result
@@ -146,7 +146,7 @@ def resolve_filter_value(conn: Connection, cache: EmbeddingCache, raw: str) -> R
         raw=raw,
         resolved=best_label,
         method="embedding",
-        matter_count=_matter_count(conn, best_label),
+        record_count=_record_count(conn, best_label),
         similarity=round(best_similarity, 4),
     )
     log.info(
@@ -191,7 +191,7 @@ def resolve_against(
     candidates: list[str],
     *,
     pick: Any,
-    matter_count: int | None = None,
+    record_count: int | None = None,
 ) -> Resolution:
     """Resolve `raw` to one of `candidates`, or raise `UnresolvedFilterValue`.
 
@@ -210,7 +210,7 @@ def resolve_against(
     exact = next((c for c in candidates if c.strip().lower() == needle), None)
     if exact is not None:
         log.info("filter_value_resolved", raw=raw, resolved=exact, method="exact")
-        return Resolution(raw=raw, resolved=exact, method="exact", matter_count=matter_count)
+        return Resolution(raw=raw, resolved=exact, method="exact", record_count=record_count)
 
     if not candidates:
         raise UnresolvedFilterValue(raw, [])
@@ -221,4 +221,4 @@ def resolve_against(
         raise UnresolvedFilterValue(raw, candidates[:8])
 
     log.info("filter_value_resolved", raw=raw, resolved=chosen, method="model")
-    return Resolution(raw=raw, resolved=chosen, method="model", matter_count=matter_count)
+    return Resolution(raw=raw, resolved=chosen, method="model", record_count=record_count)

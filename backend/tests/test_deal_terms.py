@@ -487,9 +487,9 @@ class TestAgainstRealCube:
             "/deal-terms/drill",
             json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
-        assert len(drill["matters"]) == row["answered_n"]
-        assert all(m["record_id"] in EIGHT for m in drill["matters"])
-        assert all(m["position"] for m in drill["matters"])
+        assert len(drill["records"]) == row["answered_n"]
+        assert all(m["record_id"] in EIGHT for m in drill["records"])
+        assert all(m["position"] for m in drill["records"])
 
     def test_drill_through_reaches_the_clause_language_itself(self, client: TestClient) -> None:
         """Demo script 2 beat 5: the actual clause language, with source file and offsets.
@@ -509,7 +509,7 @@ class TestAgainstRealCube:
             json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
 
-        located = [m for m in drill["matters"] if m["source_span_start"] is not None]
+        located = [m for m in drill["records"] if m["source_span_start"] is not None]
         assert located, "this deal point should be traceable in at least one agreement"
         for m in located:
             assert m["source_file"].endswith(".txt")
@@ -535,7 +535,7 @@ class TestAgainstRealCube:
         # a document-scale one comes back as the opening excerpt of that same slice. Both must
         # be characters actually taken from the agreement at the recorded offset — the point of
         # the assertion is that no text is ever synthesised.
-        for m in (x for x in drill["matters"] if x["clause_text"]):
+        for m in (x for x in drill["records"] if x["clause_text"]):
             raw = (CONTRACTS_DIR / f"{m['record_id']}.txt").read_text(
                 encoding="utf-8", errors="replace"
             )
@@ -557,5 +557,5 @@ class TestAgainstRealCube:
             "/deal-terms/drill",
             json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
-        for m in drill["matters"]:
+        for m in drill["records"]:
             assert m["clause_text"] is not None or m["text_unavailable"]

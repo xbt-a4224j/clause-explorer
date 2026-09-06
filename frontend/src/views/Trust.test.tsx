@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Trust } from '@quorum/ui'
 import { TABS } from '../tabs'
+import { STRINGS } from '../strings'
 
 /**
  * Trust (#54) — the tab that replaced Admin.
@@ -20,7 +21,7 @@ const CALIBRATION = {
   markdown: '# calibration',
   min_extraction_confidence: 0.7,
   vocabulary_size: 92,
-  measured_deal_point_count: 90,
+  measured_subject_count: 90,
   reportable_count: 5,
   cost: {
     call_count: 1701,
@@ -140,21 +141,21 @@ describe('the tab bar', () => {
 describe('accuracy across the deal-point vocabulary', () => {
   it('draws one bar row per deal point, measured or not', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-accuracy-bars')
     expect(within(chart).getAllByTestId('trust-accuracy-bars-row')).toHaveLength(4)
   })
 
   it('renders an unmeasured deal point as "not measured", never as 0.00', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-accuracy-bars')
     expect(within(chart).getByText('not measured')).toBeInTheDocument()
   })
 
   it('draws the gate as a labelled rule rather than a colour change', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-accuracy-bars')
     expect(within(chart).getByText('0.70 gate')).toBeInTheDocument()
     expect(chart.querySelector('.viz__rule')).toBeInTheDocument()
@@ -162,7 +163,7 @@ describe('accuracy across the deal-point vocabulary', () => {
 
   it('separates the point-estimate count from the gate the product enforces', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     // The caption used to say "5 of 90 ... 77 below the gate", two different populations in one
     // sentence, so the numbers did not add up and a reader could not tell what was measured.
     // The three buckets have to reconcile to the total, and the confidence argument sits below.
@@ -173,7 +174,7 @@ describe('accuracy across the deal-point vocabulary', () => {
 
   it('gives every bar a hover layer carrying its interval and n', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-accuracy-bars')
     expect(chart.querySelectorAll('title').length).toBeGreaterThan(0)
     expect(chart.textContent).toMatch(/95% CI/)
@@ -188,7 +189,7 @@ describe('every chart has a table view behind a toggle', () => {
   ]) {
     it(`${testId} toggles to a table`, async () => {
       mockApi()
-      render(<Trust />)
+      render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
       const frame = await screen.findByTestId(testId)
       expect(within(frame).queryByTestId(`${testId}-table`)).not.toBeInTheDocument()
       fireEvent.click(within(frame).getByRole('button', { name: 'table' }))
@@ -200,7 +201,7 @@ describe('every chart has a table view behind a toggle', () => {
 describe('the copy states direction', () => {
   it('never claims the label loop improved anything', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     await screen.findByTestId('trust-loop-direction')
     // the same guard #52 put on the Label panel
     expect(document.body.textContent ?? '').not.toMatch(/improved|better|▲|↑/)
@@ -208,7 +209,7 @@ describe('the copy states direction', () => {
 
   it('says the score went down, with both numbers', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const line = await screen.findByTestId('trust-loop-direction')
     expect(line).toHaveTextContent(/went down/i)
     expect(line).toHaveTextContent('569')
@@ -217,7 +218,7 @@ describe('the copy states direction', () => {
 
   it('keeps the corpus caveat on the loop visual', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     expect(await screen.findByTestId('trust-corpus-caveat')).toHaveTextContent(
       /already has a lawyer|gold label/i,
     )
@@ -227,7 +228,7 @@ describe('the copy states direction', () => {
 describe('where the reviewer disagreed', () => {
   it('stacks the outcomes with a 2px surface gap and a legend', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const bar = await screen.findByTestId('trust-disagreement-bar')
     expect(within(bar).getAllByTestId('trust-disagreement-bar-seg')).toHaveLength(2)
     const frame = screen.getByTestId('trust-disagreement')
@@ -239,7 +240,7 @@ describe('where the reviewer disagreed', () => {
     // (569 → 565). The note must derive that split rather than assert a remembered finding:
     // the live table was purged of its development keystrokes and now holds none.
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const frame = await screen.findByTestId('trust-disagreement')
     expect(frame).toHaveTextContent(/5 differed from the model/i)
     expect(frame).toHaveTextContent(/4 overwrote an answer that had been correct/i)
@@ -248,7 +249,7 @@ describe('where the reviewer disagreed', () => {
 
   it('says nothing has been reviewed when the table is empty, and claims no finding', async () => {
     mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const frame = await screen.findByTestId('trust-disagreement')
     expect(frame).toHaveTextContent(/nothing has been reviewed yet/i)
     // an empty table must not produce a finding about human review
@@ -257,7 +258,7 @@ describe('where the reviewer disagreed', () => {
 
   it('never reports the loop as an improvement, in either state', async () => {
     mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const direction = await screen.findByTestId('trust-loop-direction')
     expect(direction.textContent ?? '').not.toMatch(/improved|better|▲|↑/)
     expect(direction).toHaveTextContent(/no decisions recorded yet/i)
@@ -265,7 +266,7 @@ describe('where the reviewer disagreed', () => {
 
   it('keeps the empty bucket in the table rather than drawing a zero-width segment', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const frame = await screen.findByTestId('trust-disagreement')
     fireEvent.click(within(frame).getByRole('button', { name: 'table' }))
     const table = within(frame).getByTestId('trust-disagreement-table')
@@ -276,21 +277,21 @@ describe('where the reviewer disagreed', () => {
 describe('selection quality', () => {
   it('charts the four things the model is scored on', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-selection-bars')
     expect(within(chart).getAllByTestId('trust-selection-bars-row')).toHaveLength(4)
   })
 
   it('direct-labels refusal accuracy as the weak one', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-selection-bars')
     expect(within(chart).getByText(/the weak one/i)).toBeInTheDocument()
   })
 
   it('uses no alarm styling for it — a measurement, not an incident', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const frame = await screen.findByTestId('trust-selection')
     // No alarm class, and no red painted inline. Deliberately NOT matching the bare word
     // "red" against the markup — "authored", "lowered", "differed" and "measured" all contain
@@ -305,7 +306,7 @@ describe('selection quality', () => {
 
   it('labels selectively — three of the four bars carry no number', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const chart = await screen.findByTestId('trust-selection-bars')
     expect(chart.querySelectorAll('.viz__value')).toHaveLength(1)
   })
@@ -314,7 +315,7 @@ describe('selection quality', () => {
 describe('cost is a stat-tile row, not a chart', () => {
   it('renders calls, dollars and tokens both ways', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const tiles = await screen.findByTestId('trust-cost')
     expect(tiles).toHaveTextContent('1,701')
     expect(tiles).toHaveTextContent('$0.854442')
@@ -326,7 +327,7 @@ describe('cost is a stat-tile row, not a chart', () => {
 describe('Trust absorbs Admin', () => {
   it('hides the operator surface behind a disclosure', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const toggle = await screen.findByTestId('trust-operator-toggle')
     expect(screen.queryByTestId('trust-operator')).not.toBeInTheDocument()
     fireEvent.click(toggle)
@@ -335,7 +336,7 @@ describe('Trust absorbs Admin', () => {
 
   it('still carries ingest status and the log viewer once opened', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     fireEvent.click(await screen.findByTestId('trust-operator-toggle'))
     const operator = screen.getByTestId('trust-operator')
     expect(within(operator).getByText('Ingest status')).toBeInTheDocument()
@@ -354,7 +355,7 @@ describe('Trust absorbs Admin', () => {
 describe('the loop diagram states the direction the numbers show', () => {
   it('says the score did not move when nothing has gone round the loop', async () => {
     mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     await screen.findByTestId('trust-loop-direction')
     const note = document.querySelector('.loop__note')!
     expect(note.textContent).toMatch(/did not move/i)
@@ -362,7 +363,7 @@ describe('the loop diagram states the direction the numbers show', () => {
 
   it('says it went down when it went down', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     await screen.findByTestId('trust-loop-direction')
     const note = document.querySelector('.loop__note')!
     expect(note.textContent).toMatch(/went down/i)
@@ -370,7 +371,7 @@ describe('the loop diagram states the direction the numbers show', () => {
 
   it('shows the four buckets rather than an empty bar when nothing was reviewed', async () => {
     mockApi({ labels: { ...LABELS, labels_applied: 0, labels_differing: 0, correct_after: 569 } })
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const frame = await screen.findByTestId('trust-disagreement')
     // a stacked bar over a total of zero draws nothing, and a heading over nothing reads as a
     // failed render rather than as a count of zero
@@ -408,7 +409,7 @@ describe('missing artefacts are stated, not hidden', () => {
 
   it('names each artefact that has not been produced, and how to produce it', async () => {
     mockMissing()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     const missing = await screen.findByTestId('trust-missing')
     expect(missing).toHaveTextContent(/calibration/i)
     expect(missing).toHaveTextContent(/measure-selection/i)
@@ -417,14 +418,14 @@ describe('missing artefacts are stated, not hidden', () => {
 
   it('does not promise figures below when there are none', async () => {
     mockMissing()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     await screen.findByTestId('trust-missing')
     expect(screen.queryByTestId('trust-lead')).not.toBeInTheDocument()
   })
 
   it('says nothing about missing artefacts when they are all there', async () => {
     mockApi()
-    render(<Trust />)
+    render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />)
     await screen.findByTestId('trust-accuracy')
     expect(screen.queryByTestId('trust-missing')).not.toBeInTheDocument()
     expect(screen.getByTestId('trust-lead')).toBeInTheDocument()

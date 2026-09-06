@@ -8,6 +8,7 @@ import { AskBox } from '@quorum/ui'
 import { SessionCost } from '@quorum/ui'
 import { Term } from '@quorum/ui'
 import { Grading } from '@quorum/ui'
+import { STRINGS } from '../strings'
 
 /**
  * Ask (#36, renamed from Semantic Layer in #48).
@@ -236,6 +237,7 @@ export function Ask() {
           paragraphs before reaching the box they came to type in. */}
       <section className="sem__pane">
         <AskBox
+          strings={STRINGS}
           onAsked={(costUsd) => {
             setQuestions((n) => n + 1)
             setSessionCost((total) => total + costUsd)
@@ -353,7 +355,7 @@ WHERE deal_point_name =
           filters from the published vocabulary above, and Postgres computes every number on
           this screen. Correctness is then one discrete question — did it pick the right
           measure and filters — gradeable offline with no database and no model. It also gives{' '}
-          <Term>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
+          <Term glossary={STRINGS.glossary}>min_n</Term> somewhere to stand: the gate applies to the resolved query, whoever
           assembled it.{' '}
           <span data-testid="keyless-note">
             The catalog, the builder and the grade need no API key. The question box above does

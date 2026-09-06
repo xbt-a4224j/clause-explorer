@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Label } from '@quorum/ui'
 import type { CalibrationLabels, LabelQueueResponse } from '@quorum/ui'
+import { STRINGS } from '../strings'
 
 /**
  * Label (#29, #52).
@@ -106,7 +107,7 @@ describe('the queue', () => {
   it('shows the candidate span and both predictions', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     expect(await screen.findByText(/a fee shall accrue/)).toBeInTheDocument()
     // scoped to the predictions list: #33's rationale line repeats both values by design,
     // so an unscoped getByText would pass or fail for reasons unrelated to this assertion
@@ -118,7 +119,7 @@ describe('the queue', () => {
   it('gives each of its three numbers its own denominator', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
 
     // Four counts over different scopes: the whole queue, decisions and skips this page load,
     // and the database. "Reviewed" used to cover both deciding and skipping, so a reviewer who
@@ -133,7 +134,7 @@ describe('the queue', () => {
   it('counts a skip as a skip, and a decision as recorded, not as one number', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Skip'))
@@ -148,7 +149,7 @@ describe('the queue', () => {
   it('says a recorded decision is not yet graded', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Accept'))
@@ -168,7 +169,7 @@ describe('the decision buttons (#52)', () => {
   it('Accept posts the llm prediction and advances to the next item', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Accept'))
@@ -186,7 +187,7 @@ describe('the decision buttons (#52)', () => {
   it('Correct opens the editor with the other extractor’s answer pre-filled', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Correct'))
@@ -199,7 +200,7 @@ describe('the decision buttons (#52)', () => {
   it('Edit opens the same editor with the model’s answer, to amend rather than replace', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Edit'))
@@ -209,7 +210,7 @@ describe('the decision buttons (#52)', () => {
   it('the editor posts the typed value on Enter', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Correct'))
@@ -224,7 +225,7 @@ describe('the decision buttons (#52)', () => {
   it('Skip advances without posting a decision', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Skip'))
@@ -236,7 +237,7 @@ describe('the decision buttons (#52)', () => {
   it('is reachable with Tab and Enter — real buttons, in document order, none taken out of the tab ring', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     const actions = within(screen.getByTestId('label-actions')).getAllByRole('button')
@@ -262,7 +263,7 @@ describe('the keyboard shortcuts are removed (#52)', () => {
   it('y no longer accepts, and s no longer skips', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.keyDown(window, { key: 'y' })
@@ -276,7 +277,7 @@ describe('the keyboard shortcuts are removed (#52)', () => {
   it('n and e no longer open the editor', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.keyDown(window, { key: 'n' })
@@ -289,7 +290,7 @@ describe('the keyboard shortcuts are removed (#52)', () => {
   it('has no shortcut help of its own — ? belongs to the shell now', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.keyDown(window, { key: '?' })
@@ -301,7 +302,7 @@ describe('the keyboard shortcuts are removed (#52)', () => {
   it('does not advertise the removed keys anywhere on the tab', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
     fireEvent.click(button(/how this queue works/i))
 
@@ -320,7 +321,7 @@ describe('what the decisions changed (#52)', () => {
   it('states decisions recorded and how many differed from the model', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     expect(panel).toHaveTextContent(/6 decisions/)
     expect(panel).toHaveTextContent(/5 .*differed/)
@@ -329,7 +330,7 @@ describe('what the decisions changed (#52)', () => {
   it('gives accuracy before and after, each with its n', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     expect(panel).toHaveTextContent(/569 of 1701/)
     expect(panel).toHaveTextContent(/565 of 1701/)
@@ -340,7 +341,7 @@ describe('what the decisions changed (#52)', () => {
   it('says the score went down, and never dresses it as an improvement', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     expect(panel).toHaveTextContent(/went down/i)
     expect(panel).toHaveTextContent(/4 fewer/)
@@ -350,7 +351,7 @@ describe('what the decisions changed (#52)', () => {
   it('keeps the corpus caveat: every queued item already has a lawyer’s answer', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     expect(panel).toHaveTextContent(/already has a lawyer/i)
     expect(panel).toHaveTextContent(/un-annotated/i)
@@ -359,7 +360,7 @@ describe('what the decisions changed (#52)', () => {
   it('names the command that produced the figures', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     expect(panel).toHaveTextContent(/explorer\.evals\.calibration/)
   })
@@ -367,7 +368,7 @@ describe('what the decisions changed (#52)', () => {
   it('says so plainly when calibration has not been run', async () => {
     const { fetchMock } = mockApi(QUEUE, null)
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const panel = await screen.findByTestId('label-outcome')
     await waitFor(() => expect(panel).toHaveTextContent(/not run yet/i))
   })
@@ -375,7 +376,7 @@ describe('what the decisions changed (#52)', () => {
   it('sits above the queue, where a decision is made', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
     const panel = screen.getByTestId('label-outcome')
     const item = screen.getByTestId('label-item')
@@ -392,7 +393,7 @@ describe('whether the model agreed (#52)', () => {
   it('says the model agreed when the reviewer accepted its answer', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Accept'))
@@ -406,7 +407,7 @@ describe('whether the model agreed (#52)', () => {
   it('says the model did not agree when the reviewer corrected it', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Correct'))
@@ -420,7 +421,7 @@ describe('whether the model agreed (#52)', () => {
   it('says nothing before a decision, and nothing after a skip', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     expect(screen.queryByTestId('label-agreement')).not.toBeInTheDocument()
@@ -443,7 +444,7 @@ describe('explaining the loop (#33)', () => {
   it('renders the loop diagram with an accessible name', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     // The panel is collapsed on a first visit, so the diagram is behind the toggle rather than
     // ahead of the queue. Opening it is the assertion: the diagram exists and is reachable.
     fireEvent.click(await screen.findByRole('button', { name: /how this queue works/i }))
@@ -453,7 +454,7 @@ describe('explaining the loop (#33)', () => {
   it('starts collapsed, and an opened panel survives a remount', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    const { unmount } = render(<Label />)
+    const { unmount } = render(<Label strings={STRINGS} />)
 
     // Collapsed first: the queue targets under five seconds per item, and prose above it is
     // in the way. A reader who opens the explainer keeps it open across loads.
@@ -463,7 +464,7 @@ describe('explaining the loop (#33)', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     unmount()
 
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     expect(await screen.findByRole('button', { name: /how this queue works/i })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -473,7 +474,7 @@ describe('explaining the loop (#33)', () => {
   it('explains a disagreement as the reason this item is ranked first', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     const why = await screen.findByTestId('label-why')
     expect(why).toHaveTextContent(/disagree/i)
     expect(why).toHaveTextContent(/Yes/)
@@ -483,7 +484,7 @@ describe('explaining the loop (#33)', () => {
   it('explains an agreement differently — confirmation, not adjudication', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Skip'))
@@ -496,7 +497,7 @@ describe('explaining the loop (#33)', () => {
   it('gives a reason for an absent span, without arguing about it', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Skip'))
@@ -511,7 +512,7 @@ describe('explaining the loop (#33)', () => {
   it('describes the buttons the tab actually has', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     fireEvent.click(await screen.findByRole('button', { name: /how this queue works/i }))
     const explainer = await screen.findByText(/What your decision does/i)
     expect(explainer.parentElement).toHaveTextContent(/decision/i)
@@ -530,7 +531,7 @@ describe('designed states', () => {
       } as Response
     })
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     expect(await screen.findByText(/queue is empty/i)).toBeInTheDocument()
   })
 })
@@ -547,7 +548,7 @@ describe('the editor offers the answers the deal point actually takes', () => {
   it('is a select over the recorded positions, not a text box', async () => {
     const { fetchMock } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Edit'))
@@ -563,7 +564,7 @@ describe('the editor offers the answers the deal point actually takes', () => {
   it('offers exactly what the server will accept, so a decision cannot be rejected', async () => {
     const { fetchMock, decisions } = mockApi()
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Correct'))
@@ -582,7 +583,7 @@ describe('the editor offers the answers the deal point actually takes', () => {
       queue_size: 1,
     })
     vi.stubGlobal('fetch', fetchMock)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
     await ready()
 
     fireEvent.click(button('Edit'))
@@ -606,7 +607,7 @@ describe('the queue failing is a state, not a permanent skeleton', () => {
       return { ok: false, status: 404, json: async () => ({}) } as Response
     })
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
 
     const error = await screen.findByTestId('label-queue-error')
     expect(error).toHaveTextContent(/could not be loaded/i)
@@ -628,7 +629,7 @@ describe('the queue failing is a state, not a permanent skeleton', () => {
       return { ok: false, status: 404, json: async () => ({}) } as Response
     })
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
-    render(<Label />)
+    render(<Label strings={STRINGS} />)
 
     expect(await screen.findByTestId('label-queue-error')).toHaveTextContent(
       /No recorded predictions yet/,

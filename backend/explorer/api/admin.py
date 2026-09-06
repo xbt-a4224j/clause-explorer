@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from explorer.api.logging import redact
 from explorer.api.settings import settings
+from explorer.evals.calibration import normalise_prediction
 
 router = APIRouter(prefix="/admin")
 
@@ -82,14 +83,18 @@ def calibration() -> dict[str, Any]:
     table: dict[str, Any] = {}
     if CALIBRATION_ACCURACY.is_file():
         table = json.loads(CALIBRATION_ACCURACY.read_text(encoding="utf-8"))
+    # The committed artefact keeps its own keys (deal_point_name, matter_id) — see
+    # evals/calibration.py's ARTEFACT_KEYS docstring for why a committed calibration run must
+    # not be rewritten to match a later rename. This is the read boundary: the API speaks the
+    # platform's names, so results rows are normalised on the way out.
     return {
         "markdown": CALIBRATION_REPORT.read_text(encoding="utf-8"),
-        "results": table.get("results", []),
+        "results": [normalise_prediction(r) for r in table.get("results", [])],
         "min_extraction_confidence": table.get(
             "min_extraction_confidence", settings.min_extraction_confidence
         ),
         "vocabulary_size": table.get("vocabulary_size"),
-        "measured_deal_point_count": table.get("measured_deal_point_count"),
+        "measured_subject_count": table.get("measured_subject_count"),
         "reportable_count": table.get("reportable_count"),
         "cost": table.get("cost"),
     }
@@ -111,6 +116,9 @@ def calibration_labels() -> dict[str, Any]:
             "docs/results/calibration-labels.json.",
         )
     payload: dict[str, Any] = json.loads(CALIBRATION_LABELS.read_text(encoding="utf-8"))
+    # Same read boundary as /calibration: the artefact keeps deal_point_name, the API speaks
+    # subject.
+    payload["results"] = [normalise_prediction(r) for r in payload.get("results", [])]
     return payload
 
 

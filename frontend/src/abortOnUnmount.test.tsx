@@ -11,6 +11,7 @@ import { Grading } from '@quorum/ui'
 import { RecordCard } from '@quorum/ui'
 import { QueryBuilder } from './components/QueryBuilder'
 import type { Matter } from './types'
+import { STRINGS } from './strings'
 
 /**
  * #38 — unmounting a view must abort its in-flight requests.
@@ -43,8 +44,8 @@ const BODIES: Record<string, unknown> = {
   lines: [],
   measures: [],
   dimensions: [],
-  matters: [],
-  deal_points: [],
+  records: [],
+  facts: [],
   total_count: 0,
   total_matched: 0,
   labelled_count: 0,
@@ -88,21 +89,21 @@ function expectAbortedOnUnmount(unmount: () => void) {
 
 describe('every fetching view aborts on unmount', () => {
   it('Rollup', () => {
-    expectAbortedOnUnmount(render(<Rollup selection={['m-1']} />).unmount)
+    expectAbortedOnUnmount(render(<Rollup selection={['m-1']} strings={STRINGS} scopeFallback="x" />).unmount)
   })
 
   it('Explore', () => {
     const searchRef = createRef<HTMLInputElement>()
-    expectAbortedOnUnmount(render(<Explore searchRef={searchRef} />).unmount)
+    expectAbortedOnUnmount(render(<Explore strings={STRINGS} searchRef={searchRef} />).unmount)
   })
 
   it('Label', () => {
-    expectAbortedOnUnmount(render(<Label />).unmount)
+    expectAbortedOnUnmount(render(<Label strings={STRINGS} />).unmount)
   })
 
   // #54 folded Admin into Trust; the fetches moved with it and still abort on teardown
   it('Trust', () => {
-    expectAbortedOnUnmount(render(<Trust />).unmount)
+    expectAbortedOnUnmount(render(<Trust strings={STRINGS} accuracyChartCopy={() => ({ title: '', note: null })} />).unmount)
   })
 
   it('Ask', () => {
@@ -120,7 +121,7 @@ describe('every fetching view aborts on unmount', () => {
   it('RecordCard, once expanded', () => {
     expectAbortedOnUnmount(
       render(
-        <RecordCard
+        <RecordCard strings={STRINGS}
           record={MATTER}
           focused={false}
           expanded

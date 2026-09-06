@@ -155,9 +155,9 @@ class CorpusCounts(BaseModel):
     tell the two apart without opening psql.
     """
 
-    matters: int
-    deal_points: int
-    industries: int
+    records: int
+    facts: int
+    categories: int
 
 
 class FacetsResponse(BaseModel):
@@ -314,10 +314,10 @@ def facets(request: FacetRequest) -> FacetsResponse:
     industry_group = next(g for g in groups if g.key == "industry")
     return FacetsResponse(
         corpus=CorpusCounts(
-            matters=int(unfiltered[0][COUNT_MEASURE]) if unfiltered else 0,
-            deal_points=(int(deal_point_rows[0][DEAL_POINT_COUNT]) if deal_point_rows else 0),
+            records=int(unfiltered[0][COUNT_MEASURE]) if unfiltered else 0,
+            facts=(int(deal_point_rows[0][DEAL_POINT_COUNT]) if deal_point_rows else 0),
             # "unclassified" is a bucket, not an industry — counting it would overstate coverage
-            industries=sum(
+            categories=sum(
                 1 for v in industry_group.values if v.n > 0 and v.value.lower() not in UNINFORMATIVE
             ),
         ),

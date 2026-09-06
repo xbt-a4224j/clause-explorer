@@ -56,7 +56,7 @@ class TestTheCardsFields:
     def test_it_carries_the_source_agreement_for_the_citation(self, client: TestClient) -> None:
         body = client.get("/matters/contract_1").json()
         assert body["source_file"]
-        assert body["source_contract_title"]
+        assert body["source_title"]
 
     def test_an_unknown_matter_is_a_404_not_an_empty_card(self, client: TestClient) -> None:
         response = client.get("/matters/contract_does_not_exist")
@@ -69,21 +69,21 @@ class TestDealPoints:
         self, client: TestClient
     ) -> None:
         body = client.get("/matters/contract_1").json()
-        assert body["deal_point_count"] > 0
-        assert len(body["deal_points"]) == body["deal_point_count"]
-        assert all(dp["subject"] and dp["position"] for dp in body["deal_points"])
+        assert body["subject_count"] > 0
+        assert len(body["facts"]) == body["subject_count"]
+        assert all(dp["subject"] and dp["position"] for dp in body["facts"])
 
     def test_every_deal_point_carries_its_denominator_context(self, client: TestClient) -> None:
         """The card reports "n of m located"; both numbers must come from the response."""
         body = client.get("/matters/contract_1").json()
-        located = [dp for dp in body["deal_points"] if dp["source_span_start"] is not None]
+        located = [dp for dp in body["facts"] if dp["source_span_start"] is not None]
         assert body["located_count"] == len(located)
 
     def test_deal_points_are_rows_not_columns(self, client: TestClient) -> None:
         """The LONG shape is the extensibility of the app (D8). A 93rd deal point must be a
         row here, never a new key on the response object."""
         body = client.get("/matters/contract_1").json()
-        names = {dp["subject"] for dp in body["deal_points"]}
+        names = {dp["subject"] for dp in body["facts"]}
         assert len(names) > 1
         assert not any(n in body for n in names)
 
@@ -92,7 +92,7 @@ class TestDealPoints:
 class TestDrillThroughIsTraceable:
     def test_a_located_deal_point_exposes_its_byte_range_and_file(self, client: TestClient) -> None:
         body = client.get("/matters/contract_1").json()
-        located = next(dp for dp in body["deal_points"] if dp["source_span_start"] is not None)
+        located = next(dp for dp in body["facts"] if dp["source_span_start"] is not None)
         assert located["source_span_end"] > located["source_span_start"]
         assert body["source_file"].endswith(".txt")
 
@@ -105,9 +105,7 @@ class TestDrillThroughIsTraceable:
 
         body = client.get("/matters/contract_1").json()
         located = next(
-            dp
-            for dp in body["deal_points"]
-            if dp["source_span_start"] is not None and dp["clause_text"]
+            dp for dp in body["facts"] if dp["source_span_start"] is not None and dp["clause_text"]
         )
         raw = (CONTRACTS_DIR / "contract_1.txt").read_text(encoding="utf-8", errors="replace")
         expected = raw[located["source_span_start"] : located["source_span_end"]]
@@ -118,7 +116,7 @@ class TestDrillThroughIsTraceable:
     ) -> None:
         """495 of 12,937 rows have no span. Inventing text for them would be undetectable."""
         body = client.get("/matters/contract_1").json()
-        unlocated = [dp for dp in body["deal_points"] if dp["source_span_start"] is None]
+        unlocated = [dp for dp in body["facts"] if dp["source_span_start"] is None]
         for dp in unlocated:
             assert dp["clause_text"] is None
             assert dp["text_unavailable"]
@@ -132,7 +130,7 @@ class TestCopyableSummary:
         body = client.get("/matters/contract_1").json()
         summary = body["summary"]
         assert "<" not in summary  # pasted into a deck, not rendered
-        assert body["source_contract_title"] in summary
+        assert body["source_title"] in summary
 
     def test_the_summary_marks_an_inferred_industry_as_inferred(self, client: TestClient) -> None:
         """The paragraph leaves the app and loses the badge, so the word has to be in the text."""
@@ -142,7 +140,7 @@ class TestCopyableSummary:
 
     def test_the_summary_carries_a_denominator(self, client: TestClient) -> None:
         body = client.get("/matters/contract_1").json()
-        assert f"n={body['deal_point_count']}" in body["summary"]
+        assert f"n={body['subject_count']}" in body["summary"]
 
 
 # --- document-scale spans (the drill-through honesty fix) ---------------------------------
