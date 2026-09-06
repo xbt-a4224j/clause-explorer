@@ -279,6 +279,11 @@ export function Explore({ searchRef, onSelectionChange, seedFilters, onSeedConsu
                     matter={matter}
                     focused={i === cursor}
                     expanded={expanded === matter.matter_id}
+                    activeFilter={
+                      filters.consideration_type
+                        ? { dimension: 'consideration_type', value: filters.consideration_type }
+                        : null
+                    }
                     onFocus={() => setCursor(i)}
                     onToggle={() =>
                       setExpanded((id) => (id === matter.matter_id ? null : matter.matter_id))

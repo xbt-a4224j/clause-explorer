@@ -14,20 +14,35 @@ import { ignoreAbort } from '../abort'
  * 2. **Missing text says why.** A deal point with no located span renders its reason, not an
  *    empty box. An empty box reads as "no clause"; the truth is "MAUD located no range".
  */
+/**
+ * The deal point that carries the answer for a filtered dimension.
+ *
+ * Only consideration has one: industry and signing year come from EDGAR enrichment rather than
+ * from a lawyer's answer to a deal point, so there is no clause to show for them and this map
+ * says so by omission rather than by inventing a link.
+ */
+const EVIDENCE_FOR: Record<string, string> = {
+  consideration_type: 'Type of Consideration-Answer',
+}
+
 export function MatterCard({
   matter,
   focused,
   expanded,
+  activeFilter,
   onFocus,
   onToggle,
 }: {
   matter: Matter
+  /** e.g. `{ dimension: 'consideration_type', value: 'All Cash' }`, when one is applied */
+  activeFilter?: { dimension: string; value: string } | null
   focused: boolean
   expanded: boolean
   onFocus: () => void
   onToggle: () => void
 }) {
   const [detail, setDetail] = useState<MatterDetail | null>(null)
+  const evidenceName = activeFilter ? (EVIDENCE_FOR[activeFilter.dimension] ?? null) : null
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -151,8 +166,17 @@ export function MatterCard({
               </p>
 
               <ul className="dps">
-                {detail.deal_points.map((dp) => (
-                  <DealPoint key={dp.deal_point_name} dp={dp} sourceFile={detail.source_file} />
+                {orderedDealPoints(detail.deal_points, evidenceName).map((dp) => (
+                  <DealPoint
+                    key={dp.deal_point_name}
+                    dp={dp}
+                    sourceFile={detail.source_file}
+                    evidenceFor={
+                      dp.deal_point_name === evidenceName && activeFilter
+                        ? activeFilter.value
+                        : undefined
+                    }
+                  />
                 ))}
               </ul>
             </>
@@ -163,9 +187,46 @@ export function MatterCard({
   )
 }
 
-function DealPoint({ dp, sourceFile }: { dp: DealPointDetail; sourceFile: string | null }) {
+/**
+ * One deal point: the answer always, the clause on request.
+ *
+ * A card rendered every clause for every deal point at once. Measured on `contract_1`, that is
+ * 89 deal points carrying **221,045 characters**, so the answer a reader came for was buried in
+ * a fifth of a megabyte of contract prose. The answer is the finding; the clause is the evidence
+ * for it, and evidence is something you ask to see.
+ *
+ * `evidenceFor` marks the deal point that justifies a filter the reader has applied. Filtering
+ * to All Cash and then not being shown the consideration clause is the product failing its own
+ * claim that every figure drills through to the language beneath it, so that one opens by
+ * default and says why it is open.
+ */
+/** The deal point answering the active filter sorts first; the rest keep their order. */
+function orderedDealPoints(dps: DealPointDetail[], evidenceName: string | null): DealPointDetail[] {
+  if (!evidenceName) return dps
+  const hit = dps.filter((d) => d.deal_point_name === evidenceName)
+  return hit.length ? [...hit, ...dps.filter((d) => d.deal_point_name !== evidenceName)] : dps
+}
+
+function DealPoint({
+  dp,
+  sourceFile,
+  evidenceFor,
+}: {
+  dp: DealPointDetail
+  sourceFile: string | null
+  evidenceFor?: string
+}) {
+  const [open, setOpen] = useState(Boolean(evidenceFor))
   return (
-    <li className="dp" data-testid={`dp-${dp.deal_point_name}`}>
+    <li
+      className={`dp${evidenceFor ? ' dp--evidence' : ''}`}
+      data-testid={`dp-${dp.deal_point_name}`}
+    >
+      {evidenceFor && (
+        <p className="dp__evidence" data-testid="dp-evidence">
+          why this matter matched <strong>{evidenceFor}</strong>
+        </p>
+      )}
       <div className="dp__head">
         <span className="dp__name">{dp.deal_point_name}</span>
         <span className="dp__position">
@@ -180,11 +241,24 @@ function DealPoint({ dp, sourceFile }: { dp: DealPointDetail; sourceFile: string
 
       {dp.clause_text ? (
         <>
-          {/* the clause scrolls inside its own box; the page must never scroll sideways */}
-          <blockquote className="dp__clause">{dp.clause_text}</blockquote>
-          <p className="dp__span mono muted">
-            {sourceFile} [{dp.source_span_start}, {dp.source_span_end})
-          </p>
+          <button
+            type="button"
+            className="dp__toggle"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? 'hide the clause' : 'show the clause'}
+            <span className="mono muted"> · {dp.clause_text.length.toLocaleString('en-US')} chars</span>
+          </button>
+          {open && (
+            <>
+              {/* the clause scrolls inside its own box; the page must never scroll sideways */}
+              <blockquote className="dp__clause">{dp.clause_text}</blockquote>
+              <p className="dp__span mono muted">
+                {sourceFile} [{dp.source_span_start}, {dp.source_span_end})
+              </p>
+            </>
+          )}
         </>
       ) : (
         <p className="dp__missing">{dp.text_unavailable}</p>

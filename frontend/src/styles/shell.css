@@ -170,7 +170,12 @@ kbd {
   letter-spacing: 0.01em;
 }
 
-.explore__body { display: grid; grid-template-columns: 15rem 1fr; gap: var(--pad-lg); align-items: start; }
+/* minmax(0,·) not 1fr: an auto minimum lets a long unbroken clause set the track's floor, and
+   the whole page scrolls sideways instead of the text wrapping. */
+.explore__body {
+  display: grid; grid-template-columns: 15rem minmax(0, 1fr);
+  gap: var(--pad-lg); align-items: start; min-width: 0;
+}
 
 .facets { display: flex; flex-direction: column; gap: var(--pad-md); }
 .facets__total { font-size: 11px; color: var(--ink-muted); }
@@ -208,7 +213,7 @@ kbd {
 .facet__count { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 
 .explore__count { font-size: 11px; color: var(--ink-muted); margin-bottom: var(--pad-md); }
-.explore__list { display: flex; flex-direction: column; gap: 1px; }
+.explore__list { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 
 .card { background: var(--surface-1); border: 1px solid var(--hairline-strong); border-radius: var(--radius); }
 .card.is-focused { box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
@@ -1186,3 +1191,24 @@ kbd {
 .viz__footnote summary { cursor: pointer; color: var(--ink-tertiary); }
 .viz__footnote summary:hover { color: var(--ink-subtle); }
 .viz__footnote p { margin: 6px 0 0; line-height: 1.55; max-width: 52rem; }
+
+/* A card used to render every clause at once: 89 deal points and 221,045 characters on one
+   matter, so the answer a reader came for sat inside a fifth of a megabyte of contract prose.
+   The answer is the finding and stays; the clause is its evidence and opens on request. */
+.dp__toggle {
+  margin: 4px 0 0; padding: 2px 0; border: 0; background: none;
+  font: inherit; font-size: 11px; color: var(--accent); cursor: pointer;
+}
+.dp__toggle:hover { color: var(--accent-hover); text-decoration: underline; }
+
+/* The deal point that answers the filter the reader applied. Filtering to All Cash and then not
+   showing the consideration clause is the product failing its own claim. */
+.dp--evidence {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--pad-sm);
+  background: linear-gradient(90deg, rgba(9, 105, 218, 0.05), transparent);
+}
+.dp__evidence {
+  margin: 0 0 2px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--accent);
+}

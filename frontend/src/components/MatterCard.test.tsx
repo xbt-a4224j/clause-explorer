@@ -41,6 +41,8 @@ const DETAIL: MatterDetail = {
     '(n=89, 80 traced to a source span): Fiduciary exception: Yes. Source: ACCELERON PHARMA ' +
     'INC. - Agreement and Plan of Merger (maud/data/contracts/contract_1.txt).',
   deal_points: [
+    // deliberately NOT first: the evidence for an applied filter has to be lifted to the top,
+    // and a fixture that already had it there would not prove that
     {
       deal_point_name: 'Fiduciary exception to COR covenant',
       position: 'Yes',
@@ -49,6 +51,16 @@ const DETAIL: MatterDetail = {
       source_span_start: 234875,
       source_span_end: 239289,
       clause_text: 'Notwithstanding anything to the contrary contained in this Agreement…',
+      text_unavailable: null,
+    },
+    {
+      deal_point_name: 'Type of Consideration-Answer',
+      position: 'All Cash',
+      is_inferred: false,
+      numeric_value: null,
+      source_span_start: 4102,
+      source_span_end: 4370,
+      clause_text: 'each share shall be converted into the right to receive $115.00 in cash…',
       text_unavailable: null,
     },
     {
@@ -110,16 +122,37 @@ describe('drill-through', () => {
   it('shows the source file and char offsets behind a located deal point', async () => {
     renderCard({ expanded: true })
     const dp = await screen.findByTestId('dp-Fiduciary exception to COR covenant')
+    fireEvent.click(within(dp).getByRole('button', { name: /show the clause/i }))
     // the provenance rule: text must be traceable to a byte range in the downloaded source
     expect(within(dp).getByText(/maud\/data\/contracts\/contract_1\.txt/)).toBeInTheDocument()
     expect(within(dp).getByText(/234875/)).toBeInTheDocument()
     expect(within(dp).getByText(/239289/)).toBeInTheDocument()
   })
 
-  it('renders the clause text for a located deal point', async () => {
+  it('renders the clause text for a located deal point, once asked for', async () => {
+    // The clause is behind a toggle now. A card rendered every clause at once, which on
+    // contract_1 is 89 deal points and 221,045 characters, so the answer was buried in the
+    // evidence for it. The answer shows always; the clause opens on request.
     renderCard({ expanded: true })
     const dp = await screen.findByTestId('dp-Fiduciary exception to COR covenant')
+    expect(within(dp).queryByText(/Notwithstanding anything to the contrary/)).toBeNull()
+    fireEvent.click(within(dp).getByRole('button', { name: /show the clause/i }))
     expect(within(dp).getByText(/Notwithstanding anything to the contrary/)).toBeInTheDocument()
+  })
+
+  it('opens the clause that answers the filter the reader applied, and says why', async () => {
+    renderCard({
+      expanded: true,
+      activeFilter: { dimension: 'consideration_type', value: 'All Cash' },
+    })
+    const dp = await screen.findByTestId('dp-Type of Consideration-Answer')
+    // no click: filtering to All Cash and then hiding the consideration clause is the product
+    // failing its own claim that every figure drills through to the language beneath it
+    expect(within(dp).getByTestId('dp-evidence')).toHaveTextContent(/All Cash/)
+    expect(within(dp).getByRole('button', { name: /hide the clause/i })).toBeInTheDocument()
+    // and it is lifted to the top, where the reader is looking for it
+    const names = screen.getAllByTestId(/^dp-/).map((el) => el.getAttribute('data-testid'))
+    expect(names[0]).toBe('dp-Type of Consideration-Answer')
   })
 
   it('says why there is no text rather than rendering an empty box', async () => {
