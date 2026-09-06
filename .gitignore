@@ -40,3 +40,9 @@ data/edgar/
 
 # engineering journal, kept locally
 docs/worklog.md
+
+# Built platform artifacts. Rebuilt by `make platform-sync` in about a second, so committing
+# them would version build output — which this project has already paid for once, by committing
+# generated data until a repo could no longer be pushed. What IS committed is platform.lock,
+# which records the platform commit a demo or a published figure was produced against.
+vendor/

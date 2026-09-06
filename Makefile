@@ -6,6 +6,9 @@ up:            ## boot the whole stack
 down:
 	docker compose down
 
+platform-sync: ## rebuild semantic-quorum and install it here (~1s); writes platform.lock
+	@bash $${QUORUM:-../semantic-quorum}/scripts/sync-into.sh .
+
 ingest:        ## idempotent load: MAUD -> EDGAR enrich (seeds industries)
 	PYTHONPATH=backend python -m explorer.ingest --source $(or $(SOURCE),all)
 
