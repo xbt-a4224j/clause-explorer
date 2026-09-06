@@ -21,6 +21,7 @@ loudly with its near misses attached rather than becoming a filter that returns 
 
 from __future__ import annotations
 
+import contextlib
 import os
 
 import psycopg
@@ -667,3 +668,63 @@ class TestTheSelectionIsCollapsedBeforeItIsRendered:
             "comparable_deals.n",
             "comparable_deals.n",
         ]
+
+
+class TestTheDeclineIsFinal:
+    """A question the interpreter declined must not be resurrected by a fallback.
+
+    `/agent/ask` used to fall back to the free-form selection path whenever the shaped path
+    returned None, on the reasoning that four shapes cannot cover every answerable question.
+    Measured, that reasoning was wrong twice over: free-form scored **4 of 24** on the
+    benchmark with 0-1 of the 20 answerable questions, so it adds almost nothing — and it
+    answered "what's the average deal size in dollars" with **152**, resurrecting a question
+    the shaped path had correctly declined with `covers_the_question: false`.
+
+    A fallback that turns a correct refusal into a confident wrong number is worse than no
+    fallback. The decline is now final.
+    """
+
+    def test_a_declined_question_is_not_answered_by_a_fallback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import explorer.api.ask as ask_module
+        from explorer.api.settings import settings
+
+        monkeypatch.setattr(settings, "openai_api_key", "sk" + "-test-" + "a" * 20)
+        from explorer.agent.interpret import CANNOT_ANSWER
+
+        monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: CANNOT_ANSWER)
+        called: list[int] = []
+        monkeypatch.setattr(
+            ask_module, "select_with_usage", lambda *a, **k: called.append(1) or None
+        )
+
+        response = TestClient(app).post(
+            "/agent/ask", json={"question": "what's the average deal size in dollars"}
+        )
+        assert called == [], "the free-form path must not run after cannot-answer"
+        assert response.status_code == 422
+        assert "cannot answer" in response.json()["error"]["message"].lower()
+
+    def test_a_shape_that_merely_did_not_fit_still_falls_back(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The distinction that makes the finality safe. `None` means the four shapes did not
+        cover an answerable question — "how many deals are all cash" filters a consideration
+        type, not a deal point — and the wider path should still get a turn. Only the model
+        reporting that the CORPUS has nothing is final."""
+        import explorer.api.ask as ask_module
+        from explorer.api.settings import settings
+
+        monkeypatch.setattr(settings, "openai_api_key", "sk" + "-test-" + "a" * 20)
+        monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: None)
+        called: list[int] = []
+
+        def fake(*_a: object, **_k: object) -> object:
+            called.append(1)
+            raise AssertionError("reached, which is the assertion")
+
+        monkeypatch.setattr(ask_module, "select_with_usage", fake)
+        with contextlib.suppress(AssertionError):
+            TestClient(app).post("/agent/ask", json={"question": "how many deals are all cash"})
+        assert called == [1], "an ill-fitting shape must still reach the wider path"

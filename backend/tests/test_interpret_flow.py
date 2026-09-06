@@ -126,7 +126,11 @@ class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
     """
 
     def test_the_average_deal_size_question_declines_rather_than_counting(self) -> None:
-        assert _run("what's the average deal size in dollars", "count", None) is None
+        """CANNOT_ANSWER rather than None, and the distinction is the whole fix: None means
+        "no shape fit" and the caller may fall back, which is what answered this with 152."""
+        from explorer.agent.interpret import CANNOT_ANSWER
+
+        assert _run("what's the average deal size in dollars", "count", None) is CANNOT_ANSWER
 
     def test_a_genuine_count_question_still_answers(self) -> None:
         """The flag is about whether the CORPUS can answer, not whether a deal point exists."""
@@ -139,3 +143,21 @@ class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
     def test_a_shape_with_no_deal_point_and_no_coverage_declines(self) -> None:
         for shape in ("distribution", "median", "coverage"):
             assert _run("unanswerable", shape, None) is None, shape
+
+
+def test_the_shipped_prompt_is_the_benchmarked_prompt() -> None:
+    """The prompt IS the implementation, so a reworded one is untested code.
+
+    The first ship was a tidied rewrite of the string that scored 23/24 — same content,
+    reflowed, with "Return null for BOTH" folded into the self-check paragraph rather than
+    standing alone. It then answered "what's the average deal size in dollars" with **152** on
+    the deployed stack, because the null directive had stopped being its own instruction.
+
+    This pins them together. If the benchmark's prompt changes, the product's changes with it
+    or this fails — which is the point: a prompt edit is a code change needing a re-run, not a
+    tidy-up.
+    """
+    from explorer.agent.interpret import CHOOSE_PROMPT
+    from explorer.evals.ask_bench import CONFIRM_PROMPT
+
+    assert CHOOSE_PROMPT == CONFIRM_PROMPT

@@ -31,6 +31,13 @@ log = get_logger()
 #: The subject axis, declared `subject_axis: true` in the Cube model.
 DEAL_POINT = "deal_points.deal_point_name"
 
+#: Returned instead of None when the model reports the CORPUS cannot answer the question, as
+#: distinct from "none of the four shapes fit". The difference matters at the call site: the
+#: first must be final, and the second may fall back. Conflating them is how "what's the
+#: average deal size in dollars" came back as 152 — the shaped path declined it correctly and
+#: the free-form fallback then answered it with a count of the corpus.
+CANNOT_ANSWER: dict[str, Any] = {"cannot_answer": True}
+
 #: The picker is handed a whole question, not a phrase, so it needs to be told what to extract.
 #: Without this it read "what's the typical tail period" as a phrase to map and returned null,
 #: even though `Tail Period Length-Answer` was in front of it.
@@ -98,6 +105,16 @@ def classify_shape(
     return shape if shape in SHAPES else None
 
 
+# VERBATIM the prompt that was benchmarked, not a tidied version of it.
+#
+# The first ship was a rewrite: same content, reflowed, with "Return null for BOTH" folded into
+# the covers_the_question paragraph instead of standing on its own. It measured 23/24 in the
+# harness and then answered "what's the average deal size in dollars" with **152** on the
+# deployed stack — the model picked `count` rather than declining, because the null directive
+# had stopped being its own instruction.
+#
+# Benchmarking prompt A and shipping prompt A-prime is not a small sin here: the prompt IS the
+# implementation. Changes to this string are a code change and need a re-run, not a tidy-up.
 CHOOSE_PROMPT = (
     "You read a question about a corpus of public-target merger agreements and return two "
     "things: the SHAPE of the answer, and which ABA deal point it is about.\n\n"
@@ -110,13 +127,12 @@ CHOOSE_PROMPT = (
     "coverage — how many agreements we have an answer for on one term.\n\n"
     "DEAL POINT\n"
     "Terms of art map to their point: 'no-shop', 'fiduciary out', 'MAE carve-out', "
-    "'bringdown', 'tail period' each name one. Each point is listed with the answers it "
-    "actually takes, which is usually what identifies it.\n\n"
+    "'bringdown', 'tail period' each name one.\n\n"
+    "Return null for BOTH when this corpus cannot answer the question — it records negotiated "
+    "terms only, and holds no deal values in dollars, no fee amounts, and no adviser names.\n\n"
     "Also return `covers_the_question`: true only if the deal point you chose actually answers "
-    "what was asked. This corpus records negotiated terms only — it holds no deal values in "
-    "dollars, no fee amounts, no adviser names, and no go-shop provisions. Choosing the "
-    "closest available point and marking it false is the right response when the taxonomy does "
-    "not cover the question."
+    "what was asked. Choosing the closest available point and marking it false is the right "
+    "response when this taxonomy does not cover the question."
 )
 
 
@@ -264,9 +280,17 @@ def interpret(
     shape, deal_point, *rest = (*chosen, covers) if len(chosen) == 2 else chosen
     covers = rest[0] if rest else covers
     if shape is None:
+        # covers=False alongside no shape is the model saying the corpus has nothing for this,
+        # not that the shapes did not fit.
+        if covers is False:
+            log.info("interpret_cannot_answer", question=question)
+            return CANNOT_ANSWER
         log.info("interpret_declined", question=question, reason="no shape")
         return None
     if deal_point is None and shape == "count" and not covers:
+        log.info("interpret_cannot_answer", question=question, shape=shape)
+        return CANNOT_ANSWER
+    if False:
         # The demo-killer, caught on the deployed stack: "what's the average deal size in
         # dollars" found no deal point (right — deal value is NULL on all 152 matters), then
         # ran `count` unfiltered and answered 152. A number in reply to a question the corpus

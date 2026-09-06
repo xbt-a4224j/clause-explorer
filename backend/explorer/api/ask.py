@@ -61,7 +61,7 @@ from fastapi import APIRouter, HTTPException
 from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, Field
 
-from explorer.agent.interpret import interpret
+from explorer.agent.interpret import CANNOT_ANSWER, interpret
 from explorer.agent.pick_value import PICK_MODEL
 from explorer.agent.resolve_filter_value import (
     UnresolvedFilterValue,
@@ -353,6 +353,22 @@ def ask(request: AskRequest) -> AskResponse:
                 "came from Postgres and is unaffected."
             ),
         ) from limited
+
+    if shaped is CANNOT_ANSWER:
+        # Final. The free-form path would otherwise resurrect it: it answered "what's the
+        # average deal size in dollars" with 152 — a count of the corpus — after the shaped
+        # path had correctly refused. A fallback that turns a refusal into a confident wrong
+        # number is not a safety net.
+        log.info("agent_ask_cannot_answer", question=request.question)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "This corpus cannot answer that. It records the negotiated terms of 152 "
+                "merger agreements and holds no deal values in dollars, no fee amounts and "
+                "no adviser names. Nothing needs repairing — the question is outside what "
+                "these documents record."
+            ),
+        )
 
     if shaped is not None:
         selection = shaped
