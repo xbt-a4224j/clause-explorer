@@ -18,6 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # ── environment: differs per machine, never checked in ──────────────────────────────
     database_url: str = "postgresql://explorer:explorer@localhost:5432/explorer"
     cube_api_url: str = "http://localhost:4000/cubejs-api/v1"
     log_level: str = "INFO"
@@ -25,6 +26,9 @@ class Settings(BaseSettings):
     # Below this sample size a prevalence renders as "6 of 8", never "75%". A percentage
     # implies a precision the sample does not support, and it is the number a partner quotes
     # in a pitch. Config rather than a literal so the rendering rule is testable at its edge.
+    # ── policy: how this deployment chooses to behave. semantic-quorum takes these as
+    #    ARGUMENTS rather than importing this object — a library that reaches into its caller's
+    #    settings to find a threshold is the coupling the extraction exists to remove ────────
     percentage_threshold: int = 30
 
     # Below this, a slice is not characterized at all (#22 marks it, #23 refuses on it).
@@ -47,6 +51,7 @@ class Settings(BaseSettings):
     # document. Rendering the raw slice as "the clause" showed a table of contents, which is the
     # exact failure this product exists to avoid: a wrong answer that looks like a finding.
     # 6,000 sits just above the median so genuinely clause-scale spans pass through whole.
+    # ── presentation: what this corpus's documents look like, so domain rather than platform ──
     max_clause_chars: int = 6000
 
     # How much of a document-scale span is shown. Enough to see what kind of text the span

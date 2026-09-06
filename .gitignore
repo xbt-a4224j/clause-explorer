@@ -46,3 +46,9 @@ docs/worklog.md
 # generated data until a repo could no longer be pushed. What IS committed is platform.lock,
 # which records the platform commit a demo or a published figure was produced against.
 vendor/
+
+# The FOLIO ontology. #49 removed the hierarchy it fed; nothing has read this file since,
+# and it is 17 MB copied into every image by `COPY data/ ./data/`. The industry crosswalk that
+# replaced it is data/mappings/sic_to_folio.csv, which is 12 KB, checked in on purpose, and
+# auditable a row at a time. Attribution stays in docs/provenance.md.
+data/folio/

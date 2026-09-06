@@ -363,7 +363,7 @@ def _interpret_or_fall_back(
     # Four shapes do not cover every answerable question — "how many deals are all cash"
     # filters a consideration type, not a deal point — so a narrower path must not remove
     # reach the wider one already had.
-    call = select_with_usage(question, vocabulary, settings.openai_api_key)
+    call = select_with_usage(question, vocabulary, settings.openai_api_key or "")
     return call.selection, call
 
 
@@ -402,9 +402,11 @@ def ask(request: AskRequest) -> AskResponse:
         )
 
     started = time.perf_counter()
-    usage: list[tuple[int, int]] = []
+    token_usage: list[tuple[int, int]] = []
     try:
-        selection, call = _interpret_or_fall_back(request.question, vocabulary, usage, started)
+        selection, call = _interpret_or_fall_back(
+            request.question, vocabulary, token_usage, started
+        )
     except RateLimitError as limited:
         # Surfaced as "an internal error occurred" until the account's requests-per-day cap was
         # reached mid-demo. That is the worst message available here: indistinguishable from a
