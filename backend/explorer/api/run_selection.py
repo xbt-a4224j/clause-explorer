@@ -21,6 +21,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from quorum.gates.min_n import apply as apply_min_n
+from quorum.gates.min_n import n_from
 
 from explorer.agent.dimension_values import dimension_values
 from explorer.agent.pick_value import pick_value
@@ -35,19 +37,15 @@ from explorer.api.cube_client import CubeUnavailable
 from explorer.api.cube_client import query as cube_query
 from explorer.api.logging import get_logger
 from explorer.api.settings import settings
+from explorer.domain import DOMAIN
 
 router = APIRouter(prefix="/agent")
 log = get_logger()
 
-#: the measure whose value is the denominator on every deal-point rollup
-# Every count measure in the vocabulary, widest-grain first. Both namespaces call theirs `n`,
-# so a single hardcoded key silently disabled the gate on whichever one it was not — which is
-# how a slice of one came back carrying target and acquirer names with `refused: false`.
-COUNT_MEASURES = (
-    "comparable_deals.n",  # one row per agreement
-    "deal_points.count_distinct_matters",  # agreements, counted explicitly
-    "deal_points.n",  # one row per ANSWER: over-counts agreements ~89x
-)
+#: Every count measure the gate reads, from the manifest. Both namespaces call theirs `n`, so a
+#: single hardcoded key silently disabled the gate on whichever one it was not — which is how a
+#: slice of one came back carrying target and acquirer names with `refused: false`.
+COUNT_MEASURES = DOMAIN.gated_counts
 
 
 class Filter(BaseModel):
@@ -78,32 +76,16 @@ class RunSelectionResponse(BaseModel):
     suppressed: int = 0
 
 
-def _row_clears(row: dict[str, Any], threshold: int) -> bool:
-    """Whether one cell is big enough to be characterized. A row carrying no count at all
-    clears: there is no denominator to gate on, and inventing one to suppress by would be a
-    claim about a sample size nobody measured."""
-    n = _n_from([row])
-    return n is None or n >= threshold
-
-
 def _n_from(rows: list[dict[str, Any]]) -> int | None:
-    """The smallest agreement count anywhere in the result, or None if none was selected.
+    """The smallest count anywhere in the result, or None when none was selected.
 
-    SMALLEST, on two axes, because both were holes:
-
-    * across ROWS — a grouped result is a set of cells and the gate protects each one.
-      Reading `rows[0]` served a fourth cell of n=3 behind a first cell of 89, a cell that
-      refuses instantly when requested on its own.
-    * across MEASURES — `deal_points.n` counts answers, not agreements: healthcare is 26
-      agreements but 2,245 answers. Taking the minimum prefers whichever selected measure is
-      closest to an agreement count, so the gate cannot be walked past by selecting the
-      inflated one.
-
-    None when no count was selected at all (a median on its own), where there is no
-    denominator to gate on and none is claimed.
+    SMALLEST on two axes, because both were holes: across ROWS, since a grouped result is a set
+    of cells and reading `rows[0]` served a fourth cell of n=3 behind a first of 89; and across
+    MEASURES, since `deal_points.n` counts answers rather than agreements — healthcare is 26
+    agreements but 2,245 answers — so the gate cannot be walked past by selecting the inflated
+    one.
     """
-    counts = [int(row[m]) for row in rows for m in COUNT_MEASURES if row.get(m) is not None]
-    return min(counts) if counts else None
+    return n_from(rows, COUNT_MEASURES)
 
 
 def resolve_filters(filters: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -174,49 +156,31 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
     except CubeUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    # Per-CELL suppression, before the whole-result gate. A grouped result is a set of
-    # independent claims and each is gated on its own: refusing all four cells of a
-    # consideration split because the fourth is n=3 answers nothing, and published deal-point
-    # studies do exactly this — report the categories with enough sample, say the rest were
-    # too thin. The cost, accepted knowingly: a reader can infer a suppressed cell exists and
-    # is small. Every disclosure-control system makes that trade.
-    suppressed = 0
-    if request.dimensions:
-        kept = [r for r in rows if _row_clears(r, settings.min_n)]
-        suppressed = len(rows) - len(kept)
-        if suppressed and kept:
-            log.info("run_selection_suppressed", suppressed=suppressed, kept=len(kept))
-            return RunSelectionResponse(
-                query=payload,
-                rows=kept,
-                n=_n_from(kept),
-                refused=False,
-                threshold=settings.min_n,
-                suppressed=suppressed,
-                message=(
-                    f"{suppressed} of {len(rows)} rows suppressed: below the threshold of "
-                    f"{settings.min_n}. The remaining rows are unchanged; the distribution "
-                    "shown is therefore incomplete."
-                ),
-            )
-        rows = kept or rows
+    # Per-CELL suppression before the whole-result gate, then the gate. Both live in
+    # `quorum.gates.min_n` — the control is domain-free even though its justification is not.
+    # It reads like a legal-ethics feature (an attorney who filters to n=1 has extracted one
+    # client's negotiated term through the analytics layer, around the ethical wall, without
+    # retrieving a document), and a health-claims corpus needs exactly the same control under a
+    # different regulation.
+    gate = apply_min_n(
+        rows,
+        count_measures=COUNT_MEASURES,
+        min_n=settings.min_n,
+        grouped=bool(request.dimensions),
+    )
+    if gate.refused:
+        log.info("run_selection_refused", n=gate.n, threshold=gate.threshold)
+    elif gate.suppressed:
+        log.info("run_selection_suppressed", suppressed=gate.suppressed, kept=len(gate.rows))
+    else:
+        log.info("run_selection", measures=request.measures, row_count=len(gate.rows), n=gate.n)
 
-    n = _n_from(rows)
-    if n is not None and n < settings.min_n:
-        # Refusal is its own shape, never an empty row list with a 200 — "we will not answer
-        # this" and "there is nothing here" are different statements about different things.
-        log.info("run_selection_refused", n=n, threshold=settings.min_n)
-        return RunSelectionResponse(
-            query=payload,
-            rows=[],
-            n=n,
-            refused=True,
-            threshold=settings.min_n,
-            message=(
-                f"n={n} — insufficient to characterize (threshold {settings.min_n}). "
-                "The same gate applies to the dashboard and to a direct API call."
-            ),
-        )
-
-    log.info("run_selection", measures=request.measures, row_count=len(rows), n=n)
-    return RunSelectionResponse(query=payload, rows=rows, n=n, refused=False)
+    return RunSelectionResponse(
+        query=payload,
+        rows=gate.rows,
+        n=gate.n,
+        refused=gate.refused,
+        threshold=gate.threshold,
+        suppressed=gate.suppressed,
+        message=gate.message,
+    )

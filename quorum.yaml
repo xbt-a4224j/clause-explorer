@@ -7,6 +7,15 @@ answer_dimension: deal_points.position
 count_measure: deal_points.n
 record_count: comparable_deals.n
 
+# Every count the min_n gate reads, widest grain first. All three, because the gate takes the
+# minimum and a count it cannot see is a count it cannot gate on. Both namespaces call theirs
+# `n`, and one hardcoded key once disabled the gate on the other: a slice of one came back
+# carrying target and acquirer names with `refused: false`.
+count_measures:
+  - comparable_deals.n              # one row per agreement
+  - deal_points.count_distinct_matters  # agreements, counted explicitly
+  - deal_points.n                   # one row per ANSWER: over-counts agreements ~89x
+
 numeric_measures:
   - deal_points.median_numeric_value
   - deal_points.p25_numeric_value

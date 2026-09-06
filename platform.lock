@@ -1,6 +1,6 @@
 # Which semantic-quorum this domain is built against. Written by scripts/sync-into.sh.
 # Committed on purpose: it is the record of what a demo or a published figure was produced with.
 wheel:  semantic_quorum-0.1.0-py3-none-any.whl
-commit: 3f9ce5c7f1d8ec99b28116d40ec5499e33d892c7
-state:  clean
-synced: 2026-09-06T17:31:23Z
+commit: bac70a9417b2ca2657065f34b539246c01a36607
+state:  DIRTY — the platform tree had uncommitted changes
+synced: 2026-09-06T17:42:44Z
