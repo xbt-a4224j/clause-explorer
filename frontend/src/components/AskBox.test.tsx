@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AskBox } from '@quorum/ui'
-import type { AskResponse, MembersResponse } from '@quorum/ui'
+import { AskBox } from '@semantic-explorer-base/ui'
+import type { AskResponse, MembersResponse } from '@semantic-explorer-base/ui'
 import { STRINGS } from '../strings'
 
 /**

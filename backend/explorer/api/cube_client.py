@@ -1,6 +1,6 @@
 """The only place this API talks to Cube, bound to this deployment's URL.
 
-The implementation is `quorum.cube.client`. It takes the Cube URL as an argument and reads no
+The implementation is `semantic_explorer_base.cube.client`. It takes the Cube URL as an argument and reads no
 settings, which is what lets the platform be a library rather than an application — and what
 the platform's boundary test enforces. This module supplies the URL, so nothing else in the app
 has to carry it.
@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from quorum.cube.client import CONTINUE_WAIT, MAX_WAITS, CubeUnavailable
-from quorum.cube.client import meta as _meta
-from quorum.cube.client import query as _query
+from semantic_explorer_base.cube.client import CONTINUE_WAIT, MAX_WAITS, CubeUnavailable
+from semantic_explorer_base.cube.client import meta as _meta
+from semantic_explorer_base.cube.client import query as _query
 
 from explorer.api.settings import settings
 

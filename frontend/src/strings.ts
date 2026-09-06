@@ -10,7 +10,7 @@
  * this is a legal product and should read like one. That is the split: shared components,
  * unshared words.
  */
-import type { QuorumStrings } from '@quorum/ui'
+import type { QuorumStrings } from '@semantic-explorer-base/ui'
 import { GLOSSARY } from './glossary'
 
 export const STRINGS: QuorumStrings = {

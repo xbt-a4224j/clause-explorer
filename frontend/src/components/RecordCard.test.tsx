@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { RecordCard } from '@quorum/ui'
+import { RecordCard } from '@semantic-explorer-base/ui'
 import type { Matter, MatterDetail } from '../types'
 import { RECORD_RENDERERS } from '../recordRenderers'
 import { STRINGS } from '../strings'

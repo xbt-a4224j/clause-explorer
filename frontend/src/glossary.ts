@@ -1,10 +1,10 @@
 /**
- * This corpus's terms of art, moved from the platform's Term component (semantic-quorum#7).
+ * This corpus's terms of art, moved from the platform's Term component (semantic-explorer-base#7).
  *
  * A shared glossary would be either wrong for every other domain or so generic it defines
  * nothing — "MAUD" and "fiduciary out" mean something to one reader and nothing to the next.
  */
-import type { Glossary } from '@quorum/ui'
+import type { Glossary } from '@semantic-explorer-base/ui'
 
 export const GLOSSARY: Glossary = {
   MAUD: {

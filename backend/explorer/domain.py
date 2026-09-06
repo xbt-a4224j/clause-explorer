@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pathlib
 
-from quorum.domain import Domain, load
+from semantic_explorer_base.domain import Domain, load
 
 #: The repo root — three levels up from `backend/explorer/domain.py`.
 ROOT = pathlib.Path(__file__).resolve().parents[2]

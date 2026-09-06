@@ -5,7 +5,7 @@
  * inferred rather than labelled — is a claim about this specific corpus. The platform's Explore
  * view supplies the live counts; this is the prose that explains where they came from.
  */
-import { Term, type CorpusCounts, type Glossary } from '@quorum/ui'
+import { Term, type CorpusCounts, type Glossary } from '@semantic-explorer-base/ui'
 
 export function corpusStrip(glossary: Glossary) {
   return (counts: CorpusCounts) => (

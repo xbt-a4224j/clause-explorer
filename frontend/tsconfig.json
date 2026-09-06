@@ -19,7 +19,7 @@
     // Mirrors the Vite alias. Two places rather than one because tsc and Vite resolve
     // independently; they are checked against each other by the build, which fails loudly if
     // they disagree.
-    "paths": { "@quorum/ui": ["./vendor/quorum-ui/src/index.ts"] }
+    "paths": { "@semantic-explorer-base/ui": ["./vendor/semantic-explorer-base-ui/src/index.ts"] }
   },
-  "include": ["src", "vendor/quorum-ui/src"]
+  "include": ["src", "vendor/semantic-explorer-base-ui/src"]
 }

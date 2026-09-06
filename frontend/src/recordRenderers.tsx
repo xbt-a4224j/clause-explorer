@@ -6,7 +6,7 @@
  * record to a reader. A merger corpus shows `target ← acquirer` with an industry chip and a
  * signing date; another corpus shows something else, and neither has to know about the other.
  */
-import type { CorpusRecord, RecordDetail } from '@quorum/ui'
+import type { CorpusRecord, RecordDetail } from '@semantic-explorer-base/ui'
 import type { Matter, MatterDetail } from './types'
 
 export const RECORD_RENDERERS = {

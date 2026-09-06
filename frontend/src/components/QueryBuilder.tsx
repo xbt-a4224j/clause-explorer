@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import type { CatalogEntry, RunSelectionResponse } from '@quorum/ui'
-import { isAbortError, useAbortOnUnmount } from '@quorum/ui'
+import type { CatalogEntry, RunSelectionResponse } from '@semantic-explorer-base/ui'
+import { isAbortError, useAbortOnUnmount } from '@semantic-explorer-base/ui'
 
 /**
  * The click-to-build query panel (#37).

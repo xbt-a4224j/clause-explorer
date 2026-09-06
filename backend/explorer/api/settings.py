@@ -10,7 +10,7 @@ It was a grab bag: a connection string, a log level, a disclosure threshold, and
 of MAUD's span lengths in one place. Two changes fixed that, and only one of them is visible
 here.
 
-The important one is that `semantic-quorum` does not import this object. It takes `min_n`, the
+The important one is that `semantic-explorer-base` does not import this object. It takes `min_n`, the
 Cube URL and the API key as ARGUMENTS — a library that reaches into its caller's settings to
 find a threshold is exactly the coupling the extraction exists to remove, and it is what makes
 the gate testable at its edge without a running app.

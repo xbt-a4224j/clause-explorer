@@ -321,7 +321,7 @@ def _usage(call: SelectionCall) -> AskUsage:
 # last on whatever survived.
 #
 # Split now rather than later because these steps are exactly the seam along which the platform
-# extraction cuts: `interpret` and `resolve` are becoming semantic-quorum calls, and everything
+# extraction cuts: `interpret` and `resolve` are becoming semantic-explorer-base calls, and everything
 # else is this application.
 
 

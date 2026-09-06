@@ -53,7 +53,7 @@ describe('colour comes from tokens.css', () => {
 })
 
 describe('the platform UI is present and is the source of colour', () => {
-  const VENDORED = import.meta.glob('../vendor/quorum-ui/src/**/*.css', {
+  const VENDORED = import.meta.glob('../vendor/semantic-explorer-base-ui/src/**/*.css', {
     query: '?raw',
     import: 'default',
     eager: true,

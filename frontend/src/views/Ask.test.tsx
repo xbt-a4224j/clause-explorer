@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Ask } from './Ask'
-import type { CatalogResponse } from '@quorum/ui'
+import type { CatalogResponse } from '@semantic-explorer-base/ui'
 
 /**
  * Ask (#36; renamed from Semantic Layer and moved second in the bar by #48).

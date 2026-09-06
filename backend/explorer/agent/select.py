@@ -1,6 +1,6 @@
 """NL -> a governed Cube selection, bound to this domain and this deployment.
 
-The implementation is `quorum.agent.select`. Everything that made this file 293 lines lives
+The implementation is `semantic_explorer_base.agent.select`. Everything that made this file 293 lines lives
 there now: the enum-constrained schema, the vocabulary read live from `/meta`, and the scope
 guard that refuses a percentile the selection has not pinned to one subject value.
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from quorum.agent.select import (
+from semantic_explorer_base.agent.select import (
     SELECT_MODEL,
     AgentUnavailable,
     InvalidSelection,
@@ -30,11 +30,11 @@ from quorum.agent.select import (
     requires_scope,
     scope_reason,
 )
-from quorum.agent.select import fetch_vocabulary as _fetch_vocabulary
-from quorum.agent.select import select_via_llm as _select_via_llm
-from quorum.agent.select import select_with_usage as _select_with_usage
-from quorum.agent.select import system_prompt as _system_prompt
-from quorum.agent.select import validate_selection as _validate_selection
+from semantic_explorer_base.agent.select import fetch_vocabulary as _fetch_vocabulary
+from semantic_explorer_base.agent.select import select_via_llm as _select_via_llm
+from semantic_explorer_base.agent.select import select_with_usage as _select_with_usage
+from semantic_explorer_base.agent.select import system_prompt as _system_prompt
+from semantic_explorer_base.agent.select import validate_selection as _validate_selection
 
 from explorer.api.settings import settings
 from explorer.domain import DOMAIN

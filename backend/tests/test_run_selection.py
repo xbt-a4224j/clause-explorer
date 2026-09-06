@@ -631,7 +631,7 @@ class TestAMedianIsGatedOnItsOwnSample:
     def test_a_thin_median_refuses(self) -> None:
         from explorer.api.run_selection import COUNT_MEASURES
         from explorer.api.settings import settings
-        from quorum.gates.min_n import apply
+        from semantic_explorer_base.gates.min_n import apply
 
         thin = [{"deal_points.median_numeric_value": 30, "deal_points.numeric_n": 2}]
         gate = apply(thin, count_measures=COUNT_MEASURES, min_n=settings.min_n, grouped=False)
@@ -642,7 +642,7 @@ class TestAMedianIsGatedOnItsOwnSample:
     def test_a_thick_median_passes_and_reports_its_n(self) -> None:
         from explorer.api.run_selection import COUNT_MEASURES
         from explorer.api.settings import settings
-        from quorum.gates.min_n import apply
+        from semantic_explorer_base.gates.min_n import apply
 
         thick = [{"deal_points.median_numeric_value": 12, "deal_points.numeric_n": 150}]
         gate = apply(thick, count_measures=COUNT_MEASURES, min_n=settings.min_n, grouped=False)

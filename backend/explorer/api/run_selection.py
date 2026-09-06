@@ -21,8 +21,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from quorum.gates.min_n import apply as apply_min_n
-from quorum.gates.min_n import n_from
+from semantic_explorer_base.gates.min_n import apply as apply_min_n
+from semantic_explorer_base.gates.min_n import n_from
 
 from explorer.agent.dimension_values import dimension_values
 from explorer.agent.pick_value import pick_value
@@ -157,7 +157,7 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     # Per-CELL suppression before the whole-result gate, then the gate. Both live in
-    # `quorum.gates.min_n` — the control is domain-free even though its justification is not.
+    # `semantic_explorer_base.gates.min_n` — the control is domain-free even though its justification is not.
     # It reads like a legal-ethics feature (an attorney who filters to n=1 has extracted one
     # client's negotiated term through the analytics layer, around the ethical wall, without
     # retrieving a document), and a health-claims corpus needs exactly the same control under a

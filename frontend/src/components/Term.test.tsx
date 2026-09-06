@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { Term } from '@quorum/ui'
+import { Term } from '@semantic-explorer-base/ui'
 import { GLOSSARY } from '../glossary'
 
 /**

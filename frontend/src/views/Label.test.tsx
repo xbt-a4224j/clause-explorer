@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Label } from '@quorum/ui'
-import type { CalibrationLabels, LabelQueueResponse } from '@quorum/ui'
+import { Label } from '@semantic-explorer-base/ui'
+import type { CalibrationLabels, LabelQueueResponse } from '@semantic-explorer-base/ui'
 import { STRINGS } from '../strings'
 
 /**

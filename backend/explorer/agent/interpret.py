@@ -1,6 +1,6 @@
 """One question -> a governed selection, bound to this domain.
 
-The implementation moved to `quorum.agent.interpret`, along with the prompt, the enum schema
+The implementation moved to `semantic_explorer_base.agent.interpret`, along with the prompt, the enum schema
 and the reasons for both. This file supplies the two things the platform cannot know: which
 corpus it is reading, and where this app's key and Cube live.
 
@@ -14,20 +14,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from quorum.agent.interpret import (
+from semantic_explorer_base.agent.interpret import (
     Interpretation,
     subject_glosses,
 )
-from quorum.agent.interpret import (
+from semantic_explorer_base.agent.interpret import (
     choose_interpretation as _choose,
 )
-from quorum.agent.interpret import (
+from semantic_explorer_base.agent.interpret import (
     interpret as _interpret,
 )
-from quorum.agent.interpret import (
+from semantic_explorer_base.agent.interpret import (
     interpretation_schema as _interpretation_schema,
 )
-from quorum.agent.prompt import build
+from semantic_explorer_base.agent.prompt import build
 
 from explorer.api.settings import settings
 from explorer.domain import DOMAIN

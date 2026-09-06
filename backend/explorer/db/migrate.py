@@ -1,6 +1,6 @@
 """Schema application and teardown.
 
-The schema itself is the platform's — `quorum/db/spine.sql` — and this module applies it plus
+The schema itself is the platform's — `semantic_explorer_base/db/spine.sql` — and this module applies it plus
 this domain's own `db/domain.sql`. That split is the point of the extraction: `records`, `facts`
 and `categories` are what every corpus has, and `deal_value_usd` is what this one has.
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 
 import psycopg
-from quorum.db import migrate as apply_spine
+from semantic_explorer_base.db import migrate as apply_spine
 
 from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings

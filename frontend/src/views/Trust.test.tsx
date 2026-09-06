@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Trust } from '@quorum/ui'
+import { Trust } from '@semantic-explorer-base/ui'
 import { TABS } from '../tabs'
 import { STRINGS } from '../strings'
 

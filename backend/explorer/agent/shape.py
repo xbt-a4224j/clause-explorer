@@ -1,6 +1,6 @@
 """Question shape, bound to this domain.
 
-The implementation moved to `quorum.agent.shape`. What was here was 105 lines that named
+The implementation moved to `semantic_explorer_base.agent.shape`. What was here was 105 lines that named
 `deal_points.deal_point_name`, `deal_points.position` and `deal_points.n` in four places and
 contained no legal logic at all — it builds four Cube selections, and every one of them names
 the same three members. The four skeletons and the reasons for them now live in the platform,
@@ -15,8 +15,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from quorum.agent.shape import SHAPES, UnscopedShape
-from quorum.agent.shape import selection_for as _selection_for
+from semantic_explorer_base.agent.shape import SHAPES, UnscopedShape
+from semantic_explorer_base.agent.shape import selection_for as _selection_for
 
 from explorer.domain import DOMAIN
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { TableRowsResponse } from '@quorum/ui'
-import { ignoreAbort } from '@quorum/ui'
+import type { TableRowsResponse } from '@semantic-explorer-base/ui'
+import { ignoreAbort } from '@semantic-explorer-base/ui'
 import { ProvenanceDiagram, SystemDiagram } from '../components/overviewDiagrams'
 import { JOURNEYS, type Journey } from '../journeys'
 

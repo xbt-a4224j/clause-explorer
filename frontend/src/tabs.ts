@@ -28,8 +28,8 @@
 // outlives the label somebody remembered to rename. The id is the part nobody thinks to
 // change, which is why it is the part that has to be generic — the LABEL below is still
 // "Deal Terms", because this is a legal product and should read like one.
-export type { TabId } from '@quorum/ui'
-import type { TabId } from '@quorum/ui'
+export type { TabId } from '@semantic-explorer-base/ui'
+import type { TabId } from '@semantic-explorer-base/ui'
 
 import { STRINGS } from './strings'
 
