@@ -601,3 +601,50 @@ class TestAThinCellIsSuppressedNotFatal:
         ).json()
         assert body["refused"] is True
         assert body["suppressed"] == 0
+
+
+class TestAMedianIsGatedOnItsOwnSample:
+    """Found on the deployed stack, not by the suite, after the platform cutover.
+
+    "What's the typical tail period" came back with `n: null` and `refused: false`. The gate
+    read the three count measures the manifest listed and `deal_points.numeric_n` was not among
+    them, so a median selection — which carries no other count — had no denominator to gate on
+    and passed straight through.
+
+    That is the exact shape min_n exists to refuse. A percentile over two records is not a
+    market, and it is also the k-anonymity case: an attorney who filters until two agreements
+    remain and reads back their median has recovered something close to a single negotiated
+    number through the analytics layer, without retrieving a document.
+
+    The whole-result path was never wrong; the LIST it reads was incomplete. A gate is only as
+    wide as the measures it is told about, which is why `count_measures` is validated at load
+    and why this test names the measure rather than the behaviour.
+    """
+
+    def test_the_percentile_denominator_is_one_of_the_gated_counts(self) -> None:
+        from explorer.domain import DOMAIN
+
+        assert DOMAIN.percentile_denominator in DOMAIN.gated_counts, (
+            "a median selection carries no other count, so leaving this out means no gate at all"
+        )
+
+    def test_a_thin_median_refuses(self) -> None:
+        from explorer.api.run_selection import COUNT_MEASURES
+        from explorer.api.settings import settings
+        from quorum.gates.min_n import apply
+
+        thin = [{"deal_points.median_numeric_value": 30, "deal_points.numeric_n": 2}]
+        gate = apply(thin, count_measures=COUNT_MEASURES, min_n=settings.min_n, grouped=False)
+        assert gate.refused
+        assert gate.n == 2
+        assert gate.rows == [], "a refusal shows no rows, or the refusal is decorative"
+
+    def test_a_thick_median_passes_and_reports_its_n(self) -> None:
+        from explorer.api.run_selection import COUNT_MEASURES
+        from explorer.api.settings import settings
+        from quorum.gates.min_n import apply
+
+        thick = [{"deal_points.median_numeric_value": 12, "deal_points.numeric_n": 150}]
+        gate = apply(thick, count_measures=COUNT_MEASURES, min_n=settings.min_n, grouped=False)
+        assert not gate.refused
+        assert gate.n == 150, "the median's denominator must reach the response, not stay null"

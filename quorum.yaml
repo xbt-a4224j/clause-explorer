@@ -15,6 +15,7 @@ count_measures:
   - comparable_deals.n              # one row per agreement
   - deal_points.count_distinct_matters  # agreements, counted explicitly
   - deal_points.n                   # one row per ANSWER: over-counts agreements ~89x
+  - deal_points.numeric_n           # answers carrying a number: the percentile's own sample
 
 numeric_measures:
   - deal_points.median_numeric_value
