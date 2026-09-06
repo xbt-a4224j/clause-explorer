@@ -17,9 +17,12 @@ import sys
 import time
 from collections.abc import Callable
 
+import psycopg
+
 from explorer.api.logging import configure_logging, get_logger
 from explorer.api.settings import settings
 from explorer.ingest import edgar, maud
+from explorer.ingest.corpus import claim_corpus
 
 # dependency order, not alphabetical — see module docstring
 SOURCES: dict[str, Callable[..., dict[str, object]]] = {
@@ -39,6 +42,14 @@ def run_all(sources: list[str], dsn: str | None = None) -> dict[str, dict[str, o
     log = get_logger()
     results: dict[str, dict[str, object]] = {}
     started = time.perf_counter()
+
+    # FIRST, and before any source runs. Ingest is idempotent by matter_id, which means it
+    # will happily add its corpus alongside a stranger's without noticing — see
+    # ingest/corpus.py for the incident this exists because of.
+    with psycopg.connect(dsn or settings.database_url) as conn:
+        claimed = claim_corpus(conn)
+    log.info("corpus_claimed", corpus=claimed)
+
     for source in sources:
         results[source] = run_source(source, dsn=dsn)
     log.info(
