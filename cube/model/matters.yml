@@ -110,6 +110,9 @@ cubes:
         description: >-
           Signing year, the Explore rail's time facet. Only 2020 and 2021 exist in this
           corpus; a year facet therefore has exactly two non-empty values.
+        meta:
+          # Closed vocabulary — see deal_point_name for why this lives in the model.
+          closed_vocabulary: true
 
       - name: sic_code
         title: SEC SIC code
@@ -184,6 +187,9 @@ cubes:
         description: >
           All Cash / All Stock / Mixed. Read directly from MAUD's expert annotation for the
           "Type of Consideration" deal point — gold, not inferred, unlike industry.
+        meta:
+          # Closed vocabulary — see deal_point_name for why this lives in the model.
+          closed_vocabulary: true
 
       - name: corpus
         title: Corpus
@@ -236,6 +242,9 @@ cubes:
           Health Care grouping includes pharma, biotech, medical devices and CROs, which NAICS
           files under Manufacturing. It is our definition, not a standard one, and must be
           described that way wherever it appears.
+        meta:
+          # Closed vocabulary — see deal_point_name for why this lives in the model.
+          closed_vocabulary: true
 
       - name: updated_at
         title: Last updated

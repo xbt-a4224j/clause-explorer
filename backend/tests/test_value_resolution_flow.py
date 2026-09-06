@@ -225,3 +225,71 @@ def _wide_vocab():
             "comparable_deals.target_name",
         ),
     )
+
+
+class TestWhichDimensionsAreClosedComesFromTheModel:
+    """`closed_vocabulary` is declared in the Cube YAML, not in a Python constant.
+
+    It was a hardcoded frozenset of six member names in `dimension_values.py` — a second
+    source of truth about the model that nothing kept in step with it. Renaming a dimension in
+    the YAML would have silently stopped it resolving, and the failure would have looked like
+    the model getting worse rather than a rename going unnoticed.
+
+    Moving it also fixed a bug that had not surfaced yet: Cube propagates a member's `meta`
+    through a VIEW, so declaring it once on `matters.consideration_type` covers
+    `comparable_deals.consideration_type` too. The frozenset had to list both and listed only
+    one of each pair for two of them.
+    """
+
+    META: ClassVar[dict[str, object]] = {
+        "cubes": [
+            {
+                "name": "deal_points",
+                "dimensions": [
+                    {"name": "deal_points.deal_point_name", "meta": {"closed_vocabulary": True}},
+                    {"name": "deal_points.matter_id"},
+                ],
+            },
+            {
+                "name": "comparable_deals",
+                "dimensions": [
+                    {
+                        "name": "comparable_deals.consideration_type",
+                        "meta": {"closed_vocabulary": True},
+                    },
+                    {"name": "comparable_deals.target_name", "meta": {}},
+                    {"name": "comparable_deals.signing_date"},
+                ],
+            },
+        ]
+    }
+
+    def test_it_reads_the_declaration_from_meta(self) -> None:
+        from explorer.agent.dimension_values import closed_dimensions
+
+        assert closed_dimensions(self.META) == frozenset(
+            {"deal_points.deal_point_name", "comparable_deals.consideration_type"}
+        )
+
+    def test_an_undeclared_dimension_is_open(self) -> None:
+        """Target name and signing date grow with the corpus. They must stay open, or the
+        resolver becomes a censor that refuses values the corpus legitimately holds."""
+        from explorer.agent.dimension_values import closed_dimensions
+
+        closed = closed_dimensions(self.META)
+        assert "comparable_deals.target_name" not in closed
+        assert "comparable_deals.signing_date" not in closed
+
+    def test_the_real_model_declares_the_subject_axis(self) -> None:
+        """The one dimension every legally interesting question names. If a rename ever drops
+        this, Ask silently returns to answering 0 of 20."""
+        import pathlib
+
+        import yaml
+
+        model = yaml.safe_load(
+            (pathlib.Path(__file__).resolve().parents[2] / "cube/model/deal_points.yml").read_text()
+        )
+        dim = next(d for d in model["cubes"][0]["dimensions"] if d["name"] == "deal_point_name")
+        assert dim["meta"]["closed_vocabulary"] is True
+        assert dim["meta"]["subject_axis"] is True

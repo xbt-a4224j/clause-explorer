@@ -1,0 +1,125 @@
+{
+  "note": "Questions a transactional lawyer would ask of a public-target merger-agreement corpus. `deal_point` is a substring that must appear in the chosen ABA deal point; null means the corpus genuinely cannot answer, and declining is the correct behaviour. Written against the MAUD taxonomy, not against any implementation, so the same file grades every approach. Four substrings match several deal points on purpose: 'fiduciary out', 'publicly disclosed' and 'intervening event' are genuinely served by more than one ABA point, and picking any of them answers the question. Grading is substring containment for that reason.",
+  "questions": [
+    {
+      "q": "what's the ordinary course efforts standard in these deals",
+      "deal_point": "Ordinary course efforts standard",
+      "shape": "distribution"
+    },
+    {
+      "q": "is knowledge usually defined as actual or constructive",
+      "deal_point": "Knowledge Definition-Answer",
+      "shape": "distribution"
+    },
+    {
+      "q": "do agreements include consistent with past practice",
+      "deal_point": "consistent with past practice",
+      "shape": "distribution"
+    },
+    {
+      "q": "what fiduciary out standard is market",
+      "deal_point": "Fiduciary exception",
+      "shape": "distribution"
+    },
+    {
+      "q": "how often is specific performance available",
+      "deal_point": "Specific Performance",
+      "shape": "distribution"
+    },
+    {
+      "q": "do MAE definitions specifically reference COVID-19",
+      "deal_point": "Specific reference to COVID-19",
+      "shape": "distribution"
+    },
+    {
+      "q": "how many deals carve pandemic responses out of the negative interim covenant",
+      "deal_point": "Negative Interim Covenant includes carveout for pandemic",
+      "shape": "distribution"
+    },
+    {
+      "q": "is the ordinary course covenant carved out for pandemic responses",
+      "deal_point": "Ordinary Course Covenant includes carve-out for Pandemic",
+      "shape": "distribution"
+    },
+    {
+      "q": "what is the liability standard for a no-shop breach by non-D&O representatives",
+      "deal_point": "Non-D&O Representatives",
+      "shape": "distribution"
+    },
+    {
+      "q": "are target stockholder proceedings addressed",
+      "deal_point": "Target stockholder proceedings",
+      "shape": "distribution"
+    },
+    {
+      "q": "does the MAE definition reference the target's prospects",
+      "deal_point": "Target \"prospects\"",
+      "shape": "distribution"
+    },
+    {
+      "q": "is a general economic conditions carve-out subject to a disproportionate impact modifier",
+      "deal_point": "General economic and financial conditions: subject to",
+      "shape": "distribution"
+    },
+    {
+      "q": "what bringdown standard applies to fundamental representations",
+      "deal_point": "Fundamental Target R&Ws: Bringdown Standard",
+      "shape": "distribution"
+    },
+    {
+      "q": "must an acquisition proposal be publicly disclosed",
+      "deal_point": "publicly disclosed",
+      "shape": "distribution"
+    },
+    {
+      "q": "what triggers a change of recommendation for an intervening event",
+      "deal_point": "Intervening Event",
+      "shape": "distribution"
+    },
+    {
+      "q": "is the ability to consummate subject to MAE carveouts",
+      "deal_point": "concept is subject to MAE carveouts",
+      "shape": "distribution"
+    },
+    {
+      "q": "what is the antitrust efforts standard",
+      "deal_point": "General Antitrust Efforts Standard",
+      "shape": "distribution"
+    },
+    {
+      "q": "does knowledge extend to target management for an intervening event",
+      "deal_point": "Knowledge persons include Target management",
+      "shape": "distribution"
+    },
+    {
+      "q": "what's the typical tail period",
+      "deal_point": "Tail Period Length",
+      "shape": "median"
+    },
+    {
+      "q": "how long is the initial matching rights period after a change of recommendation",
+      "deal_point": "Initial matching rights period (COR)",
+      "shape": "median"
+    },
+    {
+      "q": "what's the average deal size in dollars",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "how many deals had a go-shop",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "what's the median reverse termination fee",
+      "deal_point": null,
+      "shape": null
+    },
+    {
+      "q": "which law firms advised on these deals",
+      "deal_point": null,
+      "shape": null
+    }
+  ]
+}

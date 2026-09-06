@@ -54,19 +54,18 @@ and this is a claim about the response that actually came back.
 from __future__ import annotations
 
 import time
-
 from typing import Any
 
 import psycopg
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from explorer.agent.interpret import interpret
+from explorer.agent.pick_value import PICK_MODEL
 from explorer.agent.resolve_filter_value import (
     UnresolvedFilterValue,
     resolve_filter_value,
 )
-from explorer.agent.interpret import interpret
-from explorer.agent.pick_value import PICK_MODEL
 from explorer.agent.select import (
     AgentUnavailable,
     InvalidSelection,

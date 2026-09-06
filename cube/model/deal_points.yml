@@ -86,6 +86,18 @@ cubes:
           (no-shop)" or "Type of Consideration-Answer". 92 distinct values in the loaded corpus.
           ALWAYS filter on this before reading any count: the cube holds every deal point at
           once, so an unfiltered n is the total number of labels, not a sample size.
+        # Which dimensions hold a CLOSED vocabulary is a property of the model, so it is
+        # declared here rather than in a Python constant that drifts from it. An agent
+        # resolving a filter value reads this from /meta and enumerates only what is
+        # marked: a dimension whose values grow with the corpus — a target name, a signing
+        # date — has no vocabulary to resolve against and must carry the user's text
+        # through verbatim rather than refuse it.
+        meta:
+          closed_vocabulary: true
+          # The subject axis of this corpus. Essentially every question a lawyer asks names
+          # a deal point, so this is the one dimension an interpreter should always pin.
+          # Measured 2026-09-06: pinning it took Ask from 0 of 20 answerable questions to 20.
+          subject_axis: true
 
       - name: position
         title: Answer
@@ -95,6 +107,9 @@ cubes:
           The negotiated position the annotator recorded for this deal point — the answer text,
           e.g. "All Cash" or '"Inconsistent" with fiduciary duties'. Group by this to get the
           distribution of outcomes for one deal point.
+        meta:
+          # Closed vocabulary — see deal_point_name for why this lives in the model.
+          closed_vocabulary: true
 
       - name: numeric_value
         title: Numeric answer
