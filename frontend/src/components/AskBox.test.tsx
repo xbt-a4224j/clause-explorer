@@ -787,3 +787,129 @@ describe('a filter value the corpus does not carry', () => {
     expect(screen.queryByTestId('ask-off-vocabulary')).not.toBeInTheDocument()
   })
 })
+
+describe('an answer opens into the records behind it', () => {
+  /**
+   * The rows were a JSON dump: correct, auditable, and a dead end. A distribution row is a
+   * group of agreements that gave the same answer, and the next question is always which ones.
+   */
+  /** What /agent/ask returns today: the subject axis pinned, plus a record-level scope. */
+  const SCOPED: AskResponse = {
+    ...ASKED,
+    measures: ['deal_points.n'],
+    dimensions: ['deal_points.position'],
+    filters: [
+      {
+        member: 'comparable_deals.label',
+        operator: 'equals',
+        values: ['Health Care Industry'],
+        resolutions: [],
+      },
+      {
+        member: 'deal_points.deal_point_name',
+        operator: 'equals',
+        values: ['Type of Consideration-Answer'],
+        resolutions: [],
+      },
+    ],
+  }
+
+  function mockRows(rows: Record<string, unknown>[]) {
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(String(url))
+        if (String(url).includes('/agent/members'))
+          return { ok: true, status: 200, json: async () => MEMBERS } as Response
+        if (String(url).includes('/agent/ask'))
+          return { ok: true, status: 200, json: async () => SCOPED } as Response
+        if (String(url).includes('run-selection'))
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              query: JSON.parse(String(init?.body ?? '{}')),
+              rows,
+              n: 89,
+              refused: false,
+              threshold: 5,
+              message: null,
+              suppressed: 0,
+            }),
+          } as Response
+        return { ok: true, status: 200, json: async () => ({}) } as Response
+      }),
+    )
+    return calls
+  }
+
+  const ROWS = [
+    { 'deal_points.position': 'All Cash', 'deal_points.n': 89 },
+    { 'deal_points.position': 'All Stock', 'deal_points.n': 39 },
+  ]
+
+  async function run() {
+    await ask()
+    fireEvent.click(screen.getByRole('button', { name: /run the confirmed selection/i }))
+    await waitFor(() => expect(screen.getByTestId('ask-rows')).toBeInTheDocument())
+  }
+
+  it('shows one row per answer rather than a blob of JSON', async () => {
+    mockRows(ROWS)
+    render(<AskBox strings={STRINGS} />)
+    await run()
+    const list = screen.getByTestId('ask-rows')
+    expect(list.tagName).toBe('UL')
+    expect(within(list).getByText('All Cash')).toBeInTheDocument()
+    expect(within(list).getByText('89')).toBeInTheDocument()
+  })
+
+  it('offers no drill when nothing was given to drill with', async () => {
+    /** A dead button is worse than no button: it promises evidence that is not reachable. */
+    mockRows(ROWS)
+    render(<AskBox strings={STRINGS} />)
+    await run()
+    expect(screen.queryByTestId('ask-drill-All Cash')).not.toBeInTheDocument()
+  })
+
+  it('opens one answer into its records, passing that answer to the drill', async () => {
+    mockRows(ROWS)
+    const seen: [string, string][] = []
+    render(
+      <AskBox
+        strings={STRINGS}
+        onDrill={async (subject, position) => {
+          seen.push([subject, position])
+          return {
+            refused: false,
+            records: [{ record_id: 'contract_0', target_name: 'ACACIA', clause_text: '$115.00' }],
+          }
+        }}
+      />,
+    )
+    await run()
+    fireEvent.click(screen.getByTestId('ask-drill-All Stock'))
+    await waitFor(() =>
+      expect(screen.getByTestId('ask-drill-row-contract_0')).toBeInTheDocument(),
+    )
+    expect(seen).toEqual([['Type of Consideration-Answer', 'All Stock']])
+  })
+
+  it('shows the refusal when the slice is too small, and no clause text with it', async () => {
+    /** The gate reaches this door too: the aggregate passing does not open the records. */
+    mockRows(ROWS)
+    render(
+      <AskBox
+        strings={STRINGS}
+        onDrill={async () => ({ refused: true, message: 'n=1 — insufficient', records: [] })}
+      />,
+    )
+    await run()
+    fireEvent.click(screen.getByTestId('ask-drill-All Cash'))
+    await waitFor(() =>
+      expect(screen.getByTestId('ask-drill-refused')).toHaveTextContent(/n=1/),
+    )
+    expect(screen.queryByTestId('ask-drill-row-contract_0')).not.toBeInTheDocument()
+  })
+})

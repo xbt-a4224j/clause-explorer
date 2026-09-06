@@ -310,6 +310,13 @@ def _vocabulary() -> list[str]:
     return [str(r[NAME]) for r in rows if r.get(NAME)]
 
 
+# Two paths, one handler. `/terms` is the platform's name and the one the shipped frontend
+# calls; `/deal-terms` is this app's original and stays because the demo scripts and saved curls
+# use it. They diverged silently during the extraction — the vendored Rollup view started asking
+# for `/api/terms` while the backend still served `/deal-terms`, and the Deal Terms tab returned
+# 404 in the browser for as long as it took to notice. Every frontend test mocks `fetch`, so a
+# route rename is exactly the failure the suite cannot see.
+@router.post("/terms", response_model=DealTermsResponse)
 @router.post("/deal-terms", response_model=DealTermsResponse)
 def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
     record_ids = request.record_ids
@@ -477,6 +484,7 @@ def _run_drill_query(
         ).fetchall()
 
 
+@router.post("/terms/drill", response_model=DrillResponse)
 @router.post("/deal-terms/drill", response_model=DrillResponse)
 def drill(request: DrillRequest) -> DrillResponse:
     """Which selected matters answer this deal point, how, and **the clause language itself**.

@@ -177,6 +177,25 @@ function EntryList({
   )
 }
 
+/**
+ * The agreements behind one answer, with their clause language.
+ *
+ * Domain-side because the route and the record shape are this app's. The server gates on the
+ * ANSWER's own count rather than on the corpus it was drawn from: "All Cash" is 89 agreements
+ * and opens, while an answer only one agreement gave refuses — otherwise a reader could reach
+ * a named party's clause text through a distribution the rollup would have declined.
+ */
+async function drillDealPoint(subject: string, position: string) {
+  const r = await fetch('/api/deal-terms/drill', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ subject, position }),
+  })
+  const body = await r.json()
+  if (!r.ok) return { refused: true, message: body?.error?.message ?? 'Drill-through failed.', records: [] }
+  return { refused: Boolean(body.refused), message: body.refusal?.message, records: body.records ?? [] }
+}
+
 export function Ask() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -241,6 +260,7 @@ export function Ask() {
             setQuestions((n) => n + 1)
             setSessionCost((total) => total + costUsd)
           }}
+          onDrill={drillDealPoint}
         />
       </section>
 

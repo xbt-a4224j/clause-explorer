@@ -1,6 +1,6 @@
 # Which semantic-explorer-base this domain is built against. Written by scripts/sync-into.sh.
 # Committed on purpose: it is the record of what a demo or a published figure was produced with.
 wheel:  semantic_explorer_base-0.1.0-py3-none-any.whl
-commit: ad3744c3da9d0d4c5d702a80d62f58c95fe9fefd
+commit: 8f1c7ed294f409eb068c8ccc48bba0adc9b985cf
 state:  DIRTY — the platform tree had uncommitted changes
-synced: 2026-09-06T22:36:35Z
+synced: 2026-09-06T22:51:53Z

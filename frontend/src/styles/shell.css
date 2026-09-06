@@ -1371,3 +1371,31 @@ kbd {
    six-item one left a column of dead space */
 .cat { display: block; columns: 3 330px; column-gap: 26px; }
 .cat__group { break-inside: avoid; margin: 0 0 18px; }
+
+/* Ask answers (2026-09-06). The rows were `JSON.stringify(result.rows)` — auditable and a dead
+   end. Each row is a group of records that gave the same answer, and the reader's next question
+   is always which ones, so a row opens into them. Styled to sit quietly under the chips: the
+   confirmation step above is what the panel is arguing, not this. */
+.ask__answers { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hairline); }
+.ask__answer { border-bottom: 1px solid var(--hairline); }
+.ask__answerhead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--pad-sm);
+  padding: 6px 0;
+}
+.ask__answername { flex: 1; min-width: 0; color: var(--ink); }
+.ask__answerfigs { display: inline-flex; gap: var(--pad-sm); color: var(--ink); font-weight: 600; }
+.ask__drillbtn {
+  padding: 1px 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  background: var(--surface-1);
+  color: var(--ink-subtle);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ask__drillbtn:hover { background: var(--surface-3); color: var(--ink); }
+.ask__drill { padding: 0 0 var(--pad-sm) var(--pad-md); }
+.ask__drill ul { list-style: none; margin: 0; padding: 0; }
