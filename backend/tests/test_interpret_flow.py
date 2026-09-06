@@ -19,10 +19,15 @@ DEAL_POINTS = [
 ]
 
 
-def _run(question, shape, deal_point, points=DEAL_POINTS):
+def _run(question, shape, deal_point, points=DEAL_POINTS, covers=None):
     """One injected chooser: the winning strategy makes both choices in a single call, so the
-    test seam is one function rather than two."""
-    return interpret(question, choose=lambda q: (shape, deal_point))
+    test seam is one function rather than two.
+
+    `covers` defaults to "true when a deal point was found" — the model does not mark a real
+    pick as not covering the question. Pass it explicitly to exercise the decline paths.
+    """
+    covers = deal_point is not None if covers is None else covers
+    return interpret(question, choose=lambda q: (shape, deal_point, covers)).selection
 
 
 class TestALawyersQuestionBecomesASelection:
@@ -72,10 +77,8 @@ class TestDecliningIsAnAnswer:
         """
         assert (
             interpret(
-                "how many agreements do we have",
-                choose=lambda q: ("count", None),
-                covers=True,
-            )
+                "how many agreements do we have", choose=lambda q: ("count", None, True)
+            ).selection
             is not None
         )
         assert _run("how many have an answer", "coverage", None) is None
@@ -126,19 +129,21 @@ class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
     """
 
     def test_the_average_deal_size_question_declines_rather_than_counting(self) -> None:
-        """CANNOT_ANSWER rather than None, and the distinction is the whole fix: None means
-        "no shape fit" and the caller may fall back, which is what answered this with 152."""
-        from explorer.agent.interpret import CANNOT_ANSWER
-
-        assert _run("what's the average deal size in dollars", "count", None) is CANNOT_ANSWER
+        """A FINAL refusal, distinct from "no shape fit" — which is the whole fix. A plain
+        decline lets a caller fall back to a wider path, and that is what answered this with
+        152, the size of the corpus.
+        """
+        result = interpret(
+            "what's the average deal size in dollars", choose=lambda q: ("count", None, False)
+        )
+        assert result.cannot_answer
+        assert result.selection is None
 
     def test_a_genuine_count_question_still_answers(self) -> None:
         """The flag is about whether the CORPUS can answer, not whether a deal point exists."""
-        s = interpret(
-            "how many agreements are loaded", choose=lambda q: ("count", None), covers=True
-        )
-        assert s is not None
-        assert s["measures"] == ["comparable_deals.n"]
+        result = interpret("how many agreements are loaded", choose=lambda q: ("count", None, True))
+        assert result.selection is not None
+        assert result.selection["measures"] == ["comparable_deals.n"]
 
     def test_a_shape_with_no_deal_point_and_no_coverage_declines(self) -> None:
         for shape in ("distribution", "median", "coverage"):

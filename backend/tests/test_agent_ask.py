@@ -691,9 +691,11 @@ class TestTheDeclineIsFinal:
         from explorer.api.settings import settings
 
         monkeypatch.setattr(settings, "openai_api_key", "sk" + "-test-" + "a" * 20)
-        from explorer.agent.interpret import CANNOT_ANSWER
+        from explorer.agent.interpret import Interpretation
 
-        monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: CANNOT_ANSWER)
+        monkeypatch.setattr(
+            ask_module, "interpret", lambda *a, **k: Interpretation(cannot_answer=True)
+        )
         called: list[int] = []
         monkeypatch.setattr(
             ask_module, "select_with_usage", lambda *a, **k: called.append(1) or None
@@ -717,7 +719,9 @@ class TestTheDeclineIsFinal:
         from explorer.api.settings import settings
 
         monkeypatch.setattr(settings, "openai_api_key", "sk" + "-test-" + "a" * 20)
-        monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: None)
+        from explorer.agent.interpret import Interpretation
+
+        monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: Interpretation())
         called: list[int] = []
 
         def fake(*_a: object, **_k: object) -> object:

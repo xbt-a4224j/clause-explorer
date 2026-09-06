@@ -61,7 +61,7 @@ from fastapi import APIRouter, HTTPException
 from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, Field
 
-from explorer.agent.interpret import CANNOT_ANSWER, interpret
+from explorer.agent.interpret import interpret
 from explorer.agent.pick_value import PICK_MODEL
 from explorer.agent.resolve_filter_value import (
     UnresolvedFilterValue,
@@ -354,7 +354,7 @@ def ask(request: AskRequest) -> AskResponse:
             ),
         ) from limited
 
-    if shaped is CANNOT_ANSWER:
+    if shaped.cannot_answer:
         # Final. The free-form path would otherwise resurrect it: it answered "what's the
         # average deal size in dollars" with 152 — a count of the corpus — after the shaped
         # path had correctly refused. A fallback that turns a refusal into a confident wrong
@@ -370,14 +370,14 @@ def ask(request: AskRequest) -> AskResponse:
             ),
         )
 
-    if shaped is not None:
-        selection = shaped
+    if shaped.selection is not None:
+        selection = shaped.selection
         # Two calls, so the reported cost is their SUM. Latency is not summed from the parts —
         # it is measured around the whole thing below, because that is what the user waited.
         prompt_tokens = sum(p for p, _ in shaped_usage)
         completion_tokens = sum(c for _, c in shaped_usage)
         call = SelectionCall(
-            selection=shaped,
+            selection=shaped.selection or {},
             model=PICK_MODEL,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,

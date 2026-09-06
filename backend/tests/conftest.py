@@ -38,5 +38,6 @@ def _no_shaped_interpretation(monkeypatch: pytest.MonkeyPatch) -> None:
     newly reached the network.
     """
     import explorer.api.ask as ask_module
+    from explorer.agent.interpret import Interpretation
 
-    monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: None)
+    monkeypatch.setattr(ask_module, "interpret", lambda *a, **k: Interpretation())

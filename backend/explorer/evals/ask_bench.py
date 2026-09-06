@@ -21,10 +21,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from explorer.agent.dimension_values import dimension_values
-from explorer.agent.interpret import CHOOSE_PROMPT, DEAL_POINT_TASK, classify_shape
+from explorer.agent.interpret import CHOOSE_PROMPT, interpret
 from explorer.agent.pick_value import PICK_MODEL, pick_value
 from explorer.agent.select import Vocabulary, fetch_vocabulary, select_with_usage
 from explorer.agent.shape import SHAPES
+from explorer.api.logging import get_logger
+
+log = get_logger()
 from explorer.api.settings import settings
 
 QUESTIONS = pathlib.Path(__file__).resolve().parents[3] / "docs/eval/ask_questions.json"
@@ -75,6 +78,80 @@ def free_form(question: str, points: list[str], vocab: Vocabulary) -> Outcome:
         deal_point=_chosen_deal_point(call.selection),
         usage=[(call.prompt_tokens, call.completion_tokens)],
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# The two-call strategies' machinery, which lost. It lived in agent/interpret.py — the PRODUCT
+# package — while only this harness used it. Experiment-only code in a shipped module is how a
+# reader concludes the shipped module is experimental.
+
+# Worked examples, not just definitions. The first version of this prompt gave one line per
+# shape and measured 2/10: it returned null for "is knowledge actual or constructive" and
+# `count` for a question that named a term. Shape is a judgement about what the ASKER wants,
+# and a definition of "distribution" does not convey that a question phrased "how many deals
+# carve X out" is still asking for the split.
+SHAPE_PROMPT = (
+    "Classify a question about a corpus of public-target merger agreements into one shape.\n\n"
+    "distribution — the question is about how a negotiated TERM came out across the deals. "
+    "This is the usual case. It covers 'what is market for X', 'is X usually A or B', "
+    "'how many deals have X', 'do agreements include X', 'what share of deals X' — all of "
+    "them want the split of answers for one term, with counts.\n"
+    "median — the question wants a typical NUMBER for a term measured in days, months or "
+    "percent, e.g. 'what is the typical tail period', 'how long is the matching rights "
+    "period'.\n"
+    "count — how many agreements are in the corpus, with NO negotiated term named.\n"
+    "coverage — how many agreements we even have an answer for on one term.\n\n"
+    "Return null ONLY when the corpus of merger agreements cannot answer the question at "
+    "all — for example a question about deal value in dollars, which these agreements do "
+    "not record. If the question names or implies a negotiated term, it is never null."
+)
+
+
+SHAPE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"shape": {"type": ["string", "null"], "enum": [*SHAPES, None]}},
+    "required": ["shape"],
+    "additionalProperties": False,
+}
+
+
+#: The picker is handed a whole question, not a phrase, so it needs to be told what to extract.
+#: Without this it read "what's the typical tail period" as a phrase to map and returned null,
+#: even though `Tail Period Length-Answer` was in front of it.
+DEAL_POINT_TASK = (
+    "The user asked a question about merger agreements. Choose the ONE ABA deal point the "
+    "question is about, from the list. Legal terms of art map to their deal point: 'no-shop', "
+    "'fiduciary out', 'MAE carve-out', 'bringdown', 'tail period' all name one. Return null "
+    "only if this corpus has no deal point covering the question."
+)
+
+
+def classify_shape(
+    question: str,
+    api_key: str | None = None,
+    usage_sink: list[tuple[int, int]] | None = None,
+) -> str | None:
+    key = api_key or settings.openai_api_key
+    if not key:
+        return None
+    from openai import OpenAI
+
+    response = OpenAI(api_key=key).chat.completions.create(
+        model=PICK_MODEL,
+        messages=[
+            {"role": "system", "content": SHAPE_PROMPT},
+            {"role": "user", "content": question},
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"name": "shape", "schema": SHAPE_SCHEMA, "strict": True},
+        },
+    )
+    shape = json.loads(response.choices[0].message.content or "{}").get("shape")
+    if usage_sink is not None and response.usage:
+        usage_sink.append((response.usage.prompt_tokens, response.usage.completion_tokens))
+    log.info("question_shape", question=question, shape=shape)
+    return shape if shape in SHAPES else None
 
 
 def shape_then_point(question: str, points: list[str], vocab: Vocabulary) -> Outcome:
@@ -310,6 +387,29 @@ def _one_call_confirmed(
 #: The self-check sentence now lives in the shipped prompt itself, so this is the same string.
 CONFIRM_PROMPT = CHOOSE_PROMPT
 
+
+def shipped(question: str, points: list[str], vocab: Vocabulary) -> Outcome:
+    """What /agent/ask actually does.
+
+    Every other strategy scores the raw chooser, and the harness then applies its own idea of
+    when that counts as a decline. The two ideas diverged: this required BOTH shape and deal
+    point to be null, while the product declines whenever there is no deal point and the shape
+    is not `count`. So "what's the median reverse termination fee" declined correctly in the
+    app and was scored a miss here.
+
+    Grading a component while shipping a pipeline is the same mistake as benchmarking prompt A
+    and shipping prompt A-prime, one level up.
+    """
+    usage: list[tuple[int, int]] = []
+    result = interpret(question, settings.openai_api_key, usage=usage)
+    return Outcome(
+        deal_point=result.deal_point,
+        shape=result.shape,
+        declined=result.selection is None,
+        usage=usage,
+    )
+
+
 STRATEGIES: dict[str, Strategy] = {
     "free-form (1 call)": free_form,
     "shape -> point (2)": shape_then_point,
@@ -324,6 +424,7 @@ STRATEGIES: dict[str, Strategy] = {
         q, p, prompt=STRICT_PROMPT, temperature=0, glosses=GLOSSES
     ),
     "+ glosses + confirm": lambda q, p, v: _one_call_confirmed(q, p, glosses=GLOSSES),
+    "SHIPPED (interpret)": shipped,
 }
 
 
