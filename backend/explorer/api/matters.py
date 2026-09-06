@@ -44,7 +44,7 @@ BAD_SPAN = "The recorded character range falls outside the source agreement."
 
 
 class DealPointDetail(BaseModel):
-    deal_point_name: str
+    subject: str
     position: str
     is_inferred: bool
     numeric_value: float | None
@@ -61,7 +61,7 @@ class DealPointDetail(BaseModel):
 
 
 class MatterDetail(BaseModel):
-    matter_id: str
+    record_id: str
     target_name: str | None
     acquirer_name: str | None
     industry: str | None
@@ -147,7 +147,7 @@ def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
     inferred flag becomes the literal word, and the denominator is written out. No percentage
     is computed here — this is one matter, and `6 of 8` reasoning belongs to the rollup (#21).
     """
-    parties = matter.target_name or matter.matter_id
+    parties = matter.target_name or matter.record_id
     if matter.acquirer_name:
         parties = f"{matter.acquirer_name} / {parties}"
 
@@ -162,15 +162,13 @@ def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
         else f"${matter.deal_value_usd:,.0f}"
     )
 
-    terms = (
-        "; ".join(f"{dp.deal_point_name}: {dp.position}" for dp in top) or "no deal points recorded"
-    )
+    terms = "; ".join(f"{dp.subject}: {dp.position}" for dp in top) or "no deal points recorded"
 
     return (
         f"{parties} — {industry}{signed}. {value}. "
         f"Negotiated terms (n={matter.deal_point_count}, {matter.located_count} traced to a "
         f"source span): {terms}. "
-        f"Source: {matter.source_contract_title or matter.matter_id} "
+        f"Source: {matter.source_contract_title or matter.record_id} "
         f"({matter.source_file or 'file not recorded'}). "
         f"Deal-point labels are MAUD expert annotations (CC BY 4.0)."
     )
@@ -181,8 +179,8 @@ def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
 SUMMARY_TERMS = 5
 
 
-@router.get("/matters/{matter_id}", response_model=MatterDetail)
-def matter_detail(matter_id: str) -> MatterDetail:
+@router.get("/matters/{record_id}", response_model=MatterDetail)
+def matter_detail(record_id: str) -> MatterDetail:
     with psycopg.connect(settings.database_url) as conn:
         row = conn.execute(
             """
@@ -192,13 +190,13 @@ def matter_detail(matter_id: str) -> MatterDetail:
               LEFT JOIN categories i ON i.code = m.category_code
              WHERE m.id = %(id)s
             """,
-            {"id": matter_id},
+            {"id": record_id},
         ).fetchone()
 
         if row is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"No matter {matter_id!r}. This is not an empty result — the id does not exist.",
+                detail=f"No matter {record_id!r}. This is not an empty result — the id does not exist.",
             )
 
         dp_rows = conn.execute(
@@ -209,7 +207,7 @@ def matter_detail(matter_id: str) -> MatterDetail:
              WHERE record_id = %(id)s
              ORDER BY subject
             """,
-            {"id": matter_id},
+            {"id": record_id},
         ).fetchall()
 
     source_file = row[7]
@@ -221,7 +219,7 @@ def matter_detail(matter_id: str) -> MatterDetail:
         clause_text, unavailable = sliced.text, sliced.unavailable
         deal_points.append(
             DealPointDetail(
-                deal_point_name=name,
+                subject=name,
                 position=position,
                 is_inferred=is_inferred,
                 numeric_value=float(numeric_value) if numeric_value is not None else None,
@@ -233,7 +231,7 @@ def matter_detail(matter_id: str) -> MatterDetail:
         )
 
     detail = MatterDetail(
-        matter_id=row[0],
+        record_id=row[0],
         target_name=row[1],
         acquirer_name=row[2],
         industry=row[3],
@@ -251,7 +249,7 @@ def matter_detail(matter_id: str) -> MatterDetail:
 
     log.info(
         "matter_detail",
-        matter_id=matter_id,
+        record_id=record_id,
         deal_point_count=detail.deal_point_count,
         located_count=detail.located_count,
         source_text_available=text is not None,

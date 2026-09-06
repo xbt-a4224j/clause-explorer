@@ -71,8 +71,8 @@ class TestBothSidesAreNormalized:
         must flip as alpha moves. Without normalization BM25 dominates at every alpha."""
         lexical = tiny_index.search("pharmaceutical deal", alpha=0.0, limit=3)
         semantic = tiny_index.search("pharmaceutical deal", alpha=1.0, limit=3)
-        assert lexical[0].matter_id != semantic[0].matter_id
-        assert semantic[0].matter_id == "m2", "the vector for this query points at Gamma Pharma"
+        assert lexical[0].record_id != semantic[0].record_id
+        assert semantic[0].record_id == "m2", "the vector for this query points at Gamma Pharma"
 
     def test_alpha_1_is_pure_vector_and_alpha_0_is_pure_bm25(self, tiny_index) -> None:
         vector_only = tiny_index.search("Acme Corp", alpha=1.0, limit=3)
@@ -114,9 +114,9 @@ class TestAgainstTheRealCorpus:
     def test_a_known_item_query_returns_its_own_matter_first(self) -> None:
         index = HybridIndex.from_postgres(DSN, cache=EmbeddingCache(api_key=None))
         with psycopg.connect(DSN) as conn:
-            matter_id, target, acquirer = conn.execute(
+            record_id, target, acquirer = conn.execute(
                 "SELECT id, target_name, acquirer_name FROM records "
                 "WHERE target_name IS NOT NULL AND acquirer_name IS NOT NULL ORDER BY id LIMIT 1"
             ).fetchone()
         top = index.search(f"{target} acquired by {acquirer}", limit=1)
-        assert top[0].matter_id == matter_id
+        assert top[0].record_id == record_id

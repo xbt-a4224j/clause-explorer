@@ -23,7 +23,7 @@ Needs `OPENAI_API_KEY` to produce new predictions; grading a committed predictio
 not.
 
 **Human labels are read back into the score (#41).** Where the Label tab has recorded a decision
-for the same `(matter_id, deal_point_name)`, that decision replaces the model's answer and is
+for the same `(record_id, subject)`, that decision replaces the model's answer and is
 then graded against MAUD exactly like the model's answer was — so a mistyped label lowers the
 number. The before/after pair and the count of labels applied are written to
 `docs/results/calibration-labels.json`, which the Admin tab renders.
@@ -57,6 +57,29 @@ log = get_logger()
 ROOT = Path(__file__).resolve().parents[3]
 SPLIT_FILE = ROOT / "docs" / "eval" / "calibration_split.json"
 PREDICTIONS_FILE = ROOT / "docs" / "eval" / "calibration_predictions.json"
+
+#: The artefact keys its rows `matter_id` and `deal_point_name`, and it stays that way. It is
+#: recorded extractor output with a sha256 in docs/provenance.md, and rewriting an evidence file
+#: to match a later rename would falsify what was measured — the number would still be right and
+#: nobody could check it against the run that produced it.
+#:
+#: So the boundary is here: the file keeps the names it was written with, and everything above
+#: this line reads the API's names. One adapter rather than a conditional at each of the eleven
+#: read sites, because the eleventh is the one that gets missed.
+ARTEFACT_KEYS = {"matter_id": "record_id", "deal_point_name": "subject"}
+
+
+def normalise_prediction(row: dict) -> dict:
+    """One recorded prediction, keyed the way the rest of the code speaks."""
+    return {ARTEFACT_KEYS.get(k, k): v for k, v in row.items()}
+
+
+def load_predictions(path=PREDICTIONS_FILE) -> list[dict]:
+    """Every recorded prediction, normalised. Raises if the file is absent — a calibration
+    figure with no recorded predictions behind it is a number nobody can check."""
+    return [normalise_prediction(r) for r in json.loads(path.read_text())]
+
+
 # committed; the Admin tab reads this rather than recomputing (#41)
 LABEL_RESULTS_FILE = ROOT / "docs" / "results" / "calibration-labels.json"
 COST_FILE = ROOT / "docs" / "eval" / "calibration_cost.json"
@@ -81,7 +104,7 @@ class DealPointResult:
 
     `measured` separates a deal point the run never reached from one it got wrong (#44)."""
 
-    deal_point_name: str
+    subject: str
     n: int
     correct: int
     # None, not 0.0, when nothing was measured. "We got none right" and "we never asked" are
@@ -142,18 +165,18 @@ def missing_pairs(
     the 1,379 that landed a second time would put a number in the cost file that is larger than
     the table actually cost to produce.
     """
-    have = {(p["matter_id"], p["deal_point_name"]) for p in recorded}
+    have = {(p["record_id"], p["subject"]) for p in recorded}
     return [pair for pair in scheduled if pair not in have]
 
 
 def actual_positions(
-    matter_ids: list[str], deal_point_names: list[str]
+    record_ids: list[str], deal_point_names: list[str]
 ) -> dict[tuple[str, str], str]:
     with psycopg.connect(settings.database_url) as conn:
         rows = conn.execute(
             "SELECT record_id, subject, position FROM facts "
             "WHERE record_id = ANY(%(ids)s) AND subject = ANY(%(names)s)",
-            {"ids": matter_ids, "names": deal_point_names},
+            {"ids": record_ids, "names": deal_point_names},
         ).fetchall()
     return {(m, d): p for m, d, p in rows}
 
@@ -166,11 +189,11 @@ def human_labels(keys: list[tuple[str, str]], dsn: str | None = None) -> dict[tu
     against a decision its reviewer already withdrew.
 
     Keys are passed in rather than parsed out of `target_id`, because `target_id` is
-    `"{matter_id}:{deal_point_name}"` and deal point names contain colons.
+    `"{record_id}:{subject}"` and deal point names contain colons.
     """
     if not keys:
         return {}
-    by_target = {f"{matter_id}:{name}": (matter_id, name) for matter_id, name in keys}
+    by_target = {f"{record_id}:{name}": (record_id, name) for record_id, name in keys}
     with psycopg.connect(dsn or settings.database_url) as conn:
         rows = conn.execute(
             """
@@ -193,7 +216,7 @@ def score(
     vocabulary: list[str] | None = None,
 ) -> dict[str, Any]:
     """Grade predictions against gold, preferring a human label over the model's answer for the
-    same (matter_id, deal_point_name) (#41), across the whole deal-point vocabulary (#44).
+    same (record_id, subject) (#41), across the whole deal-point vocabulary (#44).
 
     Pure: no database, no key, no files — which is what makes the substitution rule testable at
     all. The rule is a *substitution*, not a correction: a label replaces the prediction and is
@@ -204,19 +227,19 @@ def score(
     coverage rather than quietly reporting only what was measured. Default grades exactly what
     is in the predictions file.
     """
-    predicted_names = sorted({p["deal_point_name"] for p in predictions})
+    predicted_names = sorted({p["subject"] for p in predictions})
     names = sorted(set(vocabulary)) if vocabulary is not None else predicted_names
 
     results: list[DealPointResult] = []
     labels_applied = 0
     labels_differing = 0
     for deal_point in names:
-        rows = [p for p in predictions if p["deal_point_name"] == deal_point]
+        rows = [p for p in predictions if p["subject"] == deal_point]
         n = len(rows)
         if n == 0:
             results.append(
                 DealPointResult(
-                    deal_point_name=deal_point,
+                    subject=deal_point,
                     n=0,
                     correct=0,
                     accuracy=None,
@@ -234,7 +257,7 @@ def score(
         correct = 0
         applied = 0
         for p in rows:
-            key = (p["matter_id"], deal_point)
+            key = (p["record_id"], deal_point)
             gold = actual.get(key)
             predicted = p["predicted_position"]
             graded = predicted
@@ -250,7 +273,7 @@ def score(
         ci_low, ci_high = wilson_interval(correct, n)
         results.append(
             DealPointResult(
-                deal_point_name=deal_point,
+                subject=deal_point,
                 n=n,
                 correct=correct,
                 accuracy=round(correct / n, 3),
@@ -349,15 +372,15 @@ def record_predictions(
     # cost is the cost of the table rather than of one attempt at it.
     already: list[dict[str, Any]] = []
     if resume and PREDICTIONS_FILE.is_file():
-        already = json.loads(PREDICTIONS_FILE.read_text())
+        already = load_predictions()
         scheduled = missing_pairs(scheduled, already)
 
-    matter_ids = sorted({m for m, _ in scheduled})
+    record_ids = sorted({m for m, _ in scheduled})
     names = sorted({d for _, d in scheduled})
 
     with psycopg.connect(dsn or settings.database_url) as conn:
         source_rows = conn.execute(
-            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
+            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": record_ids}
         ).fetchall()
         # One query for every deal point's position vocabulary, instead of one per call as the
         # #28 version did — at 1,700 calls that was 1,700 round trips for 92 distinct answers.
@@ -377,14 +400,14 @@ def record_predictions(
     data_root = ROOT / "data"
 
     texts: dict[str, str] = {}
-    for matter_id in matter_ids:
-        source_file = sources.get(matter_id)
+    for record_id in record_ids:
+        source_file = sources.get(record_id)
         if not source_file:
             continue
         path = data_root / source_file
         if not path.is_file():
             continue
-        texts[matter_id] = path.read_text(encoding="utf-8", errors="replace")
+        texts[record_id] = path.read_text(encoding="utf-8", errors="replace")
 
     runnable = [(m, d) for m, d in scheduled if m in texts]
 
@@ -396,17 +419,17 @@ def record_predictions(
         returning None keeps the run's cost from being spent twice; the dropped pair simply
         does not appear in the table's n, which is the honest way to be short of data.
         """
-        matter_id, deal_point = pair
+        record_id, deal_point = pair
         allowed = sorted(allowed_by_point.get(deal_point, set()))
         for attempt in range(MAX_ATTEMPTS):
             try:
-                return asdict(predict(matter_id, texts[matter_id], deal_point, allowed, api_key))
+                return asdict(predict(record_id, texts[record_id], deal_point, allowed, api_key))
             except Exception as failure:  # noqa: BLE001 - any API failure is retried then dropped
                 if attempt == MAX_ATTEMPTS - 1:
                     log.warning(
                         "calibration_prediction_dropped",
-                        matter_id=matter_id,
-                        deal_point_name=deal_point,
+                        record_id=record_id,
+                        subject=deal_point,
                         error=type(failure).__name__,
                     )
                     return None
@@ -420,7 +443,7 @@ def record_predictions(
         fresh = [p for p in pool.map(one, runnable) if p is not None]
 
     predictions = already + fresh
-    predictions.sort(key=lambda p: (p["matter_id"], p["deal_point_name"]))
+    predictions.sort(key=lambda p: (p["record_id"], p["subject"]))
     PREDICTIONS_FILE.write_text(json.dumps(predictions, indent=2) + "\n")
 
     cost = run_cost(predictions)
@@ -448,11 +471,11 @@ def grade(
     pre-#44 behaviour of grading exactly what is in the file.
     """
     predictions = json.loads(predictions_path.read_text())
-    matter_ids = sorted({p["matter_id"] for p in predictions})
-    predicted_names = sorted({p["deal_point_name"] for p in predictions})
+    record_ids = sorted({p["record_id"] for p in predictions})
+    predicted_names = sorted({p["subject"] for p in predictions})
     names = sorted(set(vocabulary)) if vocabulary is not None else predicted_names
-    actual = actual_positions(matter_ids, sorted(set(names) | set(predicted_names)))
-    keys = [(p["matter_id"], p["deal_point_name"]) for p in predictions]
+    actual = actual_positions(record_ids, sorted(set(names) | set(predicted_names)))
+    keys = [(p["record_id"], p["subject"]) for p in predictions]
     labels = human_labels(keys, dsn=dsn) if use_labels else {}
     return score(predictions, actual, labels, vocabulary=vocabulary)
 

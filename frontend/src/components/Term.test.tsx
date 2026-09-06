@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { GLOSSARY, Term } from './Term'
+import { GLOSSARY, Term } from '@quorum/ui'
 
 /**
  * #35 — jargon was unlearnable from the app. What earns a test is that a term is defined
@@ -38,7 +38,7 @@ describe('inline glossary', () => {
   })
 
   it('every definition states what it is before elaborating', () => {
-    for (const [term, e] of Object.entries(GLOSSARY)) {
+    for (const [term, e] of Object.entries(GLOSSARY) as [string, { short: string; long: string }][]) {
       expect(e.short.length, `${term} short`).toBeGreaterThan(8)
       expect(e.long.length, `${term} long`).toBeGreaterThan(40)
     }

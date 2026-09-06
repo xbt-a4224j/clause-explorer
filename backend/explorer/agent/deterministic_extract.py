@@ -16,18 +16,16 @@ import re
 _STOPWORDS = {"answer", "y", "n", "the", "a", "an", "of", "to", "is", "and", "or", "for"}
 
 
-def _keywords(deal_point_name: str) -> list[str]:
-    words = re.findall(r"[a-z]+", deal_point_name.lower())
+def _keywords(subject: str) -> list[str]:
+    words = re.findall(r"[a-z]+", subject.lower())
     return [w for w in words if w not in _STOPWORDS and len(w) > 2]
 
 
-def predict_deterministic(
-    contract_text: str, deal_point_name: str, allowed_positions: list[str]
-) -> str:
+def predict_deterministic(contract_text: str, subject: str, allowed_positions: list[str]) -> str:
     """ "Yes"/"No"-shaped positions only: predicts the affirmative position if any keyword from
     the deal point's own name appears in the text, else the negative one. Falls back to the
     first allowed position if the vocabulary doesn't look like a Yes/No pair."""
-    keywords = _keywords(deal_point_name)
+    keywords = _keywords(subject)
     text_lower = contract_text.lower()
     hit = any(k in text_lower for k in keywords)
 

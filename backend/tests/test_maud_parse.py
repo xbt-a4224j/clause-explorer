@@ -98,12 +98,12 @@ class TestParse:
 
     def test_deal_points_are_long_and_unique_per_matter(self, parsed) -> None:
         _, points = parsed
-        keys = [(p.matter_id, p.deal_point_name) for p in points]
+        keys = [(p.record_id, p.subject) for p in points]
         assert len(keys) == len(set(keys))
 
     def test_92_deal_point_names_read_from_the_corpus(self, parsed) -> None:
         _, points = parsed
-        assert len({p.deal_point_name for p in points}) == 92
+        assert len({p.subject for p in points}) == 92
 
     def test_everything_from_maud_is_gold_not_inferred(self, parsed) -> None:
         _, points = parsed
@@ -137,14 +137,14 @@ class TestProvenance:
         sources: dict[str, str] = {}
         for point in sample:
             text = sources.setdefault(
-                point.matter_id,
-                (CONTRACTS_DIR / f"{point.matter_id}.txt").read_text(
+                point.record_id,
+                (CONTRACTS_DIR / f"{point.record_id}.txt").read_text(
                     encoding="utf-8", errors="replace"
                 ),
             )
             span = clean_excerpt(text[point.source_span_start : point.source_span_end])
             head = clean_excerpt(re.split(r"<omitted>", point.source_excerpt)[0])[:60]
-            assert head in span, f"{point.matter_id}/{point.deal_point_name}: span lost its text"
+            assert head in span, f"{point.record_id}/{point.subject}: span lost its text"
 
 
 @pytest.mark.skipif(not corpus_available(), reason="MAUD corpus not downloaded")

@@ -10,7 +10,7 @@
  * this is a legal product and should read like one. That is the split: shared components,
  * unshared words.
  */
-import type { QuorumStrings } from '@quorum/ui'
+import { configureStrings, type QuorumStrings } from '@quorum/ui'
 
 export const STRINGS: QuorumStrings = {
   appName: 'Clause Explorer',
@@ -26,6 +26,15 @@ export const STRINGS: QuorumStrings = {
   // "agreements". Collapsing the two puts the wrong noun in half the sentences on the page.
   colloquial: 'deals',
 
+  // What a fact's source text is called here. A wrong word tells the reader they are looking
+  // at something they are not — and MAUD's spans are often an envelope rather than a clause,
+  // which the drill-through labels separately.
+  sourceText: 'clause',
+
+  // The Ask placeholder. Content rather than vocabulary: a bad example teaches the wrong thing
+  // about what this corpus can answer.
+  exampleQuestion: 'healthcare cash deals, what did boards get on fiduciary outs',
+
   tabs: {
     overview: { label: 'Overview', hint: 'what this is and how it works' },
     ask: { label: 'Ask', hint: 'a question becomes a governed number, or a refusal' },
@@ -35,3 +44,7 @@ export const STRINGS: QuorumStrings = {
     label: { label: 'Label', hint: 'review the uncertainty queue' },
   },
 }
+
+// Registered at import. Anything that imports STRINGS — the app shell, a test rendering one
+// component — has the corpus's words available, with no provider to remember to wrap.
+configureStrings(STRINGS)

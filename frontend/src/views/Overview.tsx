@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { TableRowsResponse } from '../types'
+import type { TableRowsResponse } from '@quorum/ui'
 import { ignoreAbort } from '@quorum/ui'
 import { ProvenanceDiagram, SystemDiagram } from '../components/overviewDiagrams'
 import { JOURNEYS, type Journey } from '../journeys'

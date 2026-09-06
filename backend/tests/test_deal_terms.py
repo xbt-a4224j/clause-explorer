@@ -76,7 +76,7 @@ def _stub(monkeypatch: pytest.MonkeyPatch, cube: StubCube) -> StubCube:
 
 
 def _row(body: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(r for r in body["rows"] if r["deal_point_name"] == name)
+    return next(r for r in body["rows"] if r["subject"] == name)
 
 
 class TestTheCountVsPercentageRule:
@@ -86,7 +86,7 @@ class TestTheCountVsPercentageRule:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         assert row["display"] == "6 of 8"
         assert row["display_kind"] == "count"
@@ -101,7 +101,7 @@ class TestTheCountVsPercentageRule:
             monkeypatch,
             StubCube([rollup_row("Fiduciary exception", n=threshold, present=threshold // 2)]),
         )
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         assert row["display_kind"] == "percentage"
         assert row["display"].endswith("%")
@@ -113,7 +113,7 @@ class TestTheCountVsPercentageRule:
         _stub(
             monkeypatch, StubCube([rollup_row("Fiduciary exception", n=threshold - 1, present=5)])
         )
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert _row(body, "Fiduciary exception")["display_kind"] == "count"
 
     def test_the_threshold_in_force_is_reported(
@@ -121,7 +121,7 @@ class TestTheCountVsPercentageRule:
     ) -> None:
         """A reader must be able to see which rule produced the rendering."""
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert body["percentage_threshold"] == module.settings.percentage_threshold
 
     def test_a_percentage_never_appears_anywhere_below_the_threshold(
@@ -137,7 +137,7 @@ class TestTheCountVsPercentageRule:
                 ]
             ),
         )
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert all("%" not in r["display"] for r in body["rows"])
 
 
@@ -152,7 +152,7 @@ class TestAbsenceIsAFinding:
                 vocabulary=["Fiduciary exception", "Ticking fee"],
             ),
         )
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         absent = _row(body, "Ticking fee")
         assert absent["display"] == "0 of 8"
         assert absent["answered_n"] == 0
@@ -162,7 +162,7 @@ class TestAbsenceIsAFinding:
     ) -> None:
         """Distinct from the above: here every matter has an answer and every answer is 'No'."""
         _stub(monkeypatch, StubCube([rollup_row("Ticking fee", n=8, present=0)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert _row(body, "Ticking fee")["display"] == "0 of 8"
 
 
@@ -171,7 +171,7 @@ class TestEveryFigureCarriesItsDenominator:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=6, present=4)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         # 6, not 8: two of the selected matters have no labelled answer for this deal point
         assert row["answered_n"] == 6
@@ -194,7 +194,7 @@ class TestEveryFigureCarriesItsDenominator:
                 ]
             ),
         )
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         numeric = _row(body, "Ticking fee")["numeric"]
         assert numeric == {"numeric_n": 5, "median": 4.0, "p25": 3.0, "p75": 6.5}
 
@@ -203,7 +203,7 @@ class TestEveryFigureCarriesItsDenominator:
     ) -> None:
         """Not a zero, not an empty object: numeric statistics do not apply to it at all."""
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert _row(body, "Fiduciary exception")["numeric"] is None
 
     def test_no_mean_is_ever_returned(
@@ -211,7 +211,7 @@ class TestEveryFigureCarriesItsDenominator:
     ) -> None:
         """The one `type: avg` measure exists to demonstrate divergence, not to be served."""
         cube = _stub(monkeypatch, StubCube([rollup_row("Ticking fee", n=8, present=6)]))
-        client.post("/deal-terms", json={"matter_ids": EIGHT})
+        client.post("/deal-terms", json={"record_ids": EIGHT})
         requested = {m for p in cube.payloads for m in (p.get("measures") or [])}
         assert not any("mean" in m for m in requested)
 
@@ -221,7 +221,7 @@ class TestTheSelectionReachesCube:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cube = _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        client.post("/deal-terms", json={"matter_ids": EIGHT})
+        client.post("/deal-terms", json={"record_ids": EIGHT})
         rollup = next(p for p in cube.payloads if PRESENT in (p.get("measures") or []))
         matter_filter = next(f for f in rollup["filters"] if f["member"] == "deal_points.matter_id")
         assert matter_filter["operator"] == "equals"
@@ -232,7 +232,7 @@ class TestTheSelectionReachesCube:
     ) -> None:
         """An unfiltered rollup would silently answer about all 152 matters."""
         _stub(monkeypatch, StubCube([]))
-        assert client.post("/deal-terms", json={"matter_ids": []}).status_code == 422
+        assert client.post("/deal-terms", json={"record_ids": []}).status_code == 422
 
 
 class TestScopeIsStated:
@@ -241,7 +241,7 @@ class TestScopeIsStated:
     ) -> None:
         """The tab must not read as the firm's own negotiating history."""
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert "public" in body["scope_note"].lower()
         assert "not" in body["scope_note"].lower()
 
@@ -260,7 +260,7 @@ class TestMinNRefusal:
     ) -> None:
         cube = _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=2, present=1)]))
         two = EIGHT[:2]
-        body = client.post("/deal-terms", json={"matter_ids": two}).json()
+        body = client.post("/deal-terms", json={"record_ids": two}).json()
         assert body["refused"] is True
         assert body["rows"] == []
         # no cube query at all: the refusal happens before any number could be computed
@@ -270,7 +270,7 @@ class TestMinNRefusal:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stub(monkeypatch, StubCube([]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:3]}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT[:3]}).json()
         assert body["refusal"]["n"] == 3
         assert body["refusal"]["threshold"] == module.settings.min_n
         assert "n=3" in body["refusal"]["message"]
@@ -281,7 +281,7 @@ class TestMinNRefusal:
     ) -> None:
         threshold = module.settings.min_n
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=threshold, present=1)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:threshold]}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT[:threshold]}).json()
         assert body["refused"] is False
         assert body["rows"]
 
@@ -293,7 +293,7 @@ class TestMinNRefusal:
         _stub(monkeypatch, StubCube([rollup_row("Ticking fee", n=1, present=1)]))
         response = client.post(
             "/deal-terms",
-            json={"matter_ids": ["contract_1"], "bypass_min_n": True, "admin": True},
+            json={"record_ids": ["contract_1"], "bypass_min_n": True, "admin": True},
         )
         assert response.json()["refused"] is True
 
@@ -303,7 +303,7 @@ class TestMinNRefusal:
         """Distinct response shape, not merely an empty rows list — a client checking only
         `rows.length === 0` must not silently render this as "no terms found"."""
         _stub(monkeypatch, StubCube([]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT[:1]}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT[:1]}).json()
         assert "refused" in body
         assert "refusal" in body
         assert body["refusal"] is not None
@@ -327,7 +327,7 @@ class TestExtractionConfidenceGate:
         _stub(monkeypatch, StubCube([rollup_row("Extractor field", n=8, present=5)]))
         monkeypatch.setattr(module, "ROLLUP_IS_GOLD_LABELLED", False)
         monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.3)
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Extractor field")
         assert row["display_kind"] == "low_confidence"
         assert row["display"] == "not characterized"
@@ -342,7 +342,7 @@ class TestExtractionConfidenceGate:
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
         monkeypatch.setattr(module, "confidence_lookup", lambda name: 0.2)
         assert module.ROLLUP_IS_GOLD_LABELLED is True
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         assert row["display_kind"] == "count"
         assert row["display"] == "6 of 8"
@@ -355,7 +355,7 @@ class TestExtractionConfidenceGate:
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
         monkeypatch.setattr(module, "ROLLUP_IS_GOLD_LABELLED", False)
         monkeypatch.setattr(module, "confidence_lookup", lambda name: None)
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = _row(body, "Fiduciary exception")
         assert row["display_kind"] == "count"
 
@@ -375,13 +375,13 @@ class TestConfidenceLookupReadsTheCommittedTable:
                 {
                     "results": [
                         {
-                            "deal_point_name": "Measured point",
+                            "subject": "Measured point",
                             "accuracy": 0.75,
                             "ci_low": 0.301,
                             "measured": True,
                         },
                         {
-                            "deal_point_name": "Unmeasured point",
+                            "subject": "Unmeasured point",
                             "accuracy": None,
                             "ci_low": None,
                             "measured": False,
@@ -416,7 +416,7 @@ class TestConfidenceLookupReadsTheCommittedTable:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stub(monkeypatch, StubCube([rollup_row("Fiduciary exception", n=8, present=6)]))
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert body["min_extraction_confidence"] == module.settings.min_extraction_confidence
 
 
@@ -438,7 +438,7 @@ class TestDrillThroughRefusal:
         )
         response = client.post(
             "/deal-terms/drill",
-            json={"matter_ids": ["contract_1", "contract_2"], "deal_point_name": "Ticking fee"},
+            json={"record_ids": ["contract_1", "contract_2"], "subject": "Ticking fee"},
         )
         body = response.json()
         assert body["refused"] is True
@@ -453,7 +453,7 @@ class TestCubeFailureIsNotAnEmptyRollup:
             raise CubeUnavailable("Cube did not answer")
 
         monkeypatch.setattr(module, "cube_query", boom)
-        response = client.post("/deal-terms", json={"matter_ids": EIGHT})
+        response = client.post("/deal-terms", json={"record_ids": EIGHT})
         assert response.status_code == 503
 
 
@@ -470,25 +470,25 @@ class TestAgainstRealCube:
     def test_a_real_selection_rolls_up_with_counts_not_percentages(
         self, client: TestClient
     ) -> None:
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert body["selection_n"] == 8
         assert body["rows"], "a real 8-matter selection must produce rows"
         # 8 is far below the threshold, so nothing in this response may be a percentage
         assert all("%" not in r["display"] for r in body["rows"])
 
     def test_the_rollup_only_counts_the_selected_matters(self, client: TestClient) -> None:
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         assert all(r["answered_n"] <= 8 for r in body["rows"])
 
     def test_drill_through_returns_the_matters_behind_a_row(self, client: TestClient) -> None:
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = next(r for r in body["rows"] if r["present_count"] > 0)
         drill = client.post(
             "/deal-terms/drill",
-            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+            json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
         assert len(drill["matters"]) == row["answered_n"]
-        assert all(m["matter_id"] in EIGHT for m in drill["matters"])
+        assert all(m["record_id"] in EIGHT for m in drill["matters"])
         assert all(m["position"] for m in drill["matters"])
 
     def test_drill_through_reaches_the_clause_language_itself(self, client: TestClient) -> None:
@@ -502,11 +502,11 @@ class TestAgainstRealCube:
         if not corpus_available():
             pytest.skip("MAUD corpus not downloaded")
 
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = next(r for r in body["rows"] if r["present_count"] > 0)
         drill = client.post(
             "/deal-terms/drill",
-            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+            json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
 
         located = [m for m in drill["matters"] if m["source_span_start"] is not None]
@@ -524,11 +524,11 @@ class TestAgainstRealCube:
         if not corpus_available():
             pytest.skip("MAUD corpus not downloaded")
 
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = next(r for r in body["rows"] if r["present_count"] > 0)
         drill = client.post(
             "/deal-terms/drill",
-            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+            json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
 
         # Two shapes now, and the response says which: a clause-scale span comes back whole,
@@ -536,7 +536,7 @@ class TestAgainstRealCube:
         # be characters actually taken from the agreement at the recorded offset — the point of
         # the assertion is that no text is ever synthesised.
         for m in (x for x in drill["matters"] if x["clause_text"]):
-            raw = (CONTRACTS_DIR / f"{m['matter_id']}.txt").read_text(
+            raw = (CONTRACTS_DIR / f"{m['record_id']}.txt").read_text(
                 encoding="utf-8", errors="replace"
             )
             span = raw[m["source_span_start"] : m["source_span_end"]]
@@ -551,11 +551,11 @@ class TestAgainstRealCube:
         self, client: TestClient
     ) -> None:
         """Same rule as the matter card: no span means a stated reason, never invented text."""
-        body = client.post("/deal-terms", json={"matter_ids": EIGHT}).json()
+        body = client.post("/deal-terms", json={"record_ids": EIGHT}).json()
         row = next(r for r in body["rows"] if r["present_count"] > 0)
         drill = client.post(
             "/deal-terms/drill",
-            json={"matter_ids": EIGHT, "deal_point_name": row["deal_point_name"]},
+            json={"record_ids": EIGHT, "subject": row["subject"]},
         ).json()
         for m in drill["matters"]:
             assert m["clause_text"] is not None or m["text_unavailable"]

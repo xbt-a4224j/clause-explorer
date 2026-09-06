@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MatterCard } from './MatterCard'
+import { RecordCard } from '@quorum/ui'
 import type { Matter, MatterDetail } from '../types'
+import { RECORD_RENDERERS } from '../recordRenderers'
 
 /**
  * The matter card (#20).
@@ -12,7 +13,7 @@ import type { Matter, MatterDetail } from '../types'
  */
 
 const MATTER: Matter = {
-  matter_id: 'contract_1',
+  record_id: 'contract_1',
   target_name: 'ACCELERON PHARMA INC.',
   acquirer_name: 'MERCK SHARP & DOHME CORP.',
   industry: 'Health Care Industry',
@@ -24,7 +25,7 @@ const MATTER: Matter = {
 }
 
 const DETAIL: MatterDetail = {
-  matter_id: 'contract_1',
+  record_id: 'contract_1',
   target_name: 'ACCELERON PHARMA INC.',
   acquirer_name: 'MERCK SHARP & DOHME CORP.',
   industry: 'Health Care Industry',
@@ -44,7 +45,7 @@ const DETAIL: MatterDetail = {
     // deliberately NOT first: the evidence for an applied filter has to be lifted to the top,
     // and a fixture that already had it there would not prove that
     {
-      deal_point_name: 'Fiduciary exception to COR covenant',
+      subject: 'Fiduciary exception to COR covenant',
       position: 'Yes',
       is_inferred: false,
       numeric_value: null,
@@ -54,7 +55,7 @@ const DETAIL: MatterDetail = {
       text_unavailable: null,
     },
     {
-      deal_point_name: 'Type of Consideration-Answer',
+      subject: 'Type of Consideration-Answer',
       position: 'All Cash',
       is_inferred: false,
       numeric_value: null,
@@ -64,7 +65,7 @@ const DETAIL: MatterDetail = {
       text_unavailable: null,
     },
     {
-      deal_point_name: 'Ticking fee',
+      subject: 'Ticking fee',
       position: 'No',
       is_inferred: false,
       numeric_value: null,
@@ -80,11 +81,12 @@ function mockDetail(overrides: Partial<MatterDetail> = {}) {
   return vi.fn(async () => ({ ok: true, json: async () => ({ ...DETAIL, ...overrides }) }) as Response)
 }
 
-function renderCard(props: Partial<Parameters<typeof MatterCard>[0]> = {}) {
+function renderCard(props: Partial<Parameters<typeof RecordCard>[0]> = {}) {
   return render(
     <ul>
-      <MatterCard
-        matter={MATTER}
+      <RecordCard
+      render={RECORD_RENDERERS}
+        record={MATTER}
         focused={false}
         expanded={false}
         onFocus={() => {}}
@@ -101,13 +103,13 @@ afterEach(() => vi.unstubAllGlobals())
 describe('collapsed card', () => {
   it('flags an inferred industry', () => {
     renderCard()
-    const card = screen.getByTestId('matter-contract_1')
+    const card = screen.getByTestId('record-contract_1')
     expect(within(card).getByText('inferred')).toBeInTheDocument()
   })
 
   it('does not flag a gold industry', () => {
-    renderCard({ matter: { ...MATTER, is_inferred_industry: false } })
-    const card = screen.getByTestId('matter-contract_1')
+    renderCard({ record: { ...MATTER, is_inferred_industry: false } })
+    const card = screen.getByTestId('record-contract_1')
     expect(within(card).queryByText('inferred')).not.toBeInTheDocument()
   })
 })

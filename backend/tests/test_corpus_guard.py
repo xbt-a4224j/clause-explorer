@@ -10,7 +10,7 @@ The damage was not the rows; the rows were deletable. The damage was that every 
 figure silently became wrong, and the only reason it was caught was someone noticing a deal
 point count of 112 where the README said 92.
 
-Idempotency by matter_id is exactly what made it quiet: an ingest keyed on its own ids has no
+Idempotency by record_id is exactly what made it quiet: an ingest keyed on its own ids has no
 reason to look at rows it did not write, so it never notices it is a guest in someone else's
 database.
 """

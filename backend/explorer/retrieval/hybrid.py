@@ -47,7 +47,7 @@ def tokenize(text: str) -> list[str]:
 
 @dataclass(frozen=True)
 class Scored:
-    matter_id: str
+    record_id: str
     score: float
     vector_score: float
     bm25_score: float
@@ -98,7 +98,7 @@ class HybridIndex:
         order = np.argsort(-blended)[:limit]
         return [
             Scored(
-                matter_id=self.ids[i],
+                record_id=self.ids[i],
                 score=float(blended[i]),
                 vector_score=float(vector[i]),
                 bm25_score=float(bm25[i]),

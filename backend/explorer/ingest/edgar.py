@@ -399,7 +399,7 @@ class EdgarClient:
 
 @dataclass(frozen=True)
 class Enrichment:
-    matter_id: str
+    record_id: str
     target_name: str | None
     acquirer_name: str | None
     signing_date: date | None
@@ -444,7 +444,7 @@ def enrich(
 
         results.append(
             Enrichment(
-                matter_id=path.stem,
+                record_id=path.stem,
                 target_name=target_name,
                 acquirer_name=acquirer_name,
                 signing_date=header.signing_date,
@@ -643,7 +643,7 @@ def upsert_enrichment(conn: psycopg.Connection, rows: list[Enrichment]) -> int:
                     r.sic_code,
                     r.industry_code,
                     r.industry_code is not None,
-                    r.matter_id,
+                    r.record_id,
                     # repeated for the IS DISTINCT FROM guard: an unconditional UPDATE bumps
                     # updated_at on all 152 rows every run, and Cube's refresh_key is
                     # MAX(updated_at) — every re-ingest would invalidate every aggregate (#14)

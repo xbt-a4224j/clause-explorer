@@ -46,6 +46,7 @@ from explorer.api.cube_client import query as cube_query
 from explorer.api.logging import get_logger
 from explorer.api.matters import slice_source
 from explorer.api.settings import settings
+from explorer.evals.calibration import normalise_prediction
 
 router = APIRouter()
 log = get_logger()
@@ -72,7 +73,7 @@ SCOPE_NOTE = (
 
 
 class DealTermsRequest(BaseModel):
-    matter_ids: list[str] = Field(
+    record_ids: list[str] = Field(
         min_length=1,
         description="The selected set from Explore. Required: an unfiltered rollup would "
         "silently answer about the whole corpus.",
@@ -80,8 +81,8 @@ class DealTermsRequest(BaseModel):
 
 
 class DrillRequest(BaseModel):
-    matter_ids: list[str] = Field(min_length=1)
-    deal_point_name: str
+    record_ids: list[str] = Field(min_length=1)
+    subject: str
 
 
 class Refusal(BaseModel):
@@ -104,7 +105,7 @@ class PositionCount(BaseModel):
 
 
 class DealTermRow(BaseModel):
-    deal_point_name: str
+    subject: str
     answered_n: int = Field(
         description="Selected matters with a labelled answer for this deal point. The "
         "denominator — not the size of the selection."
@@ -139,7 +140,7 @@ class DealTermsResponse(BaseModel):
 
 
 class DrillMatter(BaseModel):
-    matter_id: str
+    record_id: str
     target_name: str | None
     position: str
     source_file: str | None
@@ -168,19 +169,19 @@ class DrillMatter(BaseModel):
 
 
 class DrillResponse(BaseModel):
-    deal_point_name: str
+    subject: str
     matters: list[DrillMatter]
     scope_note: str = SCOPE_NOTE
     refused: bool = False
     refusal: Refusal | None = None
 
 
-def _selection_filter(matter_ids: list[str]) -> list[dict[str, Any]]:
-    return [{"member": MATTER_ID, "operator": "equals", "values": matter_ids}]
+def _selection_filter(record_ids: list[str]) -> list[dict[str, Any]]:
+    return [{"member": MATTER_ID, "operator": "equals", "values": record_ids}]
 
 
-def _refusal(matter_ids: list[str]) -> Refusal | None:
-    n = len(set(matter_ids))
+def _refusal(record_ids: list[str]) -> Refusal | None:
+    n = len(set(record_ids))
     if n >= settings.min_n:
         return None
     return Refusal(
@@ -198,13 +199,17 @@ def _accuracy_rows() -> dict[str, float | None]:
     if not ACCURACY_FILE.is_file():
         return {}
     table = json.loads(ACCURACY_FILE.read_text(encoding="utf-8"))
+    # Keyed `deal_point_name` in the file and read as `subject` here. The artefact keeps the
+    # name it was written with — it is a committed calibration run with a sha256 in
+    # docs/provenance.md, and rewriting it to match a later rename would leave a number nobody
+    # could check against the run that produced it.
     return {
-        str(row["deal_point_name"]): (row["ci_low"] if row.get("measured") else None)
+        str(normalise_prediction(row)["subject"]): (row["ci_low"] if row.get("measured") else None)
         for row in table.get("results", [])
     }
 
 
-def confidence_lookup(deal_point_name: str) -> float | None:
+def confidence_lookup(subject: str) -> float | None:
     """Calibrated extraction accuracy for a deal point, or None if never measured.
 
     #44 gave this real numbers: `docs/eval/calibration_accuracy.json`, produced by running the
@@ -222,7 +227,7 @@ def confidence_lookup(deal_point_name: str) -> float | None:
     This is a **pure lookup**. It does not decide whether the gate applies — see
     `ROLLUP_IS_GOLD_LABELLED`.
     """
-    return _accuracy_rows().get(deal_point_name)
+    return _accuracy_rows().get(subject)
 
 
 # Every one of the 12,937 `deal_points` rows this endpoint aggregates is a MAUD annotation made
@@ -251,7 +256,7 @@ def render(present: int, answered: int, selection_n: int, threshold: int) -> tup
     return f"{round(100 * present / answered)}%", "percentage"
 
 
-def _positions(matter_ids: list[str], names: set[str]) -> dict[str, list[PositionCount]]:
+def _positions(record_ids: list[str], names: set[str]) -> dict[str, list[PositionCount]]:
     """The distribution of answers per deal point.
 
     MAUD records absence as the literal answer "None" for most deal points but not all, so a
@@ -262,7 +267,7 @@ def _positions(matter_ids: list[str], names: set[str]) -> dict[str, list[Positio
         {
             "measures": [N],
             "dimensions": [NAME, POSITION],
-            "filters": _selection_filter(matter_ids),
+            "filters": _selection_filter(record_ids),
             "order": {N: "desc"},
         }
     )
@@ -289,12 +294,12 @@ def _vocabulary() -> list[str]:
 
 @router.post("/deal-terms", response_model=DealTermsResponse)
 def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
-    matter_ids = request.matter_ids
+    record_ids = request.record_ids
     threshold = settings.percentage_threshold
 
     # The refusal check runs before any query — no number is computed, let alone shown, for a
     # selection this small. Unconditional: the request body offers no way to disable it.
-    refusal = _refusal(matter_ids)
+    refusal = _refusal(record_ids)
     if refusal is not None:
         log.info("deal_terms_refused", selection_n=refusal.n, min_n=refusal.threshold)
         return DealTermsResponse(
@@ -313,17 +318,17 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
             {
                 "measures": [PRESENT, N, NUMERIC_N, MEDIAN, P25, P75],
                 "dimensions": [NAME],
-                "filters": _selection_filter(matter_ids),
+                "filters": _selection_filter(record_ids),
                 "order": {PRESENT: "desc"},
             }
         )
         answered_names = {str(r[NAME]) for r in rollup if r.get(NAME)}
-        positions = _positions(matter_ids, answered_names)
+        positions = _positions(record_ids, answered_names)
         vocabulary = _vocabulary()
     except CubeUnavailable as unavailable:
         raise HTTPException(status_code=503, detail=str(unavailable)) from unavailable
 
-    selection_n = len(set(matter_ids))
+    selection_n = len(set(record_ids))
     rows: list[DealTermRow] = []
 
     for row in rollup:
@@ -335,7 +340,7 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
         if confidence is not None and confidence < settings.min_extraction_confidence:
             rows.append(
                 DealTermRow(
-                    deal_point_name=name,
+                    subject=name,
                     answered_n=answered,
                     present_count=present,
                     display="not characterized",
@@ -367,7 +372,7 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
 
         rows.append(
             DealTermRow(
-                deal_point_name=name,
+                subject=name,
                 answered_n=answered,
                 present_count=present,
                 display=display,
@@ -383,7 +388,7 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
         display, kind = render(0, 0, selection_n, threshold)
         rows.append(
             DealTermRow(
-                deal_point_name=name,
+                subject=name,
                 answered_n=0,
                 present_count=0,
                 display=display,
@@ -411,7 +416,7 @@ def deal_terms(request: DealTermsRequest) -> DealTermsResponse:
     )
 
 
-def _run_drill_query(deal_point_name: str, matter_ids: list[str]) -> list[tuple[Any, ...]]:
+def _run_drill_query(subject: str, record_ids: list[str]) -> list[tuple[Any, ...]]:
     """Isolated so the min_n refusal above can be proven to run first, in tests, without a
     database — the refusal must never depend on this function having been reachable."""
     with psycopg.connect(settings.database_url) as conn:
@@ -425,7 +430,7 @@ def _run_drill_query(deal_point_name: str, matter_ids: list[str]) -> list[tuple[
                AND dp.record_id = ANY(%(ids)s)
              ORDER BY dp.record_id
             """,
-            {"name": deal_point_name, "ids": list(matter_ids)},
+            {"name": subject, "ids": list(record_ids)},
         ).fetchall()
 
 
@@ -446,21 +451,19 @@ def drill(request: DrillRequest) -> DrillResponse:
     be decorative — nothing would stop clicking through to the individual clauses of the very
     matters the rollup declined to characterize.
     """
-    refusal = _refusal(request.matter_ids)
+    refusal = _refusal(request.record_ids)
     if refusal is not None:
         log.info("deal_terms_drill_refused", selection_n=refusal.n, min_n=refusal.threshold)
-        return DrillResponse(
-            deal_point_name=request.deal_point_name, matters=[], refused=True, refusal=refusal
-        )
+        return DrillResponse(subject=request.subject, matters=[], refused=True, refusal=refusal)
 
     matters: list[DrillMatter] = []
-    for matter_id, target_name, position, source_file, start, end in _run_drill_query(
-        request.deal_point_name, request.matter_ids
+    for record_id, target_name, position, source_file, start, end in _run_drill_query(
+        request.subject, request.record_ids
     ):
         sliced = slice_source(source_file, start, end)
         matters.append(
             DrillMatter(
-                matter_id=matter_id,
+                record_id=record_id,
                 target_name=target_name,
                 position=position,
                 source_file=source_file,
@@ -475,11 +478,11 @@ def drill(request: DrillRequest) -> DrillResponse:
 
     log.info(
         "deal_terms_drill",
-        deal_point_name=request.deal_point_name,
+        subject=request.subject,
         matters=len(matters),
         located=sum(1 for m in matters if m.clause_text),
     )
-    return DrillResponse(deal_point_name=request.deal_point_name, matters=matters)
+    return DrillResponse(subject=request.subject, matters=matters)
 
 
 def _as_float(value: Any) -> float | None:

@@ -42,7 +42,7 @@ class TestTheCardsFields:
         self, client: TestClient
     ) -> None:
         body = client.get("/matters/contract_1").json()
-        assert body["matter_id"] == "contract_1"
+        assert body["record_id"] == "contract_1"
         assert body["target_name"] == "ACCELERON PHARMA INC."
         assert body["industry"] == "Health Care Industry"
         # the crosswalk is not an expert label and the card must be able to say so
@@ -71,7 +71,7 @@ class TestDealPoints:
         body = client.get("/matters/contract_1").json()
         assert body["deal_point_count"] > 0
         assert len(body["deal_points"]) == body["deal_point_count"]
-        assert all(dp["deal_point_name"] and dp["position"] for dp in body["deal_points"])
+        assert all(dp["subject"] and dp["position"] for dp in body["deal_points"])
 
     def test_every_deal_point_carries_its_denominator_context(self, client: TestClient) -> None:
         """The card reports "n of m located"; both numbers must come from the response."""
@@ -83,7 +83,7 @@ class TestDealPoints:
         """The LONG shape is the extensibility of the app (D8). A 93rd deal point must be a
         row here, never a new key on the response object."""
         body = client.get("/matters/contract_1").json()
-        names = {dp["deal_point_name"] for dp in body["deal_points"]}
+        names = {dp["subject"] for dp in body["deal_points"]}
         assert len(names) > 1
         assert not any(n in body for n in names)
 

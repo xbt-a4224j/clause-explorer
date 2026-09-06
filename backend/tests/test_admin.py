@@ -93,9 +93,9 @@ class TestCalibrationReport:
                     "reportable_count": 0,
                     "cost": {"cost_usd": 1.23, "call_count": 4},
                     "results": [
-                        {"deal_point_name": "Weak", "n": 20, "accuracy": 0.2, "measured": True},
+                        {"subject": "Weak", "n": 20, "accuracy": 0.2, "measured": True},
                         {
-                            "deal_point_name": "Never run",
+                            "subject": "Never run",
                             "n": 0,
                             "accuracy": None,
                             "measured": False,
@@ -110,7 +110,7 @@ class TestCalibrationReport:
         assert body["min_extraction_confidence"] == 0.7
         assert body["vocabulary_size"] == 2
         assert body["cost"]["cost_usd"] == 1.23
-        assert [r["deal_point_name"] for r in body["results"]] == ["Weak", "Never run"]
+        assert [r["subject"] for r in body["results"]] == ["Weak", "Never run"]
 
     def test_a_report_with_no_accuracy_table_still_serves_its_prose(
         self, client: TestClient, tmp_path, monkeypatch: pytest.MonkeyPatch
@@ -138,7 +138,7 @@ class TestCalibrationLabels:
                     "labels_applied": 6,
                     "accuracy_before": 0.45,
                     "accuracy_after": 0.44,
-                    "results": [{"deal_point_name": "x", "n": 20, "labels_applied": 1}],
+                    "results": [{"subject": "x", "n": 20, "labels_applied": 1}],
                 }
             )
         )

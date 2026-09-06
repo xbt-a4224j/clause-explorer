@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SHORTCUTS, TABS, type TabId } from './tabs'
-import { ignoreAbort } from '@quorum/ui'
-import type { Journey, JourneySeed } from './journeys'
-import { Trust } from './views/Trust'
+import { Explore, Label, Rollup, Trust, ignoreAbort, useKeyboard } from '@quorum/ui'
+import type { JourneySeed } from '@quorum/ui'
+import type { Journey } from './journeys'
 import { Ask } from './views/Ask'
-import { Label } from './views/Label'
 import { Overview } from './views/Overview'
-import { DealTerms } from './views/DealTerms'
-import { Explore } from './views/Explore'
-import { useKeyboard } from './useKeyboard'
+// How this corpus draws a record: `target ← acquirer`, the inferred-industry chip, the date.
+// The card owns everything else — expansion, scores, drill-through, the provenance line.
+import { RECORD_RENDERERS } from './recordRenderers'
 import './styles/shell.css'
 
 type Health = { status: string; db: string; cube: string; version: string }
@@ -114,13 +113,9 @@ export function App() {
               // Explore is where searching this corpus happens, so the box goes there rather
               // than growing a second search of its own. The seed is the existing way one tab
               // hands a starting point to another.
-              setSeed({
-                folio_industry_code: null,
-                folio_industry_label: null,
-                signing_year: null,
-                consideration_type: null,
-                description: search,
-              })
+              // No filters: a text search should not silently narrow by anything the user
+              // did not ask for. `filters` absent clears them all on arrival.
+              setSeed({ description: search })
               setActive('explore')
               setSearch('')
             }}
@@ -148,13 +143,14 @@ export function App() {
           // Deal Terms must roll up the set the partner actually chose rather than defaulting
           // to the whole corpus.
           <Explore
+            render={RECORD_RENDERERS}
             searchRef={searchRef}
             onSelectionChange={setSelection}
             seedFilters={seed}
             onSeedConsumed={() => setSeed(null)}
           />
         ) : active === 'terms' ? (
-          <DealTerms selection={selection} />
+          <Rollup selection={selection} />
         ) : active === 'label' ? (
           <Label />
         ) : active === 'trust' ? (

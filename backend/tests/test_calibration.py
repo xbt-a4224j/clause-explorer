@@ -58,8 +58,8 @@ class TestGradeIsOfflineAndPerDealPoint:
         # a couple of holdout matters so `actual_positions` has something real to compare to.
         preds = [
             {
-                "matter_id": "contract_4",
-                "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+                "record_id": "contract_4",
+                "subject": "Announcement, pendency or consummation of deal (Y/N)",
                 "predicted_position": "definitely-wrong-value",
                 "quoted_text": None,
                 "span_start": None,
@@ -67,8 +67,8 @@ class TestGradeIsOfflineAndPerDealPoint:
                 "tokens": 100,
             },
             {
-                "matter_id": "contract_8",
-                "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+                "record_id": "contract_8",
+                "subject": "Announcement, pendency or consummation of deal (Y/N)",
                 "predicted_position": "definitely-wrong-value",
                 "quoted_text": None,
                 "span_start": None,
@@ -112,10 +112,10 @@ class TestGradeIsOfflineAndPerDealPoint:
 DP = "Announcement, pendency or consummation of deal (Y/N)"
 
 
-def _prediction(matter_id: str, position: str, deal_point: str = DP) -> dict:  # type: ignore[type-arg]
+def _prediction(record_id: str, position: str, deal_point: str = DP) -> dict:  # type: ignore[type-arg]
     return {
-        "matter_id": matter_id,
-        "deal_point_name": deal_point,
+        "record_id": record_id,
+        "subject": deal_point,
         "predicted_position": position,
         "quoted_text": None,
         "span_start": None,
@@ -197,8 +197,8 @@ def wrong_predictions(tmp_path):  # type: ignore[no-untyped-def]
     """Two predictions, both deliberately wrong, for one real deal point."""
     preds = [
         {
-            "matter_id": matter,
-            "deal_point_name": ANNOUNCEMENT,
+            "record_id": matter,
+            "subject": ANNOUNCEMENT,
             "predicted_position": "definitely-wrong-value",
             "quoted_text": None,
             "span_start": None,
@@ -258,7 +258,7 @@ class TestFullVocabularyCoverage:
             vocabulary=[ANNOUNCEMENT, "A deal point nobody predicted"],
         )
         unmeasured = next(
-            r for r in summary["results"] if r.deal_point_name == "A deal point nobody predicted"
+            r for r in summary["results"] if r.subject == "A deal point nobody predicted"
         )
         assert unmeasured.n == 0
         assert unmeasured.measured is False
@@ -313,14 +313,14 @@ class TestResumeSkipsWhatIsAlreadyRecorded:
         from explorer.evals.calibration import missing_pairs
 
         scheduled = [("m1", "d1"), ("m1", "d2"), ("m2", "d1")]
-        recorded = [{"matter_id": "m1", "deal_point_name": "d1"}]
+        recorded = [{"record_id": "m1", "subject": "d1"}]
         assert missing_pairs(scheduled, recorded) == [("m1", "d2"), ("m2", "d1")]
 
     def test_a_complete_run_has_nothing_left_to_do(self) -> None:
         from explorer.evals.calibration import missing_pairs
 
         scheduled = [("m1", "d1")]
-        recorded = [{"matter_id": "m1", "deal_point_name": "d1"}]
+        recorded = [{"record_id": "m1", "subject": "d1"}]
         assert missing_pairs(scheduled, recorded) == []
 
 
@@ -343,10 +343,10 @@ class TestOneRealCallIsPricedEndToEnd:
         if not settings.has_openai_key or settings.openai_api_key is None:
             pytest.skip("no key")
 
-        matter_id, deal_point = holdout_pairs()[0]
+        record_id, deal_point = holdout_pairs()[0]
         with psycopg.connect(DSN) as conn:
             source_file = conn.execute(
-                "SELECT source_file FROM records WHERE id = %s", (matter_id,)
+                "SELECT source_file FROM records WHERE id = %s", (record_id,)
             ).fetchone()[0]
             allowed = sorted(
                 {
@@ -358,7 +358,7 @@ class TestOneRealCallIsPricedEndToEnd:
                 }
             )
         text = (ROOT / "data" / source_file).read_text(encoding="utf-8", errors="replace")
-        prediction = predict(matter_id, text, deal_point, allowed, settings.openai_api_key)
+        prediction = predict(record_id, text, deal_point, allowed, settings.openai_api_key)
 
         assert prediction.prompt_tokens > 0
         assert prediction.completion_tokens > 0

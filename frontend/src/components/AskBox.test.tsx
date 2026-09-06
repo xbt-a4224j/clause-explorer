@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AskBox } from './AskBox'
-import type { AskResponse, MembersResponse } from '../types'
+import { AskBox } from '@quorum/ui'
+import type { AskResponse, MembersResponse } from '@quorum/ui'
 
 /**
  * The free-text box (#47).

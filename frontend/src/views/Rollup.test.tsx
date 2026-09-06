@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DealTerms } from './DealTerms'
-import type { DealTermsResponse } from '../types'
+import { Rollup } from '@quorum/ui'
+import type { RollupResponse } from '../types'
 
 /**
  * Deal Terms (#21).
@@ -14,7 +14,7 @@ import type { DealTermsResponse } from '../types'
 
 const EIGHT = ['contract_1', 'contract_2', 'contract_3', 'contract_4', 'contract_5', 'contract_6', 'contract_7', 'contract_8']
 
-const ROLLUP: DealTermsResponse = {
+const ROLLUP: RollupResponse = {
   selection_n: 8,
   percentage_threshold: 30,
   min_extraction_confidence: 0.7,
@@ -27,7 +27,7 @@ const ROLLUP: DealTermsResponse = {
     "This is not this firm's own matter history and must not be described as it.",
   rows: [
     {
-      deal_point_name: 'Fiduciary exception to COR covenant',
+      subject: 'Fiduciary exception to COR covenant',
       answered_n: 8,
       present_count: 6,
       display: '6 of 8',
@@ -40,7 +40,7 @@ const ROLLUP: DealTermsResponse = {
       gate_note: null,
     },
     {
-      deal_point_name: 'Ticking fee',
+      subject: 'Ticking fee',
       answered_n: 8,
       present_count: 2,
       display: '2 of 8',
@@ -50,7 +50,7 @@ const ROLLUP: DealTermsResponse = {
       gate_note: null,
     },
     {
-      deal_point_name: 'Go-shop period',
+      subject: 'Go-shop period',
       answered_n: 0,
       present_count: 0,
       display: '0 of 8',
@@ -71,21 +71,21 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('the count-vs-percentage rule', () => {
   it('renders "6 of 8" and never a percentage below the threshold', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     expect(within(row).getByText('6 of 8')).toBeInTheDocument()
     expect(row.textContent).not.toContain('%')
   })
 
   it('states the threshold that produced the rendering', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     expect(await screen.findByText(/below n=30/i)).toBeInTheDocument()
   })
 })
 
 describe('absence is a finding', () => {
   it('shows a deal point nobody answered as a visible 0 row', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Go-shop period')
     expect(within(row).getByText('0 of 8')).toBeInTheDocument()
   })
@@ -93,7 +93,7 @@ describe('absence is a finding', () => {
 
 describe('numeric deal points', () => {
   it('shows median with p25/p75 and its own n', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Ticking fee')
     // scoped to the numeric summary: the position breakdown also carries an n=2, and an
     // unscoped match would pass even if the median lost its own denominator
@@ -103,7 +103,7 @@ describe('numeric deal points', () => {
   })
 
   it('shows no median for a non-numeric deal point', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     expect(within(row).queryByText(/median/)).not.toBeInTheDocument()
   })
@@ -111,11 +111,11 @@ describe('numeric deal points', () => {
 
 describe('drill-through', () => {
   const DRILL = {
-    deal_point_name: 'Fiduciary exception to COR covenant',
+    subject: 'Fiduciary exception to COR covenant',
     scope_note: ROLLUP.scope_note,
     matters: [
       {
-        matter_id: 'contract_1',
+        record_id: 'contract_1',
         target_name: 'ACCELERON PHARMA INC.',
         position: 'Constructive knowledge',
         source_file: 'maud/data/contracts/contract_1.txt',
@@ -125,7 +125,7 @@ describe('drill-through', () => {
         text_unavailable: null,
       },
       {
-        matter_id: 'contract_2',
+        record_id: 'contract_2',
         target_name: 'ADAMAS PHARMACEUTICALS, INC.',
         position: 'Actual knowledge',
         source_file: 'maud/data/contracts/contract_2.txt',
@@ -148,7 +148,7 @@ describe('drill-through', () => {
 
   it('shows the clause language, not just a list of matter ids', async () => {
     vi.stubGlobal('fetch', mockBoth())
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
 
@@ -158,7 +158,7 @@ describe('drill-through', () => {
 
   it('shows the source file and character offsets behind each clause', async () => {
     vi.stubGlobal('fetch', mockBoth())
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
 
@@ -170,7 +170,7 @@ describe('drill-through', () => {
 
   it('says why a clause is missing rather than showing an empty quote', async () => {
     vi.stubGlobal('fetch', mockBoth())
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     const row = await screen.findByTestId('term-Fiduciary exception to COR covenant')
     fireEvent.click(within(row).getByRole('button', { name: /Fiduciary exception/ }))
 
@@ -203,7 +203,7 @@ describe('min_n refusal', () => {
 
   it('renders a distinct refusal state stating the actual n and the threshold', async () => {
     vi.stubGlobal('fetch', mockApi(REFUSED))
-    render(<DealTerms selection={['contract_1', 'contract_2']} />)
+    render(<Rollup selection={['contract_1', 'contract_2']} />)
     const refusal = await screen.findByTestId('refusal')
     expect(refusal).toHaveTextContent('n=2')
     expect(refusal).toHaveTextContent('threshold 5')
@@ -211,14 +211,14 @@ describe('min_n refusal', () => {
 
   it('does not render the empty-result copy for a refusal', async () => {
     vi.stubGlobal('fetch', mockApi(REFUSED))
-    render(<DealTerms selection={['contract_1', 'contract_2']} />)
+    render(<Rollup selection={['contract_1', 'contract_2']} />)
     await screen.findByTestId('refusal')
     expect(screen.queryByText(/Select deals in Explore/i)).not.toBeInTheDocument()
   })
 
   it('does not render the refusal state for an ordinary error', async () => {
     vi.stubGlobal('fetch', mockApi({ error: { message: 'Cube did not answer' } }, false))
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     await screen.findByRole('alert')
     expect(screen.queryByTestId('refusal')).not.toBeInTheDocument()
   })
@@ -226,7 +226,7 @@ describe('min_n refusal', () => {
 
 describe('scope', () => {
   it('says plainly that these are public comparables, not the firm’s own history', async () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     expect(await screen.findByText(/comparable PUBLIC deals/i)).toBeInTheDocument()
     expect(screen.getByText(/not this firm's own matter history/i)).toBeInTheDocument()
   })
@@ -234,19 +234,19 @@ describe('scope', () => {
 
 describe('designed states', () => {
   it('asks for a selection rather than rolling up the whole corpus', () => {
-    render(<DealTerms selection={[]} />)
+    render(<Rollup selection={[]} />)
     expect(screen.getByText(/Select deals in Explore/i)).toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('shows a skeleton while the rollup is in flight', () => {
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     expect(screen.getByLabelText('loading deal terms')).toBeInTheDocument()
   })
 
   it('reports a failed rollup distinctly from an empty one', async () => {
     vi.stubGlobal('fetch', mockApi({ error: { message: 'Cube did not answer' } }, false))
-    render(<DealTerms selection={EIGHT} />)
+    render(<Rollup selection={EIGHT} />)
     expect(await screen.findByRole('alert')).toHaveTextContent(/Cube did not answer/)
   })
 })

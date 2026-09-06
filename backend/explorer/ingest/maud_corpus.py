@@ -58,7 +58,7 @@ def deal_point_names() -> tuple[str, ...]:
     """The 92 ABA deal points, read from the corpus — never hardcoded in Python (#8).
 
     MAUD calls them `question`. A revision that adds a 93rd is then just more rows: a new
-    `deal_point_name` dimension value, no schema or code change (CLAUDE.md).
+    `subject` dimension value, no schema or code change (CLAUDE.md).
     """
     require_corpus()
     names: set[str] = set()
@@ -105,7 +105,7 @@ def _excerpt_owners() -> dict[str, str]:
 
 @lru_cache(maxsize=1)
 def deal_titles() -> dict[str, str]:
-    """`matter_id -> "<Target>_<Acquirer>.pdf"`, MAUD's own name for the deal.
+    """`record_id -> "<Target>_<Acquirer>.pdf"`, MAUD's own name for the deal.
 
     A row is attributed only when one contract wins the excerpt vote outright. A tie means we
     do not know whose deal it is, and a wrong title would attach the wrong party's industry —

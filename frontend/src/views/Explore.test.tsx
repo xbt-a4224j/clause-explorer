@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
-import { Explore } from './Explore'
-import type { ComparablesResponse, FacetsResponse } from '../types'
+import { Explore } from '@quorum/ui'
+import type { ComparablesResponse, FacetsResponse } from '@quorum/ui'
+import { RECORD_RENDERERS } from '../recordRenderers'
 
 /**
  * Explore (#19), against a mocked API.
@@ -60,7 +61,7 @@ const COMPARABLES: ComparablesResponse = {
   },
   matters: [
     {
-      matter_id: 'contract_1',
+      record_id: 'contract_1',
       target_name: 'ACCELERON PHARMA INC.',
       acquirer_name: 'MERCK SHARP & DOHME CORP.',
       industry: 'Health Care Industry',
@@ -71,7 +72,7 @@ const COMPARABLES: ComparablesResponse = {
       bm25_score: 0.88,
     },
     {
-      matter_id: 'contract_104',
+      record_id: 'contract_104',
       target_name: 'PPD, INC.',
       acquirer_name: 'THERMO FISHER SCIENTIFIC INC.',
       industry: 'Health Care Industry',
@@ -86,7 +87,7 @@ const COMPARABLES: ComparablesResponse = {
 
 // expanding a card fetches its detail (#20); the list must keep working regardless
 const MATTER_DETAIL = {
-  matter_id: 'contract_1',
+  record_id: 'contract_1',
   target_name: 'ACCELERON PHARMA INC.',
   acquirer_name: 'MERCK SHARP & DOHME CORP.',
   industry: 'Health Care Industry',
@@ -100,7 +101,7 @@ const MATTER_DETAIL = {
   summary: 'summary (n=1)',
   deal_points: [
     {
-      deal_point_name: 'Fiduciary exception to COR covenant',
+      subject: 'Fiduciary exception to COR covenant',
       position: 'Yes',
       is_inferred: false,
       numeric_value: null,
@@ -131,7 +132,14 @@ function mockApi(overrides: { facets?: unknown; comparables?: unknown; fail?: bo
 
 function renderExplore() {
   const ref = createRef<HTMLInputElement>()
-  return render(<Explore searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+  // The same renderers the shell passes. Without them the card draws an id and no chips —
+  // correct behaviour, since the platform card does not know this corpus has an industry.
+  return render(
+    <Explore
+      render={RECORD_RENDERERS}
+      searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
+    />,
+  )
 }
 
 beforeEach(() => {
@@ -250,7 +258,7 @@ describe('filter before rank', () => {
     // here raced the response. Wait for the button, not for its container.
     fireEvent.click(await within(rail).findByRole('button', { name: /Health Care Industry/ }))
 
-    await waitFor(() => expect(screen.getByTestId('matter-contract_104')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('record-contract_104')).toBeInTheDocument())
   })
 })
 
@@ -266,10 +274,11 @@ describe('journey pre-filter', () => {
       <Explore
         searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
         seedFilters={{
-          folio_industry_code: 'RCSG4k3ah1Pu5YgPexPgOmL',
-          folio_industry_label: 'Health Care Industry',
-          signing_year: '2020',
-          consideration_type: null,
+          filters: {
+            folio_industry_code: 'RCSG4k3ah1Pu5YgPexPgOmL',
+            folio_industry_label: 'Health Care Industry',
+            signing_year: '2020',
+          },
         }}
         onSeedConsumed={onConsumed}
       />,
@@ -286,7 +295,7 @@ describe('results', () => {
 
   it('renders matter cards with the inferred-industry flag', async () => {
     renderExplore()
-    const card = await screen.findByTestId('matter-contract_1')
+    const card = await screen.findByTestId('record-contract_1')
     expect(within(card).getByText('ACCELERON PHARMA INC.')).toBeInTheDocument()
     expect(within(card).getByText('inferred')).toBeInTheDocument()
   })
@@ -301,30 +310,30 @@ describe('results', () => {
 describe('keyboard', () => {
   it('j and k move the focused result', async () => {
     renderExplore()
-    const first = await screen.findByTestId('matter-contract_1')
+    const first = await screen.findByTestId('record-contract_1')
     expect(first).toHaveAttribute('aria-current', 'true')
 
     fireEvent.keyDown(window, { key: 'j' })
     await waitFor(() =>
-      expect(screen.getByTestId('matter-contract_104')).toHaveAttribute('aria-current', 'true'),
+      expect(screen.getByTestId('record-contract_104')).toHaveAttribute('aria-current', 'true'),
     )
 
     fireEvent.keyDown(window, { key: 'k' })
     await waitFor(() =>
-      expect(screen.getByTestId('matter-contract_1')).toHaveAttribute('aria-current', 'true'),
+      expect(screen.getByTestId('record-contract_1')).toHaveAttribute('aria-current', 'true'),
     )
   })
 
   it('k at the top of the list does not wrap or crash', async () => {
     renderExplore()
-    await screen.findByTestId('matter-contract_1')
+    await screen.findByTestId('record-contract_1')
     fireEvent.keyDown(window, { key: 'k' })
-    expect(screen.getByTestId('matter-contract_1')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByTestId('record-contract_1')).toHaveAttribute('aria-current', 'true')
   })
 
   it('Enter expands the focused result', async () => {
     renderExplore()
-    await screen.findByTestId('matter-contract_1')
+    await screen.findByTestId('record-contract_1')
     fireEvent.keyDown(window, { key: 'Enter' })
     expect(await screen.findByText('bm25')).toBeInTheDocument()
   })
@@ -333,11 +342,11 @@ describe('keyboard', () => {
     renderExplore()
     // await the list first: the search input renders during loading, so resolving on it alone
     // asserts nothing about the cursor — there are no cards yet to move between
-    await screen.findByTestId('matter-contract_1')
+    await screen.findByTestId('record-contract_1')
     const input = screen.getByLabelText('describe the deal')
     fireEvent.keyDown(input, { key: 'j' })
-    expect(screen.getByTestId('matter-contract_1')).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByTestId('matter-contract_104')).not.toHaveAttribute('aria-current', 'true')
+    expect(screen.getByTestId('record-contract_1')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByTestId('record-contract_104')).not.toHaveAttribute('aria-current', 'true')
   })
 })
 

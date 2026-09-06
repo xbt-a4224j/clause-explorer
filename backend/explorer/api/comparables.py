@@ -75,7 +75,7 @@ class ComparablesRequest(BaseModel):
 
 
 class ComparableMatter(BaseModel):
-    matter_id: str
+    record_id: str
     target_name: str | None
     acquirer_name: str | None
     industry: str | None
@@ -193,7 +193,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
         index = HybridIndex([r[0] for r in rows], [r[6] or "" for r in rows])
         try:
             for hit in index.search(request.description, alpha=alpha, limit=request.limit):
-                scored[hit.matter_id] = (hit.score, hit.vector_score, hit.bm25_score)
+                scored[hit.record_id] = (hit.score, hit.vector_score, hit.bm25_score)
         except EmbeddingUnavailable as unavailable:
             raise HTTPException(status_code=503, detail=str(unavailable)) from unavailable
 
@@ -205,7 +205,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
 
     matters = [
         ComparableMatter(
-            matter_id=row[0],
+            record_id=row[0],
             target_name=row[1],
             acquirer_name=row[2],
             industry=row[3],

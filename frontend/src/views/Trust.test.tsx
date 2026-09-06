@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Trust } from './Trust'
+import { Trust } from '@quorum/ui'
 import { TABS } from '../tabs'
 
 /**
@@ -31,7 +31,7 @@ const CALIBRATION = {
   },
   results: [
     {
-      deal_point_name: 'Definition includes stock deals-Answer',
+      subject: 'Definition includes stock deals-Answer',
       n: 19,
       correct: 0,
       accuracy: 0.0,
@@ -41,7 +41,7 @@ const CALIBRATION = {
       measured: true,
     },
     {
-      deal_point_name: 'Fiduciary exception: Board determination trigger (no shop)-Answer',
+      subject: 'Fiduciary exception: Board determination trigger (no shop)-Answer',
       n: 20,
       correct: 16,
       accuracy: 0.8,
@@ -51,7 +51,7 @@ const CALIBRATION = {
       measured: true,
     },
     {
-      deal_point_name: 'Actions required under transaction agreement-Answer (Y/N)',
+      subject: 'Actions required under transaction agreement-Answer (Y/N)',
       n: 20,
       correct: 19,
       accuracy: 0.95,
@@ -61,7 +61,7 @@ const CALIBRATION = {
       measured: true,
     },
     {
-      deal_point_name: 'Absence of Litigation Closing Condition: Governmental v. Non-Governmental',
+      subject: 'Absence of Litigation Closing Condition: Governmental v. Non-Governmental',
       n: 0,
       correct: 0,
       accuracy: null,

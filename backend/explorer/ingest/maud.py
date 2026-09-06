@@ -258,8 +258,8 @@ class Matter:
 
 @dataclass(frozen=True)
 class DealPoint:
-    matter_id: str
-    deal_point_name: str
+    record_id: str
+    subject: str
     position: str
     source_span_start: int | None
     source_span_end: int | None
@@ -314,15 +314,15 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
 
     locators: dict[str, SpanLocator] = {}
     points: list[DealPoint] = []
-    for (matter_id, deal_point_name), (answer, excerpt) in sorted(annotations.items()):
-        if matter_id not in sources:
+    for (record_id, subject), (answer, excerpt) in sorted(annotations.items()):
+        if record_id not in sources:
             continue  # labelled contract whose text is not in the corpus; drop, never invent
         # NOT setdefault: its default argument is evaluated on every call, so it would
         # rebuild the normalized index once per deal point (12,937 times) instead of once
         # per matter (152). Same result, ~60x the runtime.
-        if matter_id not in locators:
-            locators[matter_id] = SpanLocator(sources[matter_id])
-        locator = locators[matter_id]
+        if record_id not in locators:
+            locators[record_id] = SpanLocator(sources[record_id])
+        locator = locators[record_id]
         recorded = locator.locate(excerpt)
         # The recorded span says where the answer was found; try to replace it with the text
         # the annotator quoted, searched inside it (or in the whole document when MAUD's
@@ -331,8 +331,8 @@ def parse_maud() -> tuple[list[Matter], list[DealPoint]]:
         span = anchored or recorded
         points.append(
             DealPoint(
-                matter_id=matter_id,
-                deal_point_name=deal_point_name,
+                record_id=record_id,
+                subject=subject,
                 position=answer,
                 numeric_value=numeric_from_position(answer),
                 source_span_start=span[0] if span else None,
@@ -386,8 +386,8 @@ def upsert_maud(conn: Connection, matters: list[Matter], points: list[DealPoint]
             UPSERT_DEAL_POINT,
             [
                 (
-                    p.matter_id,
-                    p.deal_point_name,
+                    p.record_id,
+                    p.subject,
                     p.position,
                     p.numeric_value,
                     p.source_span_start,
@@ -433,7 +433,7 @@ def run(dsn: str | None = None) -> dict[str, object]:
     result: dict[str, object] = {
         "matters": len(matters),
         "deal_points": len(points),
-        "deal_point_names": len({p.deal_point_name for p in points}),
+        "deal_point_names": len({p.subject for p in points}),
         "spans_located": located,
         "spans_null": len(points) - located,
         "spans_anchored": anchored,

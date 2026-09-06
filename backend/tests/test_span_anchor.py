@@ -144,8 +144,8 @@ class TestParsedSpanKind:
         sources: dict[str, str] = {}
         for point in anchored:
             text = sources.setdefault(
-                point.matter_id,
-                (CONTRACTS_DIR / f"{point.matter_id}.txt").read_text(
+                point.record_id,
+                (CONTRACTS_DIR / f"{point.record_id}.txt").read_text(
                     encoding="utf-8", errors="replace"
                 ),
             )
@@ -164,8 +164,8 @@ class TestSpanKindPersists:
             pytest.skip("Postgres not reachable")
         matter = Matter(id="test_matter_43", source_file="x.txt", source_contract_title="t")
         point = DealPoint(
-            matter_id="test_matter_43",
-            deal_point_name="Test Deal Point 43",
+            record_id="test_matter_43",
+            subject="Test Deal Point 43",
             position="present",
             source_span_start=10,
             source_span_end=20,

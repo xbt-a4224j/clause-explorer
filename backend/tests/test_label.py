@@ -42,8 +42,8 @@ def client() -> TestClient:
 def predictions_file(tmp_path, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
     preds = [
         {
-            "matter_id": "contract_1",
-            "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+            "record_id": "contract_1",
+            "subject": "Announcement, pendency or consummation of deal (Y/N)",
             "predicted_position": "Yes",
             "quoted_text": "the Merger shall be announced",
             "span_start": 10,
@@ -51,8 +51,8 @@ def predictions_file(tmp_path, monkeypatch: pytest.MonkeyPatch):  # type: ignore
             "tokens": 900,
         },
         {
-            "matter_id": "contract_2",
-            "deal_point_name": "Announcement, pendency or consummation of deal (Y/N)",
+            "record_id": "contract_2",
+            "subject": "Announcement, pendency or consummation of deal (Y/N)",
             "predicted_position": "No",
             "quoted_text": None,
             "span_start": None,
@@ -86,8 +86,8 @@ class TestQueueOrdering:
         item = body["items"][0]
         assert "llm_prediction" in item
         assert "deterministic_prediction" in item
-        assert "matter_id" in item
-        assert "deal_point_name" in item
+        assert "record_id" in item
+        assert "subject" in item
 
     def test_the_progress_counters_are_reported(self, client: TestClient, predictions_file) -> None:  # type: ignore[no-untyped-def]
         body = client.get("/label/queue").json()
@@ -102,7 +102,7 @@ class TestQueueOrdering:
         so the queue was withholding from the reviewer the one thing that would stop them
         typing a value the write path then rejects."""
         body = client.get("/label/queue").json()
-        item = next(i for i in body["items"] if i["deal_point_name"].endswith("(Y/N)"))
+        item = next(i for i in body["items"] if i["subject"].endswith("(Y/N)"))
         assert set(item["allowed_positions"]) >= {"Yes", "No"}
 
     def test_the_queue_offers_exactly_what_the_write_path_accepts(
@@ -116,7 +116,7 @@ class TestQueueOrdering:
         body = client.get("/label/queue").json()
         item = body["items"][0]
         with psycopg.connect(DSN) as conn:
-            assert item["allowed_positions"] == allowed_positions(conn, item["deal_point_name"])
+            assert item["allowed_positions"] == allowed_positions(conn, item["subject"])
 
 
 @needs_corpus
@@ -136,7 +136,7 @@ class TestQueueDrawsFromTheFullPredictionSet:
         predictions = json.loads(PREDICTIONS_FILE.read_text())
         body = client.get("/label/queue").json()
         assert body["queue_size"] == len(predictions)
-        assert len({i["deal_point_name"] for i in body["items"]}) > 5
+        assert len({i["subject"] for i in body["items"]}) > 5
 
 
 class TestDecide:
@@ -168,8 +168,8 @@ class TestDecide:
         response = client.post(
             "/label/decide",
             json={
-                "matter_id": "contract_1",
-                "deal_point_name": "Ticking fee",
+                "record_id": "contract_1",
+                "subject": "Ticking fee",
                 "value": "Yes",
                 "prior_prediction": "No",
             },
@@ -183,7 +183,7 @@ class TestDecide:
     def test_a_missing_value_is_rejected(self, client: TestClient) -> None:
         response = client.post(
             "/label/decide",
-            json={"matter_id": "contract_1", "deal_point_name": "Ticking fee"},
+            json={"record_id": "contract_1", "subject": "Ticking fee"},
         )
         assert response.status_code == 422
 
@@ -200,8 +200,8 @@ def test_a_value_outside_the_deal_points_vocabulary_is_rejected(client: TestClie
     response = client.post(
         "/label/decide",
         json={
-            "matter_id": "contract_10",
-            "deal_point_name": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
+            "record_id": "contract_10",
+            "subject": "Acquisition Proposal required to be publicly disclosed-Answer (Y/N)",
             "value": "s",
         },
     )
@@ -230,7 +230,7 @@ def test_a_value_inside_the_vocabulary_is_accepted(client: TestClient) -> None:
     try:
         response = client.post(
             "/label/decide",
-            json={"matter_id": "contract_10", "deal_point_name": deal_point, "value": "No"},
+            json={"record_id": "contract_10", "subject": deal_point, "value": "No"},
         )
         assert response.status_code == 200
         with psycopg.connect(DSN) as conn:
@@ -255,6 +255,6 @@ def test_an_unknown_deal_point_is_rejected_rather_than_written(client: TestClien
     no safe value to accept for it."""
     response = client.post(
         "/label/decide",
-        json={"matter_id": "contract_10", "deal_point_name": "Not A Deal Point", "value": "No"},
+        json={"record_id": "contract_10", "subject": "Not A Deal Point", "value": "No"},
     )
     assert response.status_code == 422

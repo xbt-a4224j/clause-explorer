@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Label } from './Label'
-import type { CalibrationLabels, LabelQueueResponse } from '../types'
+import { Label } from '@quorum/ui'
+import type { CalibrationLabels, LabelQueueResponse } from '@quorum/ui'
 
 /**
  * Label (#29, #52).
@@ -18,8 +18,8 @@ const QUEUE: LabelQueueResponse = {
   labelled_count: 3,
   items: [
     {
-      matter_id: 'contract_1',
-      deal_point_name: 'Ticking fee',
+      record_id: 'contract_1',
+      subject: 'Ticking fee',
       llm_prediction: 'Yes',
       deterministic_prediction: 'No',
       disagreement: true,
@@ -31,8 +31,8 @@ const QUEUE: LabelQueueResponse = {
       allowed_positions: ['Maybe', 'No', 'Yes'],
     },
     {
-      matter_id: 'contract_2',
-      deal_point_name: 'Fiduciary exception',
+      record_id: 'contract_2',
+      subject: 'Fiduciary exception',
       llm_prediction: 'No',
       deterministic_prediction: 'No',
       disagreement: false,
@@ -175,8 +175,8 @@ describe('the decision buttons (#52)', () => {
 
     await waitFor(() => expect(decisions).toHaveLength(1))
     expect(decisions[0]).toMatchObject({
-      matter_id: 'contract_1',
-      deal_point_name: 'Ticking fee',
+      record_id: 'contract_1',
+      subject: 'Ticking fee',
       value: 'Yes',
       prior_prediction: 'Yes',
     })

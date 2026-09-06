@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { CatalogEntry, RunSelectionResponse } from '../types'
+import type { CatalogEntry, RunSelectionResponse } from '@quorum/ui'
 import { isAbortError, useAbortOnUnmount } from '@quorum/ui'
 
 /**

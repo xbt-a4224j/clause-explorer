@@ -159,7 +159,7 @@ class TestRanking:
             "/comparables", json={"description": cached_query, "limit": 10}
         ).json()["matters"]
         unranked = client.post("/comparables", json={"limit": 10}).json()["matters"]
-        assert [m["matter_id"] for m in ranked] != [m["matter_id"] for m in unranked]
+        assert [m["record_id"] for m in ranked] != [m["record_id"] for m in unranked]
 
     def test_alpha_is_accepted_per_request(self, client: TestClient, cached_query: str) -> None:
         body = client.post(

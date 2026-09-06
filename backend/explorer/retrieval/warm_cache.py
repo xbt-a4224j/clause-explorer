@@ -119,9 +119,9 @@ def gather_texts(dsn: str | None = None) -> dict[str, str]:
     for index, term in enumerate(FILTER_VALUE_EVAL_TERMS):
         texts[f"filterterm:{index}"] = term
     with psycopg.connect(dsn or settings.database_url) as conn:
-        for matter_id, summary in conn.execute(MATTER_SUMMARY_SQL):
+        for record_id, summary in conn.execute(MATTER_SUMMARY_SQL):
             if summary:
-                texts[f"matter:{matter_id}"] = summary
+                texts[f"matter:{record_id}"] = summary
         for (label,) in conn.execute(INDUSTRY_LABEL_SQL):
             texts[f"industrylabel:{label}"] = label
     return texts

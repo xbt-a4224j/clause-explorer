@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import type { CatalogEntry, CatalogResponse } from '../types'
+import type { CatalogEntry, CatalogResponse } from '@quorum/ui'
 import { ignoreAbort } from '@quorum/ui'
-import { ExplainerPanel } from '../components/ExplainerPanel'
+import { ExplainerPanel } from '@quorum/ui'
 import { RoutingDiagram } from '@quorum/ui'
 import { QueryBuilder } from '../components/QueryBuilder'
-import { AskBox } from '../components/AskBox'
+import { AskBox } from '@quorum/ui'
 import { SessionCost } from '@quorum/ui'
-import { Term } from '../components/Term'
-import { Grading } from '../components/Grading'
+import { Term } from '@quorum/ui'
+import { Grading } from '@quorum/ui'
 
 /**
  * Ask (#36, renamed from Semantic Layer in #48).

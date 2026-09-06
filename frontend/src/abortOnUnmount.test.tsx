@@ -1,14 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
-import { Trust } from './views/Trust'
+import { Trust } from '@quorum/ui'
 import { Ask } from './views/Ask'
-import { DealTerms } from './views/DealTerms'
-import { Explore } from './views/Explore'
-import { Label } from './views/Label'
+import { Rollup } from '@quorum/ui'
+import { Explore } from '@quorum/ui'
+import { Label } from '@quorum/ui'
 import { Overview } from './views/Overview'
-import { Grading } from './components/Grading'
-import { MatterCard } from './components/MatterCard'
+import { Grading } from '@quorum/ui'
+import { RecordCard } from '@quorum/ui'
 import { QueryBuilder } from './components/QueryBuilder'
 import type { Matter } from './types'
 
@@ -55,7 +55,7 @@ const BODIES: Record<string, unknown> = {
 }
 
 const MATTER: Matter = {
-  matter_id: 'm-1',
+  record_id: 'm-1',
   target_name: 'TARGET INC',
   acquirer_name: 'ACQUIRER CORP',
   signing_date: '2021-01-01',
@@ -87,8 +87,8 @@ function expectAbortedOnUnmount(unmount: () => void) {
 }
 
 describe('every fetching view aborts on unmount', () => {
-  it('DealTerms', () => {
-    expectAbortedOnUnmount(render(<DealTerms selection={['m-1']} />).unmount)
+  it('Rollup', () => {
+    expectAbortedOnUnmount(render(<Rollup selection={['m-1']} />).unmount)
   })
 
   it('Explore', () => {
@@ -117,11 +117,11 @@ describe('every fetching view aborts on unmount', () => {
     expectAbortedOnUnmount(render(<Grading />).unmount)
   })
 
-  it('MatterCard, once expanded', () => {
+  it('RecordCard, once expanded', () => {
     expectAbortedOnUnmount(
       render(
-        <MatterCard
-          matter={MATTER}
+        <RecordCard
+          record={MATTER}
           focused={false}
           expanded
           onFocus={() => {}}

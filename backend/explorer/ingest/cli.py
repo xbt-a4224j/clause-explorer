@@ -43,7 +43,7 @@ def run_all(sources: list[str], dsn: str | None = None) -> dict[str, dict[str, o
     results: dict[str, dict[str, object]] = {}
     started = time.perf_counter()
 
-    # FIRST, and before any source runs. Ingest is idempotent by matter_id, which means it
+    # FIRST, and before any source runs. Ingest is idempotent by record_id, which means it
     # will happily add its corpus alongside a stranger's without noticing — see
     # ingest/corpus.py for the incident this exists because of.
     with psycopg.connect(dsn or settings.database_url) as conn:

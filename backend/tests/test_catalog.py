@@ -67,7 +67,7 @@ class TestCatalog:
     def test_lists_dimensions_separately_from_measures(self, cube_meta: dict[str, Any]) -> None:
         body = client.get("/agent/catalog").json()
         assert {d["name"] for d in body["dimensions"]} == {"deal_points.deal_point_name"}
-        assert all("deal_point_name" not in m["name"] for m in body["measures"])
+        assert all("subject" not in m["name"] for m in body["measures"])
 
     def test_carries_descriptions(self, cube_meta: dict[str, Any]) -> None:
         """The description is what makes a selection reviewable by someone who did not write

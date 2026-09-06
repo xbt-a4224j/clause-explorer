@@ -10,7 +10,7 @@ The rows were the cheap part — a `DELETE` fixed those. The expensive part was 
 published figure silently became wrong, and the only reason anyone noticed was a deal-point
 count of 112 where the README said 92.
 
-**Idempotency is what made it quiet.** An ingest keyed on its own `matter_id`s has no reason to
+**Idempotency is what made it quiet.** An ingest keyed on its own `record_id`s has no reason to
 look at rows it did not write, so it never notices it is a guest in another project's database.
 The property that makes re-running safe is exactly the property that makes this invisible.
 

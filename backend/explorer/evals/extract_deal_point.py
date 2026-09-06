@@ -37,8 +37,8 @@ MODEL = "gpt-4o-mini"
 
 @dataclass(frozen=True)
 class Prediction:
-    matter_id: str
-    deal_point_name: str
+    record_id: str
+    subject: str
     predicted_position: str
     quoted_text: str | None
     span_start: int | None
@@ -115,9 +115,9 @@ def _locate(contract_text: str, quote: str) -> tuple[int | None, int | None]:
 
 
 def predict(
-    matter_id: str,
+    record_id: str,
     contract_text: str,
-    deal_point_name: str,
+    subject: str,
     allowed_positions: list[str],
     api_key: str,
 ) -> Prediction:
@@ -135,7 +135,7 @@ def predict(
                 "role": "system",
                 "content": (
                     "You are labelling a merger agreement for the ABA-style deal point "
-                    f'"{deal_point_name}". Choose exactly one position from the allowed set '
+                    f'"{subject}". Choose exactly one position from the allowed set '
                     "below and answer with its id alone, then quote the exact sentence that "
                     f"supports it, copied verbatim.\n\n{option_list}"
                 ),
@@ -160,8 +160,8 @@ def predict(
     # against — CLAUDE.md requires each LLM call to log model, tokens, and cost.
     log.info(
         "calibration_prediction",
-        matter_id=matter_id,
-        deal_point_name=deal_point_name,
+        record_id=record_id,
+        subject=subject,
         predicted=position,
         model=MODEL,
         tokens=tokens,
@@ -171,8 +171,8 @@ def predict(
         located=start is not None,
     )
     return Prediction(
-        matter_id=matter_id,
-        deal_point_name=deal_point_name,
+        record_id=record_id,
+        subject=subject,
         predicted_position=position,
         quoted_text=content.get("quote") or None,
         span_start=start,

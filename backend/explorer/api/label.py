@@ -8,7 +8,7 @@ by *disagreement between the two* needs no calibrated confidence — the cheapes
 available before #28 has measured one for a given deal point.
 
 Accepting an item writes a new row to `labels`. Since #41 the calibration grader reads that
-table: the latest decision for a `(matter_id, deal_point_name)` replaces the model's answer and
+table: the latest decision for a `(record_id, subject)` replaces the model's answer and
 is then graded against MAUD like any other answer, so a mistyped label lowers the accuracy
 figure. What that does not buy is a better answer on *this* corpus — every queued item is a
 held-out matter that already has a lawyer's answer, so a reviewer here can only reproduce gold.
@@ -28,6 +28,7 @@ from explorer.agent.deterministic_extract import predict_deterministic
 from explorer.api.logging import get_logger
 from explorer.api.matters import _read_source
 from explorer.api.settings import settings
+from explorer.evals.calibration import load_predictions
 
 router = APIRouter(prefix="/label")
 log = get_logger()
@@ -37,8 +38,8 @@ PREDICTIONS_FILE = ROOT / "docs" / "eval" / "calibration_predictions.json"
 
 
 class QueueItem(BaseModel):
-    matter_id: str
-    deal_point_name: str
+    record_id: str
+    subject: str
     llm_prediction: str
     deterministic_prediction: str
     disagreement: bool
@@ -58,14 +59,14 @@ class QueueResponse(BaseModel):
     labelled_count: int
 
 
-def allowed_positions(conn: psycopg.Connection, deal_point_name: str) -> list[str]:
+def allowed_positions(conn: psycopg.Connection, subject: str) -> list[str]:
     """The answers this deal point actually has, read from the data (#56).
 
     Same source `/label/queue` uses to score the deterministic baseline, so the write path and
     the read path cannot disagree about what a valid answer is.
     """
     rows = conn.execute(
-        "SELECT DISTINCT position FROM facts WHERE subject = %s", (deal_point_name,)
+        "SELECT DISTINCT position FROM facts WHERE subject = %s", (subject,)
     ).fetchall()
     return sorted({str(r[0]) for r in rows if r[0] is not None})
 
@@ -76,19 +77,17 @@ def queue() -> QueueResponse:
         raise HTTPException(
             status_code=404,
             detail="No recorded predictions yet — run "
-            '`python -c "from explorer.evals.calibration import record_predictions; '
+            '`python -c "from explorer.evals.calibration import load_predictions, record_predictions; '
             'record_predictions()"` (needs a key) and commit '
             "docs/eval/calibration_predictions.json.",
         )
 
-    import json
-
-    predictions = json.loads(PREDICTIONS_FILE.read_text())
-    matter_ids = sorted({p["matter_id"] for p in predictions})
+    predictions = load_predictions(PREDICTIONS_FILE)
+    record_ids = sorted({p["record_id"] for p in predictions})
 
     with psycopg.connect(settings.database_url) as conn:
         source_rows = conn.execute(
-            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": matter_ids}
+            "SELECT id, source_file FROM records WHERE id = ANY(%(ids)s)", {"ids": record_ids}
         ).fetchall()
         labelled_row = conn.execute(
             "SELECT count(*) FROM labels WHERE target_kind = 'deal_point'"
@@ -99,42 +98,41 @@ def queue() -> QueueResponse:
         # Edit control offers. Same function `/label/decide` validates with, so the control and
         # the write path cannot drift apart.
         allowed_by_point: dict[str, list[str]] = {
-            name: allowed_positions(conn, name)
-            for name in {p["deal_point_name"] for p in predictions}
+            name: allowed_positions(conn, name) for name in {p["subject"] for p in predictions}
         }
 
     sources: dict[str, str] = dict(source_rows)
 
     items: list[QueueItem] = []
     for p in predictions:
-        text = _read_source(sources.get(p["matter_id"])) or ""
-        deterministic = predict_deterministic(
-            text, p["deal_point_name"], allowed_by_point.get(p["deal_point_name"], [])
-        )
+        record_id = p["record_id"]
+        subject = p["subject"]
+        text = _read_source(sources.get(record_id)) or ""
+        deterministic = predict_deterministic(text, subject, allowed_by_point.get(subject, []))
         disagreement = deterministic != p["predicted_position"]
         items.append(
             QueueItem(
-                matter_id=p["matter_id"],
-                deal_point_name=p["deal_point_name"],
+                record_id=record_id,
+                subject=subject,
                 llm_prediction=p["predicted_position"],
                 deterministic_prediction=deterministic,
                 disagreement=disagreement,
                 quoted_text=p.get("quoted_text"),
                 span_start=p.get("span_start"),
                 span_end=p.get("span_end"),
-                allowed_positions=allowed_by_point.get(p["deal_point_name"], []),
+                allowed_positions=allowed_by_point.get(subject, []),
             )
         )
 
     # Disagreement first — the cheapest useful ranking signal with no calibrated confidence.
-    items.sort(key=lambda i: (not i.disagreement, i.matter_id, i.deal_point_name))
+    items.sort(key=lambda i: (not i.disagreement, i.record_id, i.subject))
 
     return QueueResponse(items=items, queue_size=len(items), labelled_count=int(labelled_count))
 
 
 class DecideRequest(BaseModel):
-    matter_id: str = Field(min_length=1)
-    deal_point_name: str = Field(min_length=1)
+    record_id: str = Field(min_length=1)
+    subject: str = Field(min_length=1)
     value: str = Field(min_length=1)
     prior_prediction: str | None = None
 
@@ -152,12 +150,12 @@ def decide(request: DecideRequest) -> dict[str, Any]:
     accuracy figure cannot accept a value that is not a possible answer to its own question.
     """
     with psycopg.connect(settings.database_url) as conn:
-        allowed = allowed_positions(conn, request.deal_point_name)
+        allowed = allowed_positions(conn, request.subject)
         if not allowed:
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    f"No deal point named {request.deal_point_name!r} has recorded answers, so "
+                    f"No deal point named {request.subject!r} has recorded answers, so "
                     "there is no vocabulary to check a decision against."
                 ),
             )
@@ -165,7 +163,7 @@ def decide(request: DecideRequest) -> dict[str, Any]:
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    f"{request.value!r} is not an answer to {request.deal_point_name!r}. "
+                    f"{request.value!r} is not an answer to {request.subject!r}. "
                     f"Allowed: {', '.join(allowed)}"
                 ),
             )
@@ -175,15 +173,15 @@ def decide(request: DecideRequest) -> dict[str, Any]:
             VALUES ('deal_point', %(target_id)s, 'position', %(value)s, %(prior)s, 'local')
             """,
             {
-                "target_id": f"{request.matter_id}:{request.deal_point_name}",
+                "target_id": f"{request.record_id}:{request.subject}",
                 "value": request.value,
                 "prior": request.prior_prediction,
             },
         )
     log.info(
         "label_decided",
-        matter_id=request.matter_id,
-        deal_point_name=request.deal_point_name,
+        record_id=request.record_id,
+        subject=request.subject,
         value=request.value,
     )
     return {"ok": True}

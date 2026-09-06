@@ -35,7 +35,7 @@ HEAD_TAIL = 120
 
 @dataclass(frozen=True)
 class Row:
-    deal_point_name: str
+    subject: str
     recorded_width: int | None
     outcome: str
     anchored_width: int | None
@@ -66,14 +66,14 @@ def collect() -> list[Row]:
     _, points = parse_maud()
 
     rows: list[Row] = []
-    matter_id = ""
+    record_id = ""
     locator: SpanLocator | None = None
     plain: tuple[str, list[int]] = ("", [])
-    for point in sorted(points, key=lambda p: p.matter_id):
-        if point.matter_id != matter_id or locator is None:
-            matter_id = point.matter_id
-            locator = SpanLocator(sources[matter_id])
-            plain = _normalize_with_offsets(sources[matter_id])
+    for point in sorted(points, key=lambda p: p.record_id):
+        if point.record_id != record_id or locator is None:
+            record_id = point.record_id
+            locator = SpanLocator(sources[record_id])
+            plain = _normalize_with_offsets(sources[record_id])
 
         recorded = locator.locate(point.source_excerpt)
         anchored, outcome = locator.anchor_with_reason(point.source_excerpt, recorded)
@@ -97,7 +97,7 @@ def collect() -> list[Row]:
 
         rows.append(
             Row(
-                deal_point_name=point.deal_point_name,
+                subject=point.subject,
                 recorded_width=None if recorded is None else recorded[1] - recorded[0],
                 outcome=outcome,
                 anchored_width=None if anchored is None else anchored[1] - anchored[0],
@@ -283,7 +283,7 @@ def report() -> str:
     add("|---|---:|---:|---:|")
     by_name: dict[str, list[Row]] = collections.defaultdict(list)
     for row in rows:
-        by_name[row.deal_point_name].append(row)
+        by_name[row.subject].append(row)
     ranked = sorted(
         by_name.items(),
         key=lambda kv: (-sum(1 for r in kv[1] if r.outcome == ANCHORED) / len(kv[1]), kv[0]),
