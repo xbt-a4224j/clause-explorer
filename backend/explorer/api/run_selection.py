@@ -22,6 +22,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from explorer.agent.dimension_values import dimension_values
+from explorer.agent.pick_value import pick_value
+from explorer.agent.resolve_filter_value import UnresolvedFilterValue, resolve_against
 from explorer.agent.select import (
     AgentUnavailable,
     InvalidSelection,
@@ -103,6 +106,40 @@ def _n_from(rows: list[dict[str, Any]]) -> int | None:
     return min(counts) if counts else None
 
 
+def resolve_filters(filters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Replace every filter value with one the corpus actually carries, or refuse loudly.
+
+    This endpoint is reachable by curl and by the click-builder, not only by the model, and the
+    UI describes it as "the same path". It was not: /agent/ask resolved values and this did
+    not, so 'Healthcare', 'cash' and 'no-shop' arrived at Cube verbatim and came back n=0 —
+    indistinguishable from a genuinely empty slice.
+
+    A dimension with no closed vocabulary (a target name, a date) travels verbatim. Refusing
+    those would make the resolver a censor rather than a translator.
+    """
+    resolved: list[dict[str, Any]] = []
+    for f in filters:
+        member = f["member"]
+        candidates = dimension_values(member)
+        if not candidates:
+            resolved.append(f)
+            continue
+        values: list[str] = []
+        for raw in f.get("values") or []:
+            try:
+                values.append(resolve_against(raw, candidates, pick=pick_value).resolved)
+            except UnresolvedFilterValue as unresolved:
+                raise InvalidSelection(
+                    f"{raw!r} is not a value {member} carries. Filtering on it would return "
+                    f'zero rows, which reads as "we have no comparable deals" rather than '
+                    f'"that value does not exist". Near misses: '
+                    f"{', '.join(repr(c) for c in unresolved.candidates[:5])}.",
+                    {"filters": filters},
+                ) from unresolved
+        resolved.append({**f, "values": values})
+    return resolved
+
+
 @router.post("/run-selection", response_model=RunSelectionResponse)
 def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
     selection: dict[str, Any] = {
@@ -121,6 +158,14 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
         validate_selection(selection, vocabulary)
     except InvalidSelection as invalid:
         log.warning("run_selection_rejected", reason=str(invalid))
+        raise HTTPException(status_code=422, detail=str(invalid)) from invalid
+
+    # Values, after names. Names are enum-locked at decode time; values are free text and are
+    # the half that silently returned zero rows until now.
+    try:
+        selection["filters"] = resolve_filters(selection["filters"])
+    except InvalidSelection as invalid:
+        log.warning("run_selection_unresolved", reason=str(invalid))
         raise HTTPException(status_code=422, detail=str(invalid)) from invalid
 
     payload = {**selection, "limit": request.limit}

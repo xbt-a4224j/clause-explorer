@@ -378,6 +378,8 @@ class TestWhatActuallyReachesCube:
     def _capture(monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, object]]) -> list[dict]:
         sent: list[dict] = []
         monkeypatch.setattr("explorer.api.run_selection.fetch_vocabulary", lambda: _vocab())
+        # open dimension by default: these tests are about the payload, not resolution
+        monkeypatch.setattr("explorer.api.run_selection.dimension_values", lambda d: [])
 
         def spy(payload: dict, timeout: float = 20.0) -> list[dict[str, object]]:
             sent.append(payload)
@@ -421,15 +423,28 @@ class TestWhatActuallyReachesCube:
         ).json()
         assert body["query"] == sent[0]
 
-    def test_a_filter_value_shaped_like_an_injection_travels_as_a_value(
+    def test_a_hostile_filter_value_never_reaches_cube_at_all(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Filter VALUES cannot be enum-constrained the way names are, so a hostile string is
-        always reachable. It must arrive at Cube as data in the payload — never spliced into
-        anything — and the assertion is that it survives byte-identical."""
+        """This assertion got STRONGER, so the test changed with it.
+
+        It used to assert a hostile string arrived at Cube byte-identical — correct when the
+        only defence was that values travel as bound data rather than spliced SQL. Since
+        filter-value resolution landed, a value that is not in the dimension's own vocabulary
+        is refused before Cube is touched, which subsumes the old property: the string cannot
+        be mishandled downstream because there is no downstream.
+
+        Kept rather than deleted because the failure it guards against is real and the
+        mechanism protecting against it changed.
+        """
         hostile = "All Cash'); DROP TABLE deal_points; --"
+        from explorer.api import run_selection as rs
+
+        # _capture stubs dimension_values to "open"; override it AFTER, not before
         sent = self._capture(monkeypatch, [{"comparable_deals.n": "0"}])
-        client.post(
+        monkeypatch.setattr(rs, "dimension_values", lambda d: ["All Cash", "All Stock"])
+        monkeypatch.setattr(rs, "pick_value", lambda raw, c, **k: None)
+        response = client.post(
             "/agent/run-selection",
             json={
                 "measures": ["comparable_deals.n"],
@@ -443,7 +458,35 @@ class TestWhatActuallyReachesCube:
                 ],
             },
         )
-        assert sent[0]["filters"][0]["values"] == [hostile]
+        assert response.status_code == 422
+        assert sent == [], "nothing hostile should reach the semantic layer"
+
+    def test_a_value_on_an_OPEN_dimension_still_travels_as_data(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A target name grows with the corpus, so it has no vocabulary to resolve against and
+        must pass through. That is where the bound-parameter guarantee still carries the
+        weight, so it is asserted here instead."""
+        from explorer.api import run_selection as rs
+
+        monkeypatch.setattr(rs, "dimension_values", lambda d: [])
+        raw = "ACCELERON PHARMA INC.'); --"
+        sent = self._capture(monkeypatch, [{"comparable_deals.n": "9"}])
+        client.post(
+            "/agent/run-selection",
+            json={
+                "measures": ["comparable_deals.n"],
+                "dimensions": [],
+                "filters": [
+                    {
+                        "member": "comparable_deals.target_name",
+                        "operator": "equals",
+                        "values": [raw],
+                    }
+                ],
+            },
+        )
+        assert sent[0]["filters"][0]["values"] == [raw]
 
 
 class TestCubeBeingDownIsNotAnEmptyAnswer:

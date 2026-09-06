@@ -26,6 +26,7 @@ look the same to whoever reads the response.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from psycopg import Connection
@@ -55,8 +56,9 @@ SIMILARITY_FLOOR = 0.55
 class Resolution:
     raw: str
     resolved: str
-    method: str  # "exact" | "embedding"
-    matter_count: int
+    method: str  # "exact" | "model" | "embedding"
+    #: None when the dimension is not industry — only industry carries a matter count
+    matter_count: int | None = None
     similarity: float | None = None
 
 
@@ -155,3 +157,68 @@ def resolve_filter_value(conn: Connection, cache: EmbeddingCache, raw: str) -> R
         similarity=result.similarity,
     )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# Generalised resolution: any dimension, not just industry.
+#
+# The original ladder was exact -> embedding, hardcoded to industry labels, and every other
+# filter member carried the model's text through verbatim. Measured on the live stack that
+# meant 'Healthcare', 'cash' and 'no-shop' all reached Cube unchanged and returned n=0 — which
+# reads as "we have no comparable deals" rather than "you named something we do not carry".
+#
+# The middle tier is now a MODEL call constrained to the dimension's own values, because it is
+# the only tier that can be enum-locked. Measured head-to-head on 16 legal terms of art against
+# the 92 ABA deal points (2026-09-06, gpt-4o-mini, $0.000189/call):
+#
+#     model       14/16, zero false positives, correct null on all four terms MAUD lacks
+#     embeddings  12/16 at the 0.55 floor, one outright wrong match
+#
+# The three the embeddings missed — no-shop, matching rights, bringdown standard — are terms
+# whose vocabulary is literal and whose 256-dim shortened vectors are not confident enough to
+# clear the floor. The two the model missed it DECLINED rather than got wrong, which is the
+# better failure: a false refusal costs a retry, a false resolution looks like a right answer.
+#
+# `pick` is injected rather than called directly so the pipeline is testable with no key and
+# no network, and so a caller with no key can pass the embedding tier instead.
+
+
+Picker = "Callable[[str, list[str]], str | None]"
+
+
+def resolve_against(
+    raw: str,
+    candidates: list[str],
+    *,
+    pick: Any,
+    matter_count: int | None = None,
+) -> Resolution:
+    """Resolve `raw` to one of `candidates`, or raise `UnresolvedFilterValue`.
+
+    Two tiers, first match wins:
+
+    1. **Exact** — case- and whitespace-insensitive. Free, deterministic, and spends no call.
+    2. **`pick`** — a constrained chooser over exactly these candidates. Returning None means
+       "the corpus has no value for this", which is a real answer: `go-shop` and `ticking fee`
+       are terms of art with no MAUD deal point, and inventing a nearest match for them would
+       be the silent wrong answer this module exists to prevent.
+
+    A `pick` result outside `candidates` is treated as a refusal. The enum should make that
+    unreachable; if it ever arrives it must not become a filter that matches nothing.
+    """
+    needle = raw.strip().lower()
+    exact = next((c for c in candidates if c.strip().lower() == needle), None)
+    if exact is not None:
+        log.info("filter_value_resolved", raw=raw, resolved=exact, method="exact")
+        return Resolution(raw=raw, resolved=exact, method="exact", matter_count=matter_count)
+
+    if not candidates:
+        raise UnresolvedFilterValue(raw, [])
+
+    chosen = pick(raw, candidates)
+    if chosen is None or chosen not in candidates:
+        log.info("filter_value_unresolved", raw=raw, offered=len(candidates), chosen=chosen)
+        raise UnresolvedFilterValue(raw, candidates[:8])
+
+    log.info("filter_value_resolved", raw=raw, resolved=chosen, method="model")
+    return Resolution(raw=raw, resolved=chosen, method="model", matter_count=matter_count)

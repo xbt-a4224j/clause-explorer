@@ -53,6 +53,8 @@ and this is a claim about the response that actually came back.
 
 from __future__ import annotations
 
+import time
+
 from typing import Any
 
 import psycopg
@@ -63,6 +65,8 @@ from explorer.agent.resolve_filter_value import (
     UnresolvedFilterValue,
     resolve_filter_value,
 )
+from explorer.agent.interpret import interpret
+from explorer.agent.pick_value import PICK_MODEL
 from explorer.agent.select import (
     AgentUnavailable,
     InvalidSelection,
@@ -326,8 +330,32 @@ def ask(request: AskRequest) -> AskResponse:
             ),
         )
 
-    call = select_with_usage(request.question, vocabulary, settings.openai_api_key)
-    selection = call.selection
+    # Two small closed choices first — shape, then deal point. Measured 2026-09-06 on ten
+    # questions a transactional lawyer would actually ask: the free-form path below answered
+    # 0 of 10, this answers 6, and the four it declines are honest declines rather than a
+    # count served in place of a distribution. See agent/shape.py for why.
+    started = time.perf_counter()
+    shaped_usage: list[tuple[int, int]] = []
+    shaped = interpret(request.question, settings.openai_api_key, usage=shaped_usage)
+    if shaped is not None:
+        selection = shaped
+        # Two calls, so the reported cost is their SUM. Latency is not summed from the parts —
+        # it is measured around the whole thing below, because that is what the user waited.
+        prompt_tokens = sum(p for p, _ in shaped_usage)
+        completion_tokens = sum(c for _, c in shaped_usage)
+        call = SelectionCall(
+            selection=shaped,
+            model=PICK_MODEL,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
+    else:
+        # Falls back rather than refusing: the four shapes do not cover every answerable
+        # question — "how many deals are all cash" filters a consideration type, not a deal
+        # point — and a narrower path must not remove reach the wider one already had.
+        call = select_with_usage(request.question, vocabulary, settings.openai_api_key)
+        selection = call.selection
 
     numbers = numeric_leaves(selection)
     if numbers:
