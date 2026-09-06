@@ -134,3 +134,31 @@ it, and a figure a partner cannot reproduce is worth less than one they can.
 Before any of this, the same ten-question subset run end to end through `/agent/ask` then
 `/agent/run-selection` produced **0 of 10** answers to the question asked — not near misses, but
 empty selections, 503s, and `how many deals are all cash` refused at n=0 when the answer is 89.
+
+## Re-measured 2026-09-06, after the prompt grew a SCOPE section
+
+`SHIPPED (interpret)` scores **23 of 27** — 17 of 20 answerable, 6 of 7 declines. One trial.
+
+This is not a claim of +3 over the 20/27 above. Identical runs of this bench at temperature 0
+have scored 23, 21 and 22 of 24 on an earlier question set, so a single trial moves within the
+noise; the defensible statement is that adding SCOPE did not cost accuracy.
+
+The re-measure was required rather than optional. The system prompt gained a SCOPE block so a
+question can name a slice of the corpus ("cash-only deals in healthcare") instead of having the
+word silently dropped. The benchmarked text survives byte-for-byte as a prefix — pinned by
+`backend/tests/test_interpret_flow.py` — but a prompt edit invalidates the number attached to
+it, and 20/27 does not describe a prompt with a section the measured one did not have.
+
+The four remaining misses are all over-answering, not wrong answers:
+
+    how many deals had a go-shop        -> MAUD has no go-shop point; it reached for the
+                                           no-shop fiduciary exception instead
+    median reverse termination fee      -> no fee amounts in the corpus; picked a numeric
+                                           point anyway
+    which agreements are most off-market -> a comparison across records, which no shape does
+    do all-cash deals have different
+      fiduciary outs                     -> two terms held at once, likewise
+
+None of these is a scope failure. The scope path declines correctly on a slice the corpus does
+not carry ("cryptocurrency deals" refuses and names near misses); these four are the taxonomy
+and cross-record-comparison gaps already described above, unchanged.
