@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -369,7 +370,8 @@ def grade(trials: int = 1, only: set[str] | None = None) -> None:
         misses: list[str] = []
         for trial in range(trials):
             right = declined_right = 0
-            for item in spec:
+            for n, item in enumerate(spec, 1):
+                print(f"    {name} trial {trial + 1} q{n}/{len(spec)}", file=sys.stderr, flush=True)
                 outcome = strategy(item["q"], points, vocab)
                 cost += sum(pt for pt, _ in outcome.usage) * 0.15 / 1e6
                 cost += sum(c for _, c in outcome.usage) * 0.60 / 1e6
@@ -396,6 +398,7 @@ def grade(trials: int = 1, only: set[str] | None = None) -> None:
             )
         )
 
+    sys.stdout.flush()
     print(f"{'strategy':<22} {'total /24':>11} {'answered /20':>13} {'$/run':>8} {'s/run':>7}")
     print("-" * 66)
     for name, totals, answered, cost, secs, _ in sorted(

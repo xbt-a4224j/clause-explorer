@@ -58,6 +58,7 @@ from typing import Any
 
 import psycopg
 from fastapi import APIRouter, HTTPException
+from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, Field
 
 from explorer.agent.interpret import interpret
@@ -335,7 +336,24 @@ def ask(request: AskRequest) -> AskResponse:
     # count served in place of a distribution. See agent/shape.py for why.
     started = time.perf_counter()
     shaped_usage: list[tuple[int, int]] = []
-    shaped = interpret(request.question, settings.openai_api_key, usage=shaped_usage)
+    try:
+        shaped = interpret(request.question, settings.openai_api_key, usage=shaped_usage)
+    except RateLimitError as limited:
+        # Surfaced as "an internal error occurred" until 2026-09-06, when the account's
+        # requests-per-day cap was reached mid-demo. That message is the worst one available:
+        # it is indistinguishable from a bug, so a reader retries, sees it again, and concludes
+        # the app is broken rather than that the provider is throttling.
+        log.warning("agent_ask_rate_limited", detail=str(limited)[:200])
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The model provider returned a rate limit, so this question was not "
+                "interpreted. Nothing is wrong with the corpus or the query — the same "
+                "question will work once the limit resets. Every figure already on screen "
+                "came from Postgres and is unaffected."
+            ),
+        ) from limited
+
     if shaped is not None:
         selection = shaped
         # Two calls, so the reported cost is their SUM. Latency is not summed from the parts —
@@ -353,7 +371,18 @@ def ask(request: AskRequest) -> AskResponse:
         # Falls back rather than refusing: the four shapes do not cover every answerable
         # question — "how many deals are all cash" filters a consideration type, not a deal
         # point — and a narrower path must not remove reach the wider one already had.
-        call = select_with_usage(request.question, vocabulary, settings.openai_api_key)
+        try:
+            call = select_with_usage(request.question, vocabulary, settings.openai_api_key)
+        except RateLimitError as limited:
+            log.warning("agent_ask_rate_limited", detail=str(limited)[:200])
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "The model provider returned a rate limit, so this question was not "
+                    "interpreted. Nothing is wrong with the corpus or the query — the same "
+                    "question will work once the limit resets."
+                ),
+            ) from limited
         selection = call.selection
 
     numbers = numeric_leaves(selection)
