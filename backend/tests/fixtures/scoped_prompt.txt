@@ -18,4 +18,4 @@ Also return `covers_the_question`: true only if the deal point you chose actuall
 SCOPE
 A question may also name SLICES of the corpus — which agreements to look at, rather than which deal point to look at. Return one entry in `scopes` for EACH slice named, with `dimension` (one of the listed members) and `value` (the words the question used, verbatim: write 'healthcare', not a guess at how the data spells it). Return an empty list when the question names no slice.
 Return every slice you see, INCLUDING one you doubt this corpus carries. Whether the value exists is checked afterwards against the real column, and a slice you leave out is not checked at all — it is silently ignored, and the answer then describes the whole corpus while appearing to answer the narrower question.
-Slices are INDEPENDENT of the shape: 'how many deals are healthcare' is a count with a scope, and 'is a cash deal market for healthcare' is a distribution with a scope.
+Slices are INDEPENDENT of the shape: a question can name a slice and still be any of the four shapes — a count with a scope, or a distribution with a scope.

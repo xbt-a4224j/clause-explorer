@@ -65,6 +65,18 @@ strings:
   # Collapsing the two changes the prompt and invalidates the measurement.
   colloquial: deals
 
+  # The four grammatical variants of "deal point" the prompt needs. These were hardcoded MAUD
+  # words inside prompt.py until a second domain read the assembled prompt and found itself
+  # being told about "negotiated terms" and "agreements". Every value here reproduces the exact
+  # word the benchmarked 20/27 prompt used, so this domain's assembled prompt is unchanged —
+  # `tests/fixtures/benchmarked_prompt.txt` is the proof.
+  subject_generic: term
+  subject_generic_plural: terms
+  subject_qualifier: negotiated
+  subject_short: point
+  numeric_units_phrase: days, months or percent
+  scope_example: healthcare
+
   corpus_description: public-target merger agreements
 
   # Phrases a lawyer uses that name exactly one deal point. Listing them is worth real accuracy
