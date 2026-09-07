@@ -8,6 +8,7 @@ import { Overview } from './views/Overview'
 // How this corpus draws a record: `target ← acquirer`, the inferred-industry chip, the date.
 // The card owns everything else — expansion, scores, drill-through, the provenance line.
 import { RECORD_RENDERERS } from './recordRenderers'
+import { EXPLORE_RANKERS, describeExploreQuery, toExploreRequestFilters } from './exploreRequest'
 import { STRINGS } from './strings'
 import { corpusStrip } from './corpusStrip'
 import './styles/shell.css'
@@ -108,6 +109,9 @@ export function App() {
           onSelectionChange={setSelection}
           seedFilters={seed}
           onSeedConsumed={() => setSeed(null)}
+          toRequestFilters={toExploreRequestFilters}
+          describeQuery={describeExploreQuery}
+          rankers={EXPLORE_RANKERS}
         />
       ) : active === 'terms' ? (
         <Rollup

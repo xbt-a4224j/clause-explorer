@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { vi } from 'vitest'
 import { App } from './App'
 import { TABS } from './tabs'
 
@@ -175,5 +176,38 @@ describe('the header search goes somewhere', () => {
       'placeholder',
       expect.stringContaining('Explore'),
     )
+  })
+})
+
+describe('a journey seed reaches Explore, not just the journey object', () => {
+  /**
+   * The gap that hid a real bug: Overview.test.tsx asserted on the SHAPE of `journey.seed`
+   * without ever mounting Explore, so `journey.seed` could carry fields Explore's own
+   * `seedFilters.filters` never reads and nothing would fail. This mounts the whole App, runs
+   * the journey, switches to Explore, and reads the actual outgoing `/comparables` request --
+   * the only way to prove the seed was APPLIED rather than merely well-typed.
+   */
+  it('applies the comparables journey seed to the real outgoing request', async () => {
+    mockHealth()
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: /run this/i }))
+    // the journey lands on Ask first (#47); the seed is consumed when Explore next mounts
+    fireEvent.click(screen.getByRole('tab', { name: /explore/i }))
+
+    await waitFor(() => {
+      // The FIRST /comparables call fires before the seed effect applies (mount with empty
+      // filters); the seeded request is a LATER call once `seedFilters` is consumed. Find the
+      // one that actually carries the industry code rather than assuming position.
+      const seeded = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+        (args: unknown[]) =>
+          String(args[0]).includes('comparables') &&
+          String((args[1] as RequestInit)?.body).includes('folio_industry_code'),
+      )
+      expect(seeded).toBeDefined()
+      const body = JSON.parse(String((seeded![1] as RequestInit).body))
+      expect(body.folio_industry_code).toBe('RCSG4k3ah1Pu5YgPexPgOmL')
+      expect(body.consideration_type).toBe('All Cash')
+    })
   })
 })

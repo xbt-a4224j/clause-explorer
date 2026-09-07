@@ -144,9 +144,13 @@ describe('drill-through', () => {
   })
 
   it('opens the clause that answers the filter the reader applied, and says why', async () => {
+    // 'consideration', not 'consideration_type': this dimension is keyed by Explore's facet
+    // GROUP key now (recordRenderers.tsx's evidenceFor, updated the same day Explore's toggle()
+    // stopped hardcoding filter field names) — the wire field 'consideration_type' is a
+    // different vocabulary this component never sees.
     renderCard({
       expanded: true,
-      activeFilter: { dimension: 'consideration_type', value: 'All Cash' },
+      activeFilter: { dimension: 'consideration', value: 'All Cash' },
     })
     const dp = await screen.findByTestId('dp-Type of Consideration-Answer')
     // no click: filtering to All Cash and then hiding the consideration clause is the product

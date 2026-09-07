@@ -1,3 +1,4 @@
+import type { JourneySeed } from '@semantic-explorer-base/ui'
 import type { TabId } from './tabs'
 
 /**
@@ -15,21 +16,21 @@ import type { TabId } from './tabs'
  * data manager deciding whether an extractor may run on firm documents.
  */
 
-export interface JourneySeed {
-  folio_industry_code: string | null
-  folio_industry_label: string | null
-  signing_year: string | null
-  consideration_type: string | null
-  /**
-   * Free text for Explore's own search box.
-   *
-   * Carried here because the shell's header search had no destination: it rendered on every
-   * tab but Explore, `?` advertised "/ focus search", and it had no handler at all. The seed
-   * was already the way one tab hands a starting point to another, so it is the way this one
-   * arrives too. Null on every journey — those start from structured filters.
-   */
-  description?: string | null
-}
+/**
+ * `JourneySeed` is the platform's own type now (`{filters?, description?}`, keyed by whatever
+ * a domain's own facet groups are called) — this file used to redeclare it with clause-
+ * explorer's field names as top-level properties (`folio_industry_code`, `signing_year`, ...)
+ * rather than nested under `filters`. That shape was never what Explore's `seedFilters` prop
+ * actually reads (`seedFilters.filters ?? {}`), so `App.tsx`'s `setSeed(journey.seed)`
+ * type-checked — every field here is optional on the real type, so the excess properties were
+ * silently tolerated — while doing nothing at runtime: Explore always saw `filters: undefined`
+ * and applied no filters at all. No test caught it because the only journey test asserts the
+ * shape of `journey.seed` itself, not that Explore ever receives it. Found and fixed while
+ * genericising Explore's own filter keys for a second domain (semantic-explorer-base's Explore
+ * fix, 2026-09-07) — the two bugs are unrelated, but touching this file's seed shape to keep
+ * pace with Explore's new group-key convention (`industry`/`industry_code`/`consideration`
+ * rather than `folio_industry_label`/`consideration_type`) is what surfaced this one.
+ */
 
 export interface Journey {
   id: string
@@ -77,10 +78,11 @@ export const JOURNEYS: readonly Journey[] = [
     // arrived. The seed still travels: the Explore step arrives already narrowed.
     tab: 'ask',
     seed: {
-      folio_industry_code: HEALTH_CARE,
-      folio_industry_label: 'Health Care Industry',
-      signing_year: null,
-      consideration_type: 'All Cash',
+      filters: {
+        industry: 'Health Care Industry',
+        industry_code: HEALTH_CARE,
+        consideration: 'All Cash',
+      },
     },
     cta: 'Run this',
   },

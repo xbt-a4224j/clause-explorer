@@ -6,6 +6,7 @@ import type { ComparablesResponse, FacetsResponse } from '@semantic-explorer-bas
 import { RECORD_RENDERERS } from '../recordRenderers'
 import { STRINGS } from '../strings'
 import { corpusStrip } from '../corpusStrip'
+import { EXPLORE_RANKERS, describeExploreQuery, toExploreRequestFilters } from '../exploreRequest'
 
 /**
  * Explore (#19), against a mocked API.
@@ -142,6 +143,9 @@ function renderExplore() {
       render={RECORD_RENDERERS}
       corpusStrip={corpusStrip(STRINGS.glossary)}
       searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
+      toRequestFilters={toExploreRequestFilters}
+      describeQuery={describeExploreQuery}
+      rankers={EXPLORE_RANKERS}
     />,
   )
 }
@@ -427,14 +431,38 @@ describe('the rank-by control', () => {
 
   it('stays hidden until there is a description to rank', async () => {
     const ref = createRef<HTMLInputElement>()
+    render(
+      <Explore
+        strings={STRINGS}
+        searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
+        rankers={EXPLORE_RANKERS}
+      />,
+    )
+    await screen.findByTestId('resolved-query')
+    expect(screen.queryByTestId('rank-control')).toBeNull()
+  })
+
+  it('is absent entirely when the domain supplies no rankers', async () => {
+    /** A knob for a blend /comparables does not compute would demonstrate a capability the
+     *  search does not have -- semantic-explorer-base's Explore fix, 2026-09-07. */
+    const ref = createRef<HTMLInputElement>()
     render(<Explore strings={STRINGS} searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
     await screen.findByTestId('resolved-query')
+    fireEvent.change(screen.getByLabelText('describe the deal'), {
+      target: { value: 'healthcare take-private' },
+    })
     expect(screen.queryByTestId('rank-control')).toBeNull()
   })
 
   it('sends the selected alpha to /comparables', async () => {
     const ref = createRef<HTMLInputElement>()
-    render(<Explore strings={STRINGS} searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
+    render(
+      <Explore
+        strings={STRINGS}
+        searchRef={ref as React.MutableRefObject<HTMLInputElement | null>}
+        rankers={EXPLORE_RANKERS}
+      />,
+    )
     await screen.findByTestId('resolved-query')
 
     fireEvent.change(screen.getByLabelText('describe the deal'), {

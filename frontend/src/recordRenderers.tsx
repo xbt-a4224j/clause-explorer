@@ -55,5 +55,9 @@ export const RECORD_RENDERERS = {
    * than from a lawyer's answer, so there is no clause to show for them. Omission says that,
    * rather than inventing a link.
    */
-  evidenceFor: { consideration_type: 'Type of Consideration-Answer' },
+  // Keyed by the FACET GROUP's own key ('consideration', from /facets), not the wire field
+  // name ('consideration_type') the request body uses -- Explore's generic toggle() writes
+  // filter state under the group key, and this map is read against that same state, not
+  // against what gets sent over the wire (see exploreRequest.ts's own field renames).
+  evidenceFor: { consideration: 'Type of Consideration-Answer' },
 }

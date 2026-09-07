@@ -130,10 +130,18 @@ describe('the two journeys (#40, cut to two in #48)', () => {
     // performed is worse than one extra click.
     expect(journey.tab).toBe('ask')
     expect(journey.steps[0]).toMatch(/^Ask/)
-    // the seed still travels, so the Explore step of this journey arrives already narrowed
+    // the seed still travels, so the Explore step of this journey arrives already narrowed.
+    // Keyed by Explore's own facet GROUP keys ('industry', 'consideration'), not the wire
+    // field names ('folio_industry_label', 'consideration_type') -- asserting the old wire
+    // names here is exactly what let a real bug hide: journey.seed used to carry those names
+    // as top-level fields instead of nested under `filters`, which type-checked against the
+    // platform's all-optional JourneySeed and did nothing at runtime, and this test's old
+    // assertion checked the SAME wrong shape the bug produced, so it passed either way.
     expect(journey.seed).toMatchObject({
-      folio_industry_label: 'Health Care Industry',
-      consideration_type: 'All Cash',
+      filters: {
+        industry: 'Health Care Industry',
+        consideration: 'All Cash',
+      },
     })
   })
 
