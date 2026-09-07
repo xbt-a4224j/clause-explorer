@@ -16,7 +16,7 @@ import numpy as np
 import psycopg
 import pytest
 from explorer.retrieval.embeddings import EmbeddingCache, content_key
-from explorer.retrieval.hybrid import DEFAULT_ALPHA, HybridIndex, normalize, tokenize
+from explorer.retrieval.hybrid import index_from_postgres, DEFAULT_ALPHA, HybridIndex, normalize, tokenize
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 
@@ -106,13 +106,13 @@ def _corpus_ready() -> bool:
 class TestAgainstTheRealCorpus:
     def test_index_builds_from_postgres_with_no_api_key(self) -> None:
         """The no-key gate, end to end: 152 summaries embedded entirely from the cache."""
-        index = HybridIndex.from_postgres(DSN, cache=EmbeddingCache(api_key=None))
+        index = index_from_postgres(DSN, cache=EmbeddingCache(api_key=None))
         assert len(index.ids) == 152
         assert index.matrix.shape == (152, 256)
         assert index.cache.api_calls == 0
 
     def test_a_known_item_query_returns_its_own_matter_first(self) -> None:
-        index = HybridIndex.from_postgres(DSN, cache=EmbeddingCache(api_key=None))
+        index = index_from_postgres(DSN, cache=EmbeddingCache(api_key=None))
         with psycopg.connect(DSN) as conn:
             record_id, target, acquirer = conn.execute(
                 "SELECT id, target_name, acquirer_name FROM records "
