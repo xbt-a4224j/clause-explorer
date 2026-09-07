@@ -179,6 +179,11 @@ def _summary(matter: MatterDetail, top: list[DealPointDetail]) -> str:
 SUMMARY_TERMS = 5
 
 
+# The platform's RecordCard fetches `/records/{id}` -- it was renamed from MatterCard during
+# the extraction and no domain followed, so the Explore expand panel 404'd in BOTH domains
+# until claims-explorer#16 caught it. Mounted alongside the original the same way `/terms` and
+# `/deal-terms` both answer, so no existing caller breaks.
+@router.get("/records/{record_id}", response_model=MatterDetail)
 @router.get("/matters/{record_id}", response_model=MatterDetail)
 def matter_detail(record_id: str) -> MatterDetail:
     with psycopg.connect(settings.database_url) as conn:
