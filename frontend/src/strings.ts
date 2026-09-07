@@ -27,6 +27,11 @@ export const STRINGS: QuorumStrings = {
   // "agreements". Collapsing the two puts the wrong noun in half the sentences on the page.
   colloquial: 'deals',
 
+  // This corpus's search IS prose-shaped -- hybrid retrieval over each matter's summary -- so
+  // the sentence-inviting placeholder is honest here. It moved out of the platform because the
+  // second domain, whose search is a keyword match over structured fields, rendered it verbatim.
+  searchPlaceholder: 'Describe the deal in front of you…',
+
   glossary: GLOSSARY,
 
   // What a fact's source text is called here. A wrong word tells the reader they are looking

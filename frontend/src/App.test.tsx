@@ -159,7 +159,7 @@ describe('the header search goes somewhere', () => {
       ),
     )
     await waitFor(() =>
-      expect(screen.getByLabelText('describe the deal')).toHaveValue('healthcare all cash'),
+      expect(screen.getByLabelText('describe the matter')).toHaveValue('healthcare all cash'),
     )
   })
 

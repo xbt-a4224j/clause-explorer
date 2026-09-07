@@ -351,7 +351,7 @@ describe('keyboard', () => {
     // await the list first: the search input renders during loading, so resolving on it alone
     // asserts nothing about the cursor — there are no cards yet to move between
     await screen.findByTestId('record-contract_1')
-    const input = screen.getByLabelText('describe the deal')
+    const input = screen.getByLabelText('describe the matter')
     fireEvent.keyDown(input, { key: 'j' })
     expect(screen.getByTestId('record-contract_1')).toHaveAttribute('aria-current', 'true')
     expect(screen.getByTestId('record-contract_104')).not.toHaveAttribute('aria-current', 'true')
@@ -448,7 +448,7 @@ describe('the rank-by control', () => {
     const ref = createRef<HTMLInputElement>()
     render(<Explore strings={STRINGS} searchRef={ref as React.MutableRefObject<HTMLInputElement | null>} />)
     await screen.findByTestId('resolved-query')
-    fireEvent.change(screen.getByLabelText('describe the deal'), {
+    fireEvent.change(screen.getByLabelText('describe the matter'), {
       target: { value: 'healthcare take-private' },
     })
     expect(screen.queryByTestId('rank-control')).toBeNull()
@@ -465,7 +465,7 @@ describe('the rank-by control', () => {
     )
     await screen.findByTestId('resolved-query')
 
-    fireEvent.change(screen.getByLabelText('describe the deal'), {
+    fireEvent.change(screen.getByLabelText('describe the matter'), {
       target: { value: 'healthcare take-private' },
     })
     const control = await screen.findByTestId('rank-control')
