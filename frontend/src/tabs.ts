@@ -20,16 +20,15 @@
  * rather than the act; the semantic-layer argument still lives inside it, below the
  * demonstration rather than in front of it.
  *
- * Order is load-bearing: the number-key shortcut is the index, so reordering this array
- * silently rebinds every shortcut. `TAB_IDS`'s order is the one the platform's `Shell`
- * actually renders from (semantic-explorer-base#8); this array stays as the labeled,
- * grouped view of the same six ids that this app's own code and tests read.
+ * Order is load-bearing: it is the order the platform's `Shell` renders the tab bar in
+ * (semantic-explorer-base#8). `TAB_IDS` is the source of truth for that; this array stays as
+ * the labeled, grouped view of the same six ids that this app's own code and tests read.
  */
 // Ids come from the platform. `terms` was `deal-terms`, which shipped into a health-claims
-// fork of this app and stayed there: an id lives in URLs, tests and keyboard bindings, so it
-// outlives the label somebody remembered to rename. The id is the part nobody thinks to
-// change, which is why it is the part that has to be generic — the LABEL below is still
-// "Deal Terms", because this is a legal product and should read like one.
+// fork of this app and stayed there: an id lives in URLs and tests, so it outlives the label
+// somebody remembered to rename. The id is the part nobody thinks to change, which is why it
+// is the part that has to be generic — the LABEL below is still "Deal Terms", because this is
+// a legal product and should read like one.
 export type { TabId } from '@semantic-explorer-base/ui'
 import { EVIDENCE_TAB_IDS, TAB_IDS } from '@semantic-explorer-base/ui'
 import type { TabId } from '@semantic-explorer-base/ui'
@@ -69,14 +68,3 @@ export const TABS: readonly Tab[] = TAB_IDS.map((id) => ({
   group: EVIDENCE_TAB_IDS.has(id) ? 'under-the-hood' : 'work',
   ...STRINGS.tabs[id],
 }))
-
-export const SHORTCUTS: ReadonlyArray<[string, string]> = [
-  ['1 – 6', 'switch tab'],
-  // On Explore this is Explore's own box; on every other tab it is the header box, which now
-  // carries what you type to Explore rather than swallowing it.
-  ['/', 'focus search — Enter searches Explore'],
-  ['j / k', 'move through results'],
-  ['Enter', 'open the focused result'],
-  ['?', 'show this help'],
-  ['Esc', 'close / clear'],
-]

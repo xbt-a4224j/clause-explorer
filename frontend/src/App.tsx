@@ -3,7 +3,6 @@ import type { TabId } from './tabs'
 import { Explore, Label, Rollup, RollupDiagram, Shell, Trust, ignoreAbort } from '@semantic-explorer-base/ui'
 import type { JourneySeed, ShellStatus } from '@semantic-explorer-base/ui'
 import type { Journey } from './journeys'
-import { SHORTCUTS } from './tabs'
 import { Ask } from './views/Ask'
 import { Overview } from './views/Overview'
 // How this corpus draws a record: `target ← acquirer`, the inferred-industry chip, the date.
@@ -17,11 +16,11 @@ type Health = { status: string; db: string; cube: string; version: string }
 
 /**
  * Shell for the views. Landing tab is Overview (#39) — it states what the system is before
- * any view demonstrates it; Explore, the demo entry point, is one key away.
+ * any view demonstrates it.
  *
- * The frame itself — bar, tabs, keyboard binding, status strip, shortcuts dialog — moved to
- * the platform's `Shell` (semantic-explorer-base#8). What stays here: which view renders per
- * tab, this app's health check, and what pressing Enter in the search box actually does.
+ * The frame itself — bar, tabs, status strip — moved to the platform's `Shell`
+ * (semantic-explorer-base#8). What stays here: which view renders per tab, this app's health
+ * check, and what pressing Enter in the search box actually does.
  */
 export function App() {
   const [active, setActive] = useState<TabId>('overview')
@@ -69,7 +68,6 @@ export function App() {
       activeId={active}
       onSelect={setActive}
       status={status}
-      shortcuts={SHORTCUTS}
       search={
         active === 'explore'
           ? undefined

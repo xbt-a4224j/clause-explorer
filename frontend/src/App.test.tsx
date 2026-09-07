@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { TABS } from './tabs'
 
@@ -103,17 +102,17 @@ describe('shell', () => {
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/overview/i)
   })
 
-  it('puts Ask second — the act, not the mechanism, behind Overview (#48)', async () => {
+  it('puts Ask second — the act, not the mechanism, behind Overview (#48)', () => {
     render(<App />)
-    await userEvent.keyboard('2')
+    fireEvent.click(screen.getByRole('tab', { name: /^ask/i }))
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/^ask/i)
     // the old name described the implementation; nothing in the bar should still carry it
     expect(screen.queryByRole('tab', { name: /semantic layer/i })).not.toBeInTheDocument()
   })
 
-  it('keeps Explore one key behind Ask — still the entry point for demo script 1', async () => {
+  it('keeps Explore one key behind Ask — still the entry point for demo script 1', () => {
     render(<App />)
-    await userEvent.keyboard('3')
+    fireEvent.click(screen.getByRole('tab', { name: TABS[2].label }))
     expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/explore/i)
   })
 
@@ -122,46 +121,6 @@ describe('shell', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(6)
     expect(screen.queryByRole('tab', { name: /coverage/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /tables/i })).not.toBeInTheDocument()
-  })
-})
-
-describe('keyboard navigation', () => {
-  beforeEach(() => mockHealth())
-
-  it('switches tabs with number keys', async () => {
-    render(<App />)
-    await userEvent.keyboard('3')
-    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(
-      new RegExp(TABS[2].label, 'i'),
-    )
-  })
-
-  it('opens the shortcut overlay with ?', async () => {
-    render(<App />)
-    await userEvent.keyboard('?')
-    expect(await screen.findByRole('dialog', { name: /shortcut/i })).toBeInTheDocument()
-  })
-
-  it('closes the overlay with Escape', async () => {
-    render(<App />)
-    await userEvent.keyboard('?')
-    await screen.findByRole('dialog')
-    await userEvent.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  })
-
-  it('ignores shortcuts while typing in an input', async () => {
-    render(<App />)
-    const box = screen.getByRole('searchbox')
-    await userEvent.type(box, '3')
-    expect(box).toHaveValue('3')
-    expect(screen.getByRole('tab', { selected: true })).toHaveAccessibleName(/overview/i)
-  })
-
-  it('focuses search with /', async () => {
-    render(<App />)
-    await userEvent.keyboard('/')
-    expect(screen.getByRole('searchbox')).toHaveFocus()
   })
 })
 

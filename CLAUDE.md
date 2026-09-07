@@ -108,8 +108,6 @@ components — the only two in the codebase are the Admin status dots, and they 
 
 UX is a first-class requirement, not polish at the end:
 
-- **Keyboard-first.** Every primary action reachable without a mouse. `/` focuses search,
-  `j`/`k` move through results, `?` shows shortcuts.
 - **Every number carries its denominator.** Always, everywhere. `n=8`, not a bare percentage.
 - **Counts below threshold, percentages above.** "6 of 8" never renders as "75%" — a percentage
   implies precision the sample doesn't support.
