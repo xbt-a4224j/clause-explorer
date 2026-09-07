@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { SHORTCUTS, TABS, type TabId } from './tabs'
-import { Explore, Label, Rollup, RollupDiagram, Trust, ignoreAbort, useKeyboard } from '@semantic-explorer-base/ui'
-import type { JourneySeed } from '@semantic-explorer-base/ui'
+import { useEffect, useRef, useState } from 'react'
+import type { TabId } from './tabs'
+import { Explore, Label, Rollup, RollupDiagram, Shell, Trust, ignoreAbort } from '@semantic-explorer-base/ui'
+import type { JourneySeed, ShellStatus } from '@semantic-explorer-base/ui'
 import type { Journey } from './journeys'
+import { SHORTCUTS } from './tabs'
 import { Ask } from './views/Ask'
 import { Overview } from './views/Overview'
 // How this corpus draws a record: `target ← acquirer`, the inferred-industry chip, the date.
@@ -17,10 +18,13 @@ type Health = { status: string; db: string; cube: string; version: string }
 /**
  * Shell for the views. Landing tab is Overview (#39) — it states what the system is before
  * any view demonstrates it; Explore, the demo entry point, is one key away.
+ *
+ * The frame itself — bar, tabs, keyboard binding, status strip, shortcuts dialog — moved to
+ * the platform's `Shell` (semantic-explorer-base#8). What stays here: which view renders per
+ * tab, this app's health check, and what pressing Enter in the search box actually does.
  */
 export function App() {
   const [active, setActive] = useState<TabId>('overview')
-  const [showHelp, setShowHelp] = useState(false)
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
   const [selection, setSelection] = useState<string[]>([])
   // An Overview journey pre-filters Explore; Explore consumes and clears it. The journey now
@@ -48,215 +52,107 @@ export function App() {
     return () => controller.abort()
   }, [])
 
-  const focusSearch = useCallback(() => searchRef.current?.focus(), [])
-
-  const handlers = useMemo(() => {
-    const map: Record<string, () => void> = {
-      '/': focusSearch,
-      '?': () => setShowHelp(true),
-      Escape: () => setShowHelp(false),
-    }
-    // Number keys map to tab index — see the ordering note in tabs.ts
-    TABS.forEach((tab, i) => {
-      map[String(i + 1)] = () => setActive(tab.id)
-    })
-    return map
-  }, [focusSearch])
-
-  useKeyboard(handlers)
-
-  const activeTab = TABS.find((t) => t.id === active)!
+  const status: ShellStatus | null = healthError
+    ? { ok: false, label: 'api unreachable' }
+    : health
+      ? {
+          ok: health.status === 'ok',
+          label: health.status,
+          items: [`db ${health.db}`, `cube ${health.cube}`, `v${health.version}`],
+        }
+      : null
 
   return (
-    <div className="shell">
-      <header className="shell__bar">
-        <div className="shell__brand">clause explorer</div>
-
-        <nav className="shell__tabs" role="tablist" aria-label="views">
-          {TABS.map((tab, i) => (
-            <span key={tab.id} className="shell__tabslot">
-              {/* The divider marks where the product ends and the evidence for it begins. It read
-                  "under the hood", which means implementation detail you may skip — the opposite
-                  of true here, since Trust is where a data owner decides whether to believe any
-                  of the four tabs to its left. */}
-              {tab.group === 'under-the-hood' && TABS[i - 1]?.group === 'work' && (
-                <span className="shell__tabgroup" aria-hidden="true">
-                  evidence
-                </span>
-              )}
-              <button
-                role="tab"
-                type="button"
-                aria-selected={tab.id === active}
-                aria-controls={`panel-${tab.id}`}
-                className={`shell__tab shell__tab--${tab.group}${tab.id === active ? ' is-active' : ''}`}
-                onClick={() => setActive(tab.id)}
-              >
-                {tab.label}
-                <span className="shell__tabkey" aria-hidden="true">
-                  {i + 1}
-                </span>
-              </button>
-            </span>
-          ))}
-        </nav>
-
-        {active !== 'explore' && (
-          <input
-            ref={searchRef}
-            type="search"
-            className="shell__search"
-            placeholder="search Explore  /"
-            aria-label="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter' || !search.trim()) return
+    <Shell
+      brand="clause explorer"
+      strings={STRINGS}
+      activeId={active}
+      onSelect={setActive}
+      status={status}
+      shortcuts={SHORTCUTS}
+      search={
+        active === 'explore'
+          ? undefined
+          : {
+              placeholder: 'search Explore  /',
+              value: search,
+              onChange: setSearch,
+              inputRef: searchRef,
               // Explore is where searching this corpus happens, so the box goes there rather
               // than growing a second search of its own. The seed is the existing way one tab
               // hands a starting point to another.
               // No filters: a text search should not silently narrow by anything the user
               // did not ask for. `filters` absent clears them all on arrival.
-              setSeed({ description: search })
-              setActive('explore')
-              setSearch('')
-            }}
-          />
-        )}
-      </header>
-
-      <main
-        className="shell__main"
-        role="tabpanel"
-        id={`panel-${active}`}
-        aria-label={activeTab.label}
-      >
-        <h1 className="shell__title">{activeTab.label}</h1>
-        <p className="shell__hint">{activeTab.hint}</p>
-        {active === 'overview' ? (
-          <Overview
-            onStartJourney={(journey: Journey) => {
-              if (journey.seed) setSeed(journey.seed)
-              setActive(journey.tab)
-            }}
-          />
-        ) : active === 'explore' ? (
-          // The selection lives here, not inside Explore: switching tabs unmounts the view, and
-          // Deal Terms must roll up the set the partner actually chose rather than defaulting
-          // to the whole corpus.
-          <Explore
-            strings={STRINGS}
-            corpusStrip={corpusStrip(STRINGS.glossary)}
-            render={RECORD_RENDERERS}
-            searchRef={searchRef}
-            onSelectionChange={setSelection}
-            seedFilters={seed}
-            onSeedConsumed={() => setSeed(null)}
-          />
-        ) : active === 'terms' ? (
-          <Rollup
-            selection={selection}
-            strings={STRINGS}
-            scopeFallback="Comparable PUBLIC deals from the MAUD study of SEC-filed merger agreements — not this firm's own matter history."
-            diagram={
-              <RollupDiagram
-                description={
-                  '152 merger agreements were each read by lawyers who answered the same 92 ' +
-                  "questions, the American Bar Association's public target deal points. Those " +
-                  'answers are stored one row per agreement per question, which is why a new ' +
-                  'question costs nothing to add. Selecting a set of deals in Explore rolls ' +
-                  'those rows up into a count per question. Below a sample size of 30 the ' +
-                  'answer renders as a count rather than a percentage, and every row drills ' +
-                  'back to the clause language in the source file.'
-                }
-              />
+              onSubmit: (value) => {
+                setSeed({ description: value })
+                setActive('explore')
+                setSearch('')
+              },
             }
-          />
-        ) : active === 'label' ? (
-          <Label strings={STRINGS} />
-        ) : active === 'trust' ? (
-          <Trust
-                strings={STRINGS}
-                accuracyChartCopy={({ heldOut, reportable, total }) => ({
-                  title: 'Which questions could run without a lawyer?',
-                  note: (
-                    <>
-                      Each bar is one of the ABA&rsquo;s deal-point questions; its length is how
-                      often an automated extractor got it right on {heldOut} agreements lawyers
-                      had already answered. Point it at documents nobody has annotated and{' '}
-                      <strong>
-                        {reportable} of {total} questions could be answered by machine
-                      </strong>
-                      . For the other {total - reportable}, a person has to read the agreement.
-                    </>
-                  ),
-                })}
-              />
-        ) : active === 'ask' ? (
-          <Ask />
-        ) : (
-          <p className="shell__pending">
-            This view lands in its own issue. The shell, keyboard contract and health strip are
-            what ship here.
-          </p>
-        )}
-      </main>
-
-      <footer className="shell__status">
-        {healthError && (
-          <>
-            <span className="shell__dot shell__dot--bad" />
-            <span>api unreachable</span>
-          </>
-        )}
-        {health && (
-          <>
-            <span
-              className={`shell__dot ${
-                health.status === 'ok' ? 'shell__dot--ok' : 'shell__dot--warn'
-              }`}
+      }
+    >
+      {active === 'overview' ? (
+        <Overview
+          onStartJourney={(journey: Journey) => {
+            if (journey.seed) setSeed(journey.seed)
+            setActive(journey.tab)
+          }}
+        />
+      ) : active === 'explore' ? (
+        // The selection lives here, not inside Explore: switching tabs unmounts the view, and
+        // Deal Terms must roll up the set the partner actually chose rather than defaulting
+        // to the whole corpus.
+        <Explore
+          strings={STRINGS}
+          corpusStrip={corpusStrip(STRINGS.glossary)}
+          render={RECORD_RENDERERS}
+          searchRef={searchRef}
+          onSelectionChange={setSelection}
+          seedFilters={seed}
+          onSeedConsumed={() => setSeed(null)}
+        />
+      ) : active === 'terms' ? (
+        <Rollup
+          selection={selection}
+          strings={STRINGS}
+          scopeFallback="Comparable PUBLIC deals from the MAUD study of SEC-filed merger agreements — not this firm's own matter history."
+          diagram={
+            <RollupDiagram
+              description={
+                '152 merger agreements were each read by lawyers who answered the same 92 ' +
+                "questions, the American Bar Association's public target deal points. Those " +
+                'answers are stored one row per agreement per question, which is why a new ' +
+                'question costs nothing to add. Selecting a set of deals in Explore rolls ' +
+                'those rows up into a count per question. Below a sample size of 30 the ' +
+                'answer renders as a count rather than a percentage, and every row drills ' +
+                'back to the clause language in the source file.'
+              }
             />
-            <span>{health.status}</span>
-            <span className="shell__sep">·</span>
-            <span>db {health.db}</span>
-            <span className="shell__sep">·</span>
-            <span>cube {health.cube}</span>
-            <span className="shell__sep">·</span>
-            <span>v{health.version}</span>
-          </>
-        )}
-        <span className="shell__spacer" />
-        <button type="button" className="shell__helpbtn" onClick={() => setShowHelp(true)}>
-          ? shortcuts
-        </button>
-      </footer>
-
-      {showHelp && (
-        <div className="shell__scrim" onClick={() => setShowHelp(false)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Keyboard shortcuts"
-            className="shell__dialog"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="shell__dialogtitle">Keyboard shortcuts</h2>
-            <dl className="shell__keys">
-              {SHORTCUTS.map(([key, what]) => (
-                <div key={key} className="shell__keyrow">
-                  <dt>
-                    <kbd>{key}</kbd>
-                  </dt>
-                  <dd>{what}</dd>
-                </div>
-              ))}
-            </dl>
-            <button type="button" className="shell__close" onClick={() => setShowHelp(false)}>
-              close
-            </button>
-          </div>
-        </div>
+          }
+        />
+      ) : active === 'label' ? (
+        <Label strings={STRINGS} />
+      ) : active === 'trust' ? (
+        <Trust
+          strings={STRINGS}
+          accuracyChartCopy={({ heldOut, reportable, total }) => ({
+            title: 'Which questions could run without a lawyer?',
+            note: (
+              <>
+                Each bar is one of the ABA&rsquo;s deal-point questions; its length is how often
+                an automated extractor got it right on {heldOut} agreements lawyers had already
+                answered. Point it at documents nobody has annotated and{' '}
+                <strong>
+                  {reportable} of {total} questions could be answered by machine
+                </strong>
+                . For the other {total - reportable}, a person has to read the agreement.
+              </>
+            ),
+          })}
+        />
+      ) : (
+        <Ask />
       )}
-    </div>
+    </Shell>
   )
 }

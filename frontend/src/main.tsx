@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import '@semantic-explorer-base/ui/styles/tokens.css'
+import '@semantic-explorer-base/ui/styles/platform.css'
 import { App } from './App'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -21,7 +21,9 @@
  * demonstration rather than in front of it.
  *
  * Order is load-bearing: the number-key shortcut is the index, so reordering this array
- * silently rebinds every shortcut.
+ * silently rebinds every shortcut. `TAB_IDS`'s order is the one the platform's `Shell`
+ * actually renders from (semantic-explorer-base#8); this array stays as the labeled,
+ * grouped view of the same six ids that this app's own code and tests read.
  */
 // Ids come from the platform. `terms` was `deal-terms`, which shipped into a health-claims
 // fork of this app and stayed there: an id lives in URLs, tests and keyboard bindings, so it
@@ -29,6 +31,7 @@
 // change, which is why it is the part that has to be generic — the LABEL below is still
 // "Deal Terms", because this is a legal product and should read like one.
 export type { TabId } from '@semantic-explorer-base/ui'
+import { EVIDENCE_TAB_IDS, TAB_IDS } from '@semantic-explorer-base/ui'
 import type { TabId } from '@semantic-explorer-base/ui'
 
 import { STRINGS } from './strings'
@@ -43,42 +46,29 @@ export interface Tab {
    * question; `under-the-hood` is the evidence that the answers are trustworthy. Eight
    * undifferentiated tabs read as a feature list and hide which three someone would actually
    * open, so the bar is split and the second group is styled quieter.
+   *
+   * Membership comes from the platform's `EVIDENCE_TAB_IDS` rather than being repeated here —
+   * this used to hardcode the same split a second time, and a domain editing this array had no
+   * way to know it was also supposed to agree with the platform's own copy.
    */
   group: 'work' | 'under-the-hood'
 }
 
-export const TABS: readonly Tab[] = ([
-  {
-    id: 'overview',
-    audience: 'partner',
-    group: 'work',
-  },
-  {
-    id: 'ask',
-    audience: 'partner',
-    group: 'work',
-  },
-  {
-    id: 'explore',
-    audience: 'partner',
-    group: 'work',
-  },
-  {
-    id: 'terms',
-    audience: 'partner',
-    group: 'work',
-  },
-  {
-    id: 'trust',
-    audience: 'km',
-    group: 'under-the-hood',
-  },
-  {
-    id: 'label',
-    audience: 'km',
-    group: 'under-the-hood',
-  },
-] as const).map((tab) => ({ ...tab, ...STRINGS.tabs[tab.id] }))
+const AUDIENCE: Record<TabId, Tab['audience']> = {
+  overview: 'partner',
+  ask: 'partner',
+  explore: 'partner',
+  terms: 'partner',
+  trust: 'km',
+  label: 'km',
+}
+
+export const TABS: readonly Tab[] = TAB_IDS.map((id) => ({
+  id,
+  audience: AUDIENCE[id],
+  group: EVIDENCE_TAB_IDS.has(id) ? 'under-the-hood' : 'work',
+  ...STRINGS.tabs[id],
+}))
 
 export const SHORTCUTS: ReadonlyArray<[string, string]> = [
   ['1 – 6', 'switch tab'],
