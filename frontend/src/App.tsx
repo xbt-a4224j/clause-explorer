@@ -72,7 +72,7 @@ export function App() {
         active === 'explore'
           ? undefined
           : {
-              placeholder: 'search Explore  /',
+              placeholder: 'search Explore',
               value: search,
               onChange: setSearch,
               inputRef: searchRef,
