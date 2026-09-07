@@ -2,5 +2,5 @@
 # Committed on purpose: it is the record of what a demo or a published figure was produced with.
 wheel:  semantic_explorer_base-0.1.0-py3-none-any.whl
 commit: 32c903fe10aa3a77b06aa9fa3e8603ec03ca80f8
-state:  clean
-synced: 2026-09-07T15:30:39Z
+state:  DIRTY — the platform tree had uncommitted changes
+synced: 2026-09-07T15:37:42Z

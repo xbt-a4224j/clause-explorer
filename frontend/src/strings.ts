@@ -39,9 +39,19 @@ export const STRINGS: QuorumStrings = {
   // which the drill-through labels separately.
   sourceText: 'clause',
 
-  // The Ask placeholder. Content rather than vocabulary: a bad example teaches the wrong thing
-  // about what this corpus can answer.
-  exampleQuestion: 'healthcare cash deals, what did boards get on fiduciary outs',
+  // Pre-filled into the Ask box, so a first-time visitor can press Enter rather than compose a
+  // question cold. Content rather than vocabulary: a bad example teaches the wrong thing about
+  // what this corpus can answer.
+  //
+  // It used to read "healthcare CASH deals, what did boards get on fiduciary outs", and that
+  // question is one this corpus cannot answer: consideration type is a deal-point ANSWER, not a
+  // record-level column, so "cash" has no scope dimension to land in and the model put it in
+  // `signing_year`. Pressing Enter on the app's own example returned a refusal about 'cash' not
+  // being a year. Two deal points held at once is a known gap, not a phrasing accident — the
+  // benchmark records the same miss as "do all-cash deals have different fiduciary outs".
+  // Dropping the one unassignable word keeps the demonstration (a scope AND a subject) and
+  // returns 26 of 26 healthcare agreements, no suppression.
+  exampleQuestion: 'healthcare deals, what did boards get on fiduciary outs',
 
   heldOutClaim:
     "Every item queued here is one of the 20 held-out matters — documents MAUD already has a " +
