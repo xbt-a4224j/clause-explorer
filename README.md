@@ -13,9 +13,11 @@ here too, so you can re-run them and disagree with me.
 
 ![Overview — two journeys, each with the path it takes through the app](docs/img/overview.png)
 
-*The landing tab. Two questions, the person who asks each one, what it costs them today, and the
-clicks that answer it. **Run this** lands on the first step already filtered. The tab bar splits:
-four tabs are the product, two are the evidence that its answers are trustworthy.*
+*The landing tab. It opens on the business problem — a partner cannot tell from the inside where
+their own recollection of "what's market" runs out — then two questions, the person who asks each
+one, what it costs them today, and the clicks that answer it. **Run this** lands on the first step
+already filtered. The tab bar splits: four tabs are the product, two are the evidence that its
+answers are trustworthy.*
 
 ---
 
@@ -230,7 +232,7 @@ def select_with_usage(question: str, vocabulary: Vocabulary, api_key: str) -> Se
     )
 ```
 
-![Ask — the vocabulary the model may select from, and the selection it emits](docs/img/semantic-layer.png)
+![Ask — ten starter questions, then the vocabulary the model may select from](docs/img/semantic-layer.png)
 
 *Ask. The vocabulary panel is Cube's `/meta`, read live rather than checked in — a stale copy could
 disagree with the YAML, and then any selection failure becomes an unfalsifiable argument.*
@@ -335,8 +337,12 @@ person who tuned the prompt against them, which makes this a smoke test with an 
 than a benchmark. Naming the missing terms in the prompt would score higher and would be
 overfitting to this question set.
 
+![What each change bought — the ablation, ordered as it was measured](docs/img/ablation.png)
+
+*The same panel on the Trust tab. The shipped row is marked and is deliberately not the top score:
+the change that scored highest also declined five real questions.*
+
 Full ablation with the losing strategies: [`docs/results/ask-strategies.md`](docs/results/ask-strategies.md).
-The tab shows it too, under *Trust → What each change bought*.
 
 ---
 
