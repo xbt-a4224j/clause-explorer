@@ -357,7 +357,6 @@ export function Ask() {
           numeric={NUMERIC}
           render={RECORD_RENDERERS}
           askEndpoint="/api/ask"
-          runEndpoint="/api/agent/run-selection"
           onDrill={drillDealPoint}
           onAsked={(costUsd) => {
             setQuestions((n) => n + 1)

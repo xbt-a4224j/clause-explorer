@@ -3,34 +3,83 @@ on:
   push: {branches: [main]}
   pull_request: {branches: [main]}
 
+# Every job needs semantic-explorer-base as a sibling checkout: the domain builds against it as
+# a locally-built wheel (backend) and vendored source (frontend), the same way `make
+# platform-sync` does on a laptop — see that repo's scripts/sync-into.sh for why a wheel and not
+# a submodule. CI had no way to do this at all until semantic-explorer-base went public on
+# 2026-09-09: the default GITHUB_TOKEN cannot check out a private sibling repo, which is why
+# every run failed identically (ModuleNotFoundError / "Cannot find module") from the day the
+# platform moved to this pattern (2026-09-06) until now, regardless of what any individual push
+# changed.
+#
+# `path:` on each checkout places both repos as true siblings under $GITHUB_WORKSPACE, so
+# `../semantic-explorer-base` resolves from inside clause-explorer exactly as it does locally.
+
 jobs:
   backend:
     runs-on: ubuntu-latest
+    defaults:
+      run: {working-directory: clause-explorer}
     steps:
       - uses: actions/checkout@v4
+        with: {path: clause-explorer}
+      - uses: actions/checkout@v4
+        with: {repository: xbt-a4224j/semantic-explorer-base, path: semantic-explorer-base}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: pip install -r requirements.txt ruff mypy
-      - run: ruff format --check .
-      - run: ruff check .
-      - run: mypy backend/explorer --ignore-missing-imports
+      - name: build tool for the platform wheel
+        working-directory: semantic-explorer-base
+        run: python -m venv .venv && .venv/bin/pip install -q build
+      - name: domain deps
+        run: python -m venv .venv && .venv/bin/pip install -q -r requirements.txt ruff mypy
+      - name: sync the platform in
+        run: bash ../semantic-explorer-base/scripts/sync-into.sh .
+      - run: .venv/bin/ruff format --check .
+      - run: .venv/bin/ruff check .
+      - run: .venv/bin/mypy backend/explorer --ignore-missing-imports
       # no API key: every test not marked needs_key must pass
-      - run: pytest backend/tests -q -m "not needs_key"
+      - run: .venv/bin/pytest backend/tests -q -m "not needs_key"
 
   frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run: {working-directory: clause-explorer}
     steps:
       - uses: actions/checkout@v4
+        with: {path: clause-explorer}
+      - uses: actions/checkout@v4
+        with: {repository: xbt-a4224j/semantic-explorer-base, path: semantic-explorer-base}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
       - uses: actions/setup-node@v4
         with: {node-version: "22"}
+      - name: build tool for the platform wheel
+        working-directory: semantic-explorer-base
+        run: python -m venv .venv && .venv/bin/pip install -q build
+      - name: sync the platform in
+        # No .venv in clause-explorer at this point, which is fine — the script's wheel-install
+        # step is conditional on one existing, and this job only needs the frontend/vendor copy.
+        run: bash ../semantic-explorer-base/scripts/sync-into.sh .
       - run: cd frontend && npm install
       - run: cd frontend && npx tsc --noEmit
       - run: cd frontend && npm test -- --run
 
   stack:
     runs-on: ubuntu-latest
+    defaults:
+      run: {working-directory: clause-explorer}
     steps:
       - uses: actions/checkout@v4
+        with: {path: clause-explorer}
+      - uses: actions/checkout@v4
+        with: {repository: xbt-a4224j/semantic-explorer-base, path: semantic-explorer-base}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: build tool for the platform wheel
+        working-directory: semantic-explorer-base
+        run: python -m venv .venv && .venv/bin/pip install -q build
+      - name: sync the platform in
+        run: bash ../semantic-explorer-base/scripts/sync-into.sh .
       - name: whole stack boots and api is healthy
         run: |
           docker compose up -d --build
