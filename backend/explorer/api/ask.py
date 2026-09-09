@@ -79,6 +79,7 @@ from explorer.agent.select import (
 from explorer.api.cube_client import query as cube_query  # noqa: F401 - see `no_cube` in tests
 from explorer.api.logging import get_logger
 from explorer.api.settings import settings
+from explorer.domain import DOMAIN
 from explorer.evals.pricing import PRICE_CHECKED_ON, PRICE_SOURCE, cost_usd
 from explorer.retrieval.embeddings import EmbeddingCache
 
@@ -325,6 +326,47 @@ def _usage(call: SelectionCall) -> AskUsage:
 # else is this application.
 
 
+
+def _explain_unresolved_scope(message: str) -> str:
+    """Replace the resolver's message when the word names an ANSWER rather than a slice.
+
+    "all cash" is not an industry, so the resolver refused it and listed industries as near
+    misses — sending a reader to look at a column the word was never about. But "all cash" IS a
+    real answer to Type of Consideration, on 89 of 152 agreements. Telling someone the corpus
+    has nothing for it is a false statement in a refusal.
+
+    Ported from claims-explorer, where the same word class ("single-vehicle collision") produced
+    the same wrong refusal. Tracked upstream as semantic-explorer-base#10.
+    """
+    import re
+
+    quoted = re.search(r"'([^']+)'", message)
+    if not quoted:
+        return message
+    raw = quoted.group(1)
+
+    try:
+        from semantic_explorer_base.agent.dimension_values import dimension_values
+
+        answers = dimension_values(DOMAIN.answer_dimension, cube_url=settings.cube_api_url)
+    except Exception:  # noqa: BLE001 - a better message is best-effort; never fatal
+        return message
+
+    hit = next((a for a in answers if a.strip().lower() == raw.strip().lower()), None)
+    if hit is None:
+        contains = [a for a in answers if raw.strip().lower() in a.strip().lower()]
+        hit = contains[0] if len(contains) == 1 else None
+    if hit is None:
+        return message
+
+    return (
+        f"{raw!r} is an ANSWER a deal point takes, not a property of an agreement — "
+        f"{hit!r} is recorded on agreements in this corpus. Asking for one deal point sliced by "
+        f"another is outside the four shapes this app answers, so it declines rather than "
+        f"returning a corpus-wide number that looks like the narrower answer."
+    )
+
+
 def _interpret_or_fall_back(
     question: str, vocabulary: Vocabulary, usage: list[tuple[int, int]], started: float
 ) -> tuple[dict[str, Any], SelectionCall]:
@@ -355,7 +397,9 @@ def _interpret_or_fall_back(
         # the same confident wrong number the `cannot_answer` branch above exists to prevent;
         # the guard simply did not cover this second way of being unanswerable.
         log.info("agent_ask_unresolved_scope", question=question)
-        raise HTTPException(status_code=422, detail=shaped.unresolved_scope)
+        raise HTTPException(
+            status_code=422, detail=_explain_unresolved_scope(shaped.unresolved_scope)
+        )
 
     if shaped.selection is not None:
         # Two calls, so the reported cost is their SUM. Latency is measured around the whole

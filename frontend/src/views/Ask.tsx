@@ -5,6 +5,7 @@ import { ExplainerPanel } from '@semantic-explorer-base/ui'
 import { RoutingDiagram } from '@semantic-explorer-base/ui'
 import { QueryBuilder } from '../components/QueryBuilder'
 import { AskBox } from '@semantic-explorer-base/ui'
+import type { AskExample } from '@semantic-explorer-base/ui'
 import { SessionCost } from '@semantic-explorer-base/ui'
 import { Term } from '@semantic-explorer-base/ui'
 import { STRINGS } from '../strings'
@@ -48,6 +49,58 @@ import { STRINGS } from '../strings'
  * page. So the lead line is trimmed to the first sentence and the rest sits behind one toggle
  * for the whole panel. Nothing is hidden; it is ordered.
  */
+
+/**
+ * Starter questions.
+ *
+ * Every one was run against the live stack and the `expect` line is what came back. Two
+ * candidates were cut rather than reworded: "do MAE definitions carve out pandemics" resolved
+ * to the *prospects* deal point and returned a confident answer to a different question, and
+ * the governing-law phrasing did the same. A tile that quietly answers something else is worse
+ * than no tile, and the confirmation chips are the only reason it was visible at all.
+ */
+const ASK_EXAMPLES: AskExample[] = [
+  {
+    question: 'What did boards get on fiduciary outs?',
+    expect: 'reasonably likely to be superior 143 · Acquisition Proposal only 8',
+  },
+  {
+    question: 'What did healthcare deals get on fiduciary outs?',
+    expect: 'one position, 26 of 26 Health Care agreements',
+  },
+  {
+    question: "What's the split on type of consideration?",
+    expect: 'All Cash 89 · All Stock 39 · Mixed 21',
+  },
+  {
+    question: 'What is the bringdown standard for target representations?',
+    expect: 'accurate at MAE standard, 143',
+  },
+  {
+    question: "How is 'knowledge' defined across these agreements?",
+    expect: 'Constructive 84 · Actual 68',
+  },
+  {
+    question: 'How often is there a financing condition?',
+    expect: 'Yes 140 · No 12',
+  },
+  {
+    question: 'How often do deals include a specific performance provision?',
+    expect: '"entitled to" 135 · "entitled to seek" 14',
+  },
+  {
+    question: "What's the median tail period?",
+    expect: 'median 12, n=150',
+  },
+  {
+    question: 'How many agreements were signed in 2021?',
+    expect: '111 of 152',
+  },
+  {
+    question: 'How many agreements does this corpus cover?',
+    expect: '152',
+  },
+]
 
 const GROUPS: { title: string; blurb: string; match: (name: string) => boolean }[] = [
   {
@@ -255,6 +308,7 @@ export function Ask() {
           paragraphs before reaching the box they came to type in. */}
       <section className="sem__pane">
         <AskBox
+          examples={ASK_EXAMPLES}
           strings={STRINGS}
           onAsked={(costUsd) => {
             setQuestions((n) => n + 1)

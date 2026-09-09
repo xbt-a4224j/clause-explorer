@@ -32,7 +32,7 @@ from pydantic import BaseModel, Field
 
 from explorer.api.logging import get_logger
 from explorer.api.settings import settings
-from explorer.retrieval.embeddings import EmbeddingUnavailable
+from explorer.retrieval.embeddings import EmbeddingUnavailable, default_cache
 from explorer.retrieval.hybrid import DEFAULT_ALPHA, HybridIndex
 
 router = APIRouter()
@@ -68,7 +68,7 @@ class ComparablesRequest(BaseModel):
     )
     signed_from: str | None = Field(default=None, description="ISO date, inclusive.")
     signed_to: str | None = Field(default=None, description="ISO date, inclusive.")
-    limit: int = Field(default=10, ge=1, le=100)
+    limit: int = Field(default=10, ge=1, le=200)
     alpha: float | None = Field(
         default=None, ge=0.0, le=1.0, description="Hybrid weight; defaults to HYBRID_ALPHA."
     )
@@ -190,7 +190,14 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
     scored: dict[str, tuple[float, float, float]] = {}
     if request.description and rows:
         # index over the FILTERED set only — see module docstring
-        index = HybridIndex([r[0] for r in rows], [r[6] or "" for r in rows])
+        # `cache=` is NOT optional here. The platform's HybridIndex falls back to ITS OWN
+        # `default_cache()`, which reads no settings and therefore carries no API key — so every
+        # free-text query that was not already in the committed npz failed with "OPENAI_API_KEY is
+        # not set" while the key was present the whole time. This domain's `default_cache()` is the
+        # keyed one. Regression from 4101ebb; found by an adversarial demo review 2026-09-08.
+        index = HybridIndex(
+            [r[0] for r in rows], [r[6] or "" for r in rows], cache=default_cache()
+        )
         try:
             for hit in index.search(request.description, alpha=alpha, limit=request.limit):
                 scored[hit.record_id] = (hit.score, hit.vector_score, hit.bm25_score)

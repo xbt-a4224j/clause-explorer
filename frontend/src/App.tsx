@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TabId } from './tabs'
 import { Explore, Label, Rollup, RollupDiagram, Shell, Trust, ignoreAbort } from '@semantic-explorer-base/ui'
+import type { Ablation } from '@semantic-explorer-base/ui'
 import type { JourneySeed, ShellStatus } from '@semantic-explorer-base/ui'
 import type { Journey } from './journeys'
 import { Ask } from './views/Ask'
@@ -23,6 +24,54 @@ type Health = { status: string; db: string; cube: string; version: string }
  * (semantic-explorer-base#8). What stays here: which view renders per tab, this app's health
  * check, and what pressing Enter in the search box actually does.
  */
+/**
+ * What each prompt change bought, measured 2026-09-06 under shape-aware grading.
+ *
+ * These are the rows from `docs/results/ask-strategies.md`, not a summary of them. The tab
+ * could previously report only a headline, which was the wrong output twice over: the first
+ * headline published here (23/24) came from a metric that graded the deal point and ignored the
+ * SHAPE, so a run that picked the right term and then returned the corpus size scored as
+ * correct. Re-graded honestly the same prompt scored 7 of 27, and everything above that came
+ * from two specific decisions rather than from the model getting better.
+ *
+ * The shipped row is deliberately not the top score. Naming the missing terms in the prompt
+ * would score higher and would be overfitting to this question set.
+ */
+const ASK_ABLATION: Ablation = {
+  outOf: 27,
+  answerableOutOf: 20,
+  steps: [
+    { label: 'free choice over 11 measures', score: 4, answerable: 1 },
+    { label: 'as first shipped (shape-aware grading)', score: 7, answerable: 5 },
+    { label: 'drop the coverage shape', score: 8, answerable: 6 },
+    { label: 'name distribution the default, list its phrasings', score: 17, answerable: 15 },
+    { label: 'decline when the computation is inexpressible', score: 20, answerable: 16 },
+    {
+      label: 'list each deal point with the answers it takes',
+      score: 23,
+      answerable: 17,
+      shipped: true,
+    },
+  ],
+  misses: (
+    <>
+      <strong>Still wrong at 23 of 27:</strong> one deal-point confusion (ordinary course efforts
+      standard read as buyer consent requirement), two median-versus-distribution mixups, and one
+      of the seven questions that should have been declined.
+    </>
+  ),
+  provenance: (
+    <>
+      One trial per row, <code>gpt-4o-mini</code> at temperature 0, which is not determinism:
+      three identical runs of the same prompt scored 23, 21 and 22. A single run is a sample. The
+      questions were also written by the same person who tuned the prompt against them, which
+      makes this a smoke test with an answer key rather than a benchmark. Harness{' '}
+      <code>backend/explorer/evals/ask_bench.py</code>, answer key{' '}
+      <code>docs/eval/ask_questions.json</code>.
+    </>
+  ),
+}
+
 export function App() {
   const [active, setActive] = useState<TabId>('overview')
   // the matter ids Explore currently shows — the set Deal Terms (#21) rolls up
@@ -137,6 +186,7 @@ export function App() {
       ) : active === 'trust' ? (
         <Trust
           strings={STRINGS}
+          ablation={ASK_ABLATION}
           accuracyChartCopy={({ heldOut, reportable, total }) => ({
             title: 'Which questions could run without a lawyer?',
             note: (

@@ -913,3 +913,40 @@ describe('an answer opens into the records behind it', () => {
     expect(screen.queryByTestId('ask-drill-row-contract_0')).not.toBeInTheDocument()
   })
 })
+
+/**
+ * Starter tiles (#59). The tile's job is to load the question into the box a person can still
+ * edit, and to load *nothing else* — clicking one must not interpret or execute anything. The
+ * pre-run assertion is the point: the tile is a shortcut to the question, never to the answer.
+ */
+describe('starter question tiles', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('fills the question box on click and calls nothing', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    render(
+      <AskBox
+        strings={STRINGS}
+        examples={[
+          { question: "What's the split on type of consideration?", expect: 'All Cash 89' },
+          { question: 'How many agreements were signed in 2021?', expect: '111 of 152' },
+        ]}
+      />,
+    )
+
+    const tiles = within(screen.getByTestId('ask-tiles')).getAllByRole('button')
+    expect(tiles).toHaveLength(2)
+
+    fireEvent.click(tiles[1])
+
+    expect(screen.getByTestId('ask-question')).toHaveValue(
+      'How many agreements were signed in 2021?',
+    )
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('renders no tile strip when the domain supplies none', () => {
+    render(<AskBox strings={STRINGS} />)
+    expect(screen.queryByTestId('ask-tiles')).toBeNull()
+  })
+})

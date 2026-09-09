@@ -59,11 +59,16 @@ const HEALTH_CARE = 'RCSG4k3ah1Pu5YgPexPgOmL'
 export const JOURNEYS: readonly Journey[] = [
   {
     id: 'comparables',
-    who: 'A knowledge-management analyst',
+    who: 'A KM lawyer',
+    // "all cash" was in this question and it made the journey unperformable: consideration type
+    // is a deal-point ANSWER, not a record-level slice, so asking for fiduciary outs sliced by it
+    // is two deal points at once — outside the four shapes, and the app correctly declines. It
+    // enters at the Explore step below, where it is a real filter. The question now asks what Ask
+    // can actually answer.
     question:
-      '“Partner is pitching a healthcare target tomorrow, all cash. What did boards get on fiduciary outs?”',
+      '“Partner is pitching a healthcare target tomorrow. What did boards get on fiduciary outs?”',
     today:
-      'Search the document system by keyword, open eight agreements, read each no-shop section, build a table by hand.',
+      'Search the DMS by keyword, open eight precedents, read each no-shop section, build a table by hand.',
     steps: [
       'Ask · the measure and the slice',
       'Explore · healthcare, all cash',
@@ -88,7 +93,7 @@ export const JOURNEYS: readonly Journey[] = [
   },
   {
     id: 'trust-the-extractor',
-    who: 'A data manager',
+    who: 'The engineer evaluating the extractor',
     question: '“Before this runs over our own precedents, where is the extractor weak?”',
     today: 'Take the vendor’s accuracy claim, or annotate a sample by hand to check it.',
     steps: [

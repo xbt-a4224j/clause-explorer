@@ -62,11 +62,11 @@ export const STRINGS: QuorumStrings = {
     'matter for the surrounding text.',
 
   tabs: {
-    overview: { label: 'Overview', hint: 'what this is and how it works' },
+    overview: { label: 'Overview', hint: 'the attorney surface, and what sits under it' },
     ask: { label: 'Ask', hint: 'a question becomes a governed number, or a refusal' },
-    explore: { label: 'Explore', hint: 'find comparable deals' },
-    terms: { label: 'Deal Terms', hint: 'what was negotiated across a set' },
-    trust: { label: 'Trust', hint: 'where the model is trusted, and where it is not' },
+    explore: { label: 'Explore', hint: 'retrieval: comparable precedents, keyword and semantic' },
+    terms: { label: 'Deal Terms', hint: 'the rollup, every figure grounded in its n' },
+    trust: { label: 'Trust', hint: 'evaluation: what the extractor may answer, what it must decline' },
     label: { label: 'Label', hint: 'review the uncertainty queue' },
   },
 }

@@ -1,8 +1,12 @@
 # Clause Explorer
 
-A comparable-deals workbench for transactional contract work. Find deals like the one in front of
-you, see what was negotiated across them, and see the evidence for every number before you repeat
-it to a partner.
+A comparable-deals workbench for transactional contract work: the attorney-facing layer over a
+precedent library. Find deals like the one in front of you, see what was negotiated across them,
+and see the evidence for every number before you repeat it to a partner.
+
+Underneath, it is ingestion and indexing over a corpus of agreements, two read paths — retrieval
+(keyword and semantic, blended per query) and a governed semantic layer that computes numbers a
+model never writes — and an evaluation harness for both, with the misses named.
 
 Every figure in this file came from a command that ran against a live instance. The commands are
 here too, so you can re-run them and disagree with me.
@@ -20,8 +24,8 @@ four tabs are the product, two are the evidence that its answers are trustworthy
 A partner pitching a healthcare private-equity sponsor needs, by tomorrow: *our comparable deals,
 what was negotiated in each, and a paragraph for the pitch deck.*
 
-Today that takes a knowledge-management professional days, across three systems, and the answer
-comes back incomplete. The ABA produces its Public Target Deal Points Studies by hand, annually, by
+Today that takes a KM lawyer days — a keyword search of the DMS, eight precedents opened and read,
+a table built by hand — and the answer comes back incomplete. The ABA produces its Public Target Deal Points Studies by hand, annually, by
 committee — because knowing what's market genuinely matters and nobody made it queryable.
 
 This makes it queryable with the discipline the manual version has and most AI tools drop: every
@@ -295,6 +299,45 @@ if n is not None and n < settings.min_n:
 through the analytics layer, around the ethical wall, without ever retrieving a document. It is a
 confidentiality control, not a nicety.
 
+## What each prompt change bought
+
+The useful output of a selection harness is not an accuracy figure. It is the list of what moved
+the number, because that is the part you can act on. Measured 2026-09-06 against
+`docs/eval/ask_questions.json` — 27 questions written against the MAUD taxonomy, 20 with a
+correct deal point and 7 that must be declined:
+
+| change | total /27 | answerable /20 |
+|---|---|---|
+| free choice over 11 measures | 4 | 1 |
+| as first shipped | 7 | 5 |
+| drop the `coverage` shape | 8 | 6 |
+| name `distribution` the default and list its phrasings | 17 | 15 |
+| decline when the COMPUTATION is inexpressible | 20 | 16 |
+| **list each deal point with the answers it takes** ← shipped | **23** | **17** |
+
+Two decisions account for nearly all of it. Naming `distribution` the default more than doubled
+the score, because described merely as "the usual case" it lost two thirds of the answerable
+questions to `count` and `coverage`. Listing each deal point beside the answers it takes was the
+other: the ABA names are cryptic (`W/N/A/F applies to-Answer`) while their answers say plainly
+what the question is. It costs tokens rather than work, roughly tripling the prompt for
+$0.0007 a question instead of $0.0002.
+
+**The 23 is one trial, and temperature 0 is not determinism** — three identical runs of the same
+prompt scored 23, 21 and 22. Still wrong at 23 of 27: one deal-point confusion (ordinary course
+efforts standard read as buyer consent requirement), two median-versus-distribution mixups, and
+one of the seven declines.
+
+Two things this is not. The first headline published here was **23/24 under a metric that graded
+the deal point and ignored the shape**, so a run that found the right term and then returned the
+corpus size counted as correct; re-graded honestly the same prompt scored 7 of 27, and that
+correction is worth more than the number was. And the 27 questions were written by the same
+person who tuned the prompt against them, which makes this a smoke test with an answer key rather
+than a benchmark. Naming the missing terms in the prompt would score higher and would be
+overfitting to this question set.
+
+Full ablation with the losing strategies: [`docs/results/ask-strategies.md`](docs/results/ask-strategies.md).
+The tab shows it too, under *Trust → What each change bought*.
+
 ---
 
 # 3 · The rollup, and the drill-through
@@ -452,6 +495,10 @@ What the product does not do, stated here rather than discovered later.
 - **The extractor is mostly below its own gate**, as published above. It never applies to MAUD's own
   labels: all 12,937 product rows are lawyer annotations, and gating them on a 0.25-median
   extractor accuracy would suppress gold on the strength of a number describing something else.
+- **Matter entitlements are not modelled.** The corpus is public EDGAR filings, so there is no
+  ethical wall to inherit. Inside a firm, both read paths would have to carry the wall from the DMS
+  through embedding, retrieval and the rollup; `min_n` is the aggregate-side half of that and is
+  not presented as the whole.
 - **The retrieval improvements are measured but unmerged.**
   [#58](https://github.com/xbt-a4224j/clause-explorer/issues/58) shows raising the extractor's
   context budget from 12,000 to 200,000 characters moves evidence coverage from 40.2% to 89.2% for

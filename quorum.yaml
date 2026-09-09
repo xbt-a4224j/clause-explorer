@@ -16,6 +16,15 @@ count_measures:
   - deal_points.count_distinct_matters  # agreements, counted explicitly
   - deal_points.n                   # one row per ANSWER: over-counts agreements ~89x
   - deal_points.numeric_n           # answers carrying a number: the percentile's own sample
+  # Added 2026-09-08. These four are count-shaped and were NOT gated, so a selection using only
+  # one of them bypassed min_n entirely: `present_count` + `position` on the app's own
+  # "meant to fail" example returned a named party's actual MAE standard, unrefused.
+  # `matters_total` is the worst of them — the catalog advertises it as an alias of
+  # count_distinct_matters, which IS gated, so the alias refused while the original did not.
+  - deal_points.matters_total
+  - deal_points.present_count
+  - deal_points.expert_labelled_n
+  - deal_points.with_source_span_n
 
 numeric_measures:
   - deal_points.median_numeric_value

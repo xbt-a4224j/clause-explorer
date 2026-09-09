@@ -120,6 +120,24 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
   return (
     <div className="ov">
       <section className="sem__pane">
+        <h3 className="sem__h">Know where your experience is thin</h3>
+        <p className="sem__sub">
+          A partner is asked whether it is market for a target board to engage with a rival bidder
+          before that bidder&rsquo;s offer is actually superior. The honest answer is a
+          recollection of the deals they happened to work on, and there is no way to tell from the
+          inside where that recollection runs out.
+          Of the 152 agreements here, <strong>26 are health care, and all 26 took the same
+          position</strong> — a settled point nobody would have called settled.
+          This is the workbench for checking which is which: the same{' '}
+          <strong>&ldquo;what is market?&rdquo;</strong> analysis that is published annually by
+          committee and read as a PDF, made queryable over a precedent library, with every figure
+          carrying the sample it came from, drilling through to the clause underneath it, and
+          refusing when the slice is too thin to mean anything.
+        </p>
+        <CorpusStrip />
+      </section>
+
+      <section className="sem__pane">
         <h3 className="sem__h">What someone would actually do here</h3>
         <p className="sem__sub">
           Two questions, two people who ask them, and the path each one takes. Every journey below
@@ -137,23 +155,13 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
       </section>
 
       <section className="sem__pane">
-        <h3 className="sem__h">What this is</h3>
-        <p className="sem__sub">
-          A workbench for <strong>&ldquo;what is market?&rdquo;</strong> — the question whose
-          reference answer is produced annually, by committee, and read as a PDF. This makes the
-          same analysis queryable while keeping the discipline the manual version has: every figure
-          carries its sample size, drills through to the clauses underneath it, and the system
-          refuses when a slice is too thin.
-        </p>
-        <CorpusStrip />
-      </section>
-
-      <section className="sem__pane">
         <h3 className="sem__h">How it is put together</h3>
         <p className="sem__sub">
-          Two ingest sources, one store, then <strong>two independent read paths</strong>. Finding
-          the right document and computing a defensible number are different problems, and routing
-          both through one generative step inherits the weaknesses of both.
+          Ingestion and indexing over a corpus of agreements, then{' '}
+          <strong>two independent read paths</strong> under one attorney surface. Retrieval finds
+          the right precedent, keyword and semantic blended per query; the governed semantic layer
+          computes the number. They are different problems, and routing both through one
+          generative step inherits the weaknesses of both.
         </p>
         <div className="explain__diagram">
           <SystemDiagram />
@@ -161,7 +169,7 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
       </section>
 
       <section className="sem__pane">
-        <h3 className="sem__h">Where a figure comes from</h3>
+        <h3 className="sem__h">Grounding: where a figure comes from</h3>
         <p className="sem__sub">
           Aggregate answers are not generated. A measure is defined once in the semantic layer,
           Postgres computes it, the count of underlying matters travels with the result to the
@@ -194,6 +202,12 @@ export function Overview({ onStartJourney }: { onStartJourney: (journey: Journey
           <li>
             <strong>Nothing re-extracts the expert labels.</strong> Re-deriving them with a model
             would replace the most reliable thing in the system with the least.
+          </li>
+          <li>
+            <strong>It does not model matter entitlements.</strong> The corpus is public filings, so
+            there is no ethical wall to inherit. On a firm&rsquo;s DMS both read paths would have to
+            carry the wall through embedding, retrieval and the rollup; <code>min_n</code> is the
+            aggregate-side half of that, not the whole.
           </li>
           <li>
             <strong>Thin coverage is shown, not smoothed.</strong> On <em>Explore</em> a facet
