@@ -167,7 +167,8 @@ describe('the vocabulary', () => {
   it('puts the question box in front of the vocabulary, not behind it', async () => {
     mockCatalog()
     render(<Ask />)
-    const box = await screen.findByTestId('ask-box')
+    // `ask-view` since the one-shot console replaced the chip-confirming box.
+    const box = await screen.findByTestId('ask-view')
     const catalog = screen.getByTestId('catalog')
     expect(box.compareDocumentPosition(catalog) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -418,10 +419,33 @@ describe('the question box and its running cost', () => {
     },
   }
 
+  /** What `/api/ask` returns: the answer, the receipt, and the measured cost in one response. */
+  const ONE_SHOT_RESPONSE = {
+    question: 'healthcare deals',
+    resolved_query: 'agreements where label=Health Care Industry · n=26',
+    selection: { measures: ['comparable_deals.n'], dimensions: [], filters: [] },
+    rows: [{ 'comparable_deals.n': '26' }],
+    n: 26,
+    refused: false,
+    threshold: 5,
+    message: null,
+    declined: false,
+    decline_reason: null,
+    receipt: null,
+    records: null,
+    needs_confirmation: false,
+    resolutions: [],
+    usage: ASK_RESPONSE.usage,
+  }
+
   function mockWithAsk() {
     const fetchMock = vi.fn(async (url: string) => {
       if (String(url).includes('/grading')) {
         return { ok: true, status: 200, json: async () => GRADING } as Response
+      }
+      // `/api/ask` is the one-shot route; it answers AND reports what the question cost.
+      if (String(url).endsWith('/api/ask')) {
+        return { ok: true, status: 200, json: async () => ONE_SHOT_RESPONSE } as Response
       }
       if (String(url).includes('/agent/ask')) {
         return { ok: true, status: 200, json: async () => ASK_RESPONSE } as Response
@@ -449,7 +473,7 @@ describe('the question box and its running cost', () => {
     render(<Ask />)
     const box = await screen.findByTestId('ask-question')
     fireEvent.change(box, { target: { value: 'healthcare deals' } })
-    fireEvent.click(screen.getByRole('button', { name: /interpret/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^ask$/i }))
 
     const total = await screen.findByTestId('ask-session')
     expect(total).toHaveTextContent('1 question')

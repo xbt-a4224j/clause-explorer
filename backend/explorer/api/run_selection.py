@@ -122,6 +122,49 @@ def resolve_filters(filters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return resolved
 
 
+def execute(selection: dict[str, Any], limit: int = 50) -> tuple[list[dict[str, Any]], Any]:
+    """Run a VALIDATED, value-resolved selection and gate the result.
+
+    Factored out of the route 2026-09-08 so the one-shot `/ask` runs this exact path rather than
+    a lookalike. The gate's justification is the reason it must not be reimplemented per route:
+    a bypass anywhere is a bypass everywhere, and the UI describing two paths as "the same" is
+    what let the last one live.
+    """
+    try:
+        rows = cube_query({**selection, "limit": limit})
+    except CubeUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # How many records the scope actually holds, asked separately and only when a filter pins an
+    # identifying dimension. See the gate's `records_in_scope`: one gated count counts SUBJECT
+    # rows, so a slice holding a single record reported n=13 and cleared a threshold of 5.
+    records_in_scope: int | None = None
+    if any(f.get("member") in DOMAIN.identifying_dimensions for f in selection.get("filters", [])):
+        try:
+            scope_rows = cube_query(
+                {
+                    "measures": [DOMAIN.record_count],
+                    "dimensions": [],
+                    "filters": selection.get("filters", []),
+                    "limit": 1,
+                }
+            )
+            if scope_rows and scope_rows[0].get(DOMAIN.record_count) is not None:
+                records_in_scope = int(scope_rows[0][DOMAIN.record_count])
+        except CubeUnavailable as exc:
+            # Failing open here would make an outage the way to read one party's terms.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    gate = apply_min_n(
+        rows,
+        count_measures=COUNT_MEASURES,
+        min_n=settings.min_n,
+        grouped=bool(selection.get("dimensions")),
+        records_in_scope=records_in_scope,
+    )
+    return rows, gate
+
+
 @router.post("/run-selection", response_model=RunSelectionResponse)
 def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
     selection: dict[str, Any] = {
@@ -151,47 +194,8 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
         raise HTTPException(status_code=422, detail=str(invalid)) from invalid
 
     payload = {**selection, "limit": request.limit}
-    try:
-        rows = cube_query(payload)
-    except CubeUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    _rows, gate = execute(selection, limit=request.limit)
 
-    # How many agreements the scope actually holds, asked separately and only when a filter pins
-    # a party name. `min_n` reads whatever count the selection chose, and one of the gated counts
-    # counts ANSWER ROWS: filtered to a single named target it reported n=13, cleared a threshold
-    # of 5, and served that party's negotiated terms. The threshold was always about agreements,
-    # so when the answer is knowable it is measured rather than inferred from the wrong grain.
-    records_in_scope: int | None = None
-    if any(f.member in DOMAIN.identifying_dimensions for f in request.filters):
-        try:
-            scope_rows = cube_query(
-                {
-                    "measures": [DOMAIN.record_count],
-                    "dimensions": [],
-                    "filters": selection.get("filters", []),
-                    "limit": 1,
-                }
-            )
-            if scope_rows and scope_rows[0].get(DOMAIN.record_count) is not None:
-                records_in_scope = int(scope_rows[0][DOMAIN.record_count])
-        except CubeUnavailable as exc:
-            # The gate cannot be verified, so the selection is not served. Failing open here
-            # would make an outage the way to read one party's terms.
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    # Per-CELL suppression before the whole-result gate, then the gate. Both live in
-    # `semantic_explorer_base.gates.min_n` — the control is domain-free even though its justification is not.
-    # It reads like a legal-ethics feature (an attorney who filters to n=1 has extracted one
-    # client's negotiated term through the analytics layer, around the ethical wall, without
-    # retrieving a document), and a health-claims corpus needs exactly the same control under a
-    # different regulation.
-    gate = apply_min_n(
-        rows,
-        count_measures=COUNT_MEASURES,
-        min_n=settings.min_n,
-        grouped=bool(request.dimensions),
-        records_in_scope=records_in_scope,
-    )
     if gate.refused:
         log.info("run_selection_refused", n=gate.n, threshold=gate.threshold)
     elif gate.suppressed:

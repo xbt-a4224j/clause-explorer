@@ -92,6 +92,13 @@ class DrillRequest(BaseModel):
     record_ids: list[str] = Field(default_factory=list)
     subject: str
     position: str | None = None
+    #: The question's own scope, when the caller has filters rather than a selection.
+    #:
+    #: Ask reported "Health Care Industry, 26" and drilled to a Cisco acquisition, because it
+    #: sent only `subject` and `position` and this endpoint therefore ran corpus-wide. The count
+    #: and the list beneath it described different sets. Resolved to `record_ids` below, so both
+    #: the gate and the text query are scoped by the machinery that already existed.
+    filters: list[dict[str, Any]] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _needs_a_scope(self) -> DrillRequest:
@@ -502,17 +509,42 @@ def drill(request: DrillRequest) -> DrillResponse:
     be decorative — nothing would stop clicking through to the individual clauses of the very
     matters the rollup declined to characterize.
     """
-    refusal = _refusal(request.record_ids) if request.record_ids else None
+    # The scope, before anything is counted or fetched. One Cube call, and only when the caller
+    # sent filters instead of ids — an unscoped drill must not pay for it.
+    record_ids = list(request.record_ids)
+    derived_from_filters = not record_ids and bool(request.filters)
+    if derived_from_filters:
+        try:
+            record_ids = [
+                str(row["comparable_deals.id"])
+                for row in cube_query(
+                    {
+                        "measures": [],
+                        "dimensions": ["comparable_deals.id"],
+                        "filters": request.filters,
+                        "limit": 500,
+                    }
+                )
+                if row.get("comparable_deals.id") is not None
+            ]
+        except CubeUnavailable as exc:
+            # Failing open would drill corpus-wide under a scoped heading, which is the bug.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Which count the gate reads depends on what the caller had. A Rollup sends the selection it
+    # is characterizing, so the selection is the bound. A question sends its scope, and the
+    # tighter, correct bound is the scoped matters that gave THIS answer — see `_position_n`.
+    refusal = _refusal(record_ids) if record_ids and not derived_from_filters else None
     if refusal is None and request.position is not None:
         # The slice, not the selection it was drawn from. Counted with no text fetched.
-        refusal = _refusal_for_n(_position_n(request.subject, request.record_ids, request.position))
+        refusal = _refusal_for_n(_position_n(request.subject, record_ids, request.position))
     if refusal is not None:
         log.info("deal_terms_drill_refused", selection_n=refusal.n, min_n=refusal.threshold)
         return DrillResponse(subject=request.subject, records=[], refused=True, refusal=refusal)
 
     records: list[DrillMatter] = []
     for record_id, target_name, position, source_file, start, end in _run_drill_query(
-        request.subject, request.record_ids, request.position
+        request.subject, record_ids, request.position
     ):
         sliced = slice_source(source_file, start, end)
         records.append(

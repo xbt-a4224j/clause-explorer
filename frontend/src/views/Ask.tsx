@@ -4,8 +4,9 @@ import { ignoreAbort } from '@semantic-explorer-base/ui'
 import { ExplainerPanel } from '@semantic-explorer-base/ui'
 import { RoutingDiagram } from '@semantic-explorer-base/ui'
 import { QueryBuilder } from '../components/QueryBuilder'
-import { AskBox } from '@semantic-explorer-base/ui'
-import type { AskExample } from '@semantic-explorer-base/ui'
+import { AskConsole } from '@semantic-explorer-base/ui'
+import type { AskExample, NumericAnswerFormat } from '@semantic-explorer-base/ui'
+import { RECORD_RENDERERS } from '../recordRenderers'
 import { SessionCost } from '@semantic-explorer-base/ui'
 import { Term } from '@semantic-explorer-base/ui'
 import { STRINGS } from '../strings'
@@ -113,6 +114,25 @@ const ASK_EXAMPLES: AskExample[] = [
     expect: '152',
   },
 ]
+
+/**
+ * How this corpus's numbers are written down.
+ *
+ * Deliberately no currency and no unit appended. A deal point's units live in the deal point —
+ * a matching-rights period is business days, a tail period is months, a fee is a percentage —
+ * so the measure cannot know them and inventing one would put "$4" beside a number that means
+ * four days. The deal point's own name is on screen directly above, which is where the unit is.
+ */
+const NUMERIC: NumericAnswerFormat = {
+  match: (name) => name.endsWith('median_numeric_value'),
+  spread: ['deal_points.p25_numeric_value', 'deal_points.p75_numeric_value'],
+  denominator: 'deal_points.numeric_n',
+  label: () => 'median',
+  format: (value) => {
+    const n = Number(value)
+    return Number.isFinite(n) ? String(Math.round(n * 100) / 100) : value
+  },
+}
 
 const GROUPS: { title: string; blurb: string; match: (name: string) => boolean }[] = [
   {
@@ -250,11 +270,21 @@ function EntryList({
  * and opens, while an answer only one agreement gave refuses — otherwise a reader could reach
  * a named party's clause text through a distribution the rollup would have declined.
  */
-async function drillDealPoint(subject: string, position: string) {
+async function drillDealPoint(
+  subject: string,
+  position: string,
+  scope?: { member: string; values: string[] }[],
+) {
+  // `filters` is the question's scope. Without it the endpoint drills the whole corpus, so an
+  // answer reading "Health Care Industry, 26" listed a Cisco acquisition underneath it.
   const r = await fetch('/api/deal-terms/drill', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ subject, position }),
+    body: JSON.stringify({
+      subject,
+      position,
+      filters: (scope ?? []).map((f) => ({ ...f, operator: 'equals' })),
+    }),
   })
   const body = await r.json()
   if (!r.ok) return { refused: true, message: body?.error?.message ?? 'Drill-through failed.', records: [] }
@@ -306,9 +336,11 @@ export function Ask() {
   return (
     <div className="sem">
       <p className="sem__pointer">
-        Assemble a question here and run it: a measure and a slice from the governed vocabulary,
-        the exact selection that will be sent, and a number with its sample size — or a refusal.
-        If you came to find comparable deals, that is <strong>Explore</strong>.
+        Ask in words and get a number with its sample size, or a refusal. Above every answer is
+        the selection in one line, so a misreading is visible without opening anything; behind{' '}
+        <em>how this was computed</em> are the handful of names the model chose, how each value
+        resolved, and the statement Postgres actually ran. If you came to find comparable deals,
+        that is <strong>Explore</strong>.
       </p>
 
       {/* #47: the free-text path sits above the click-built one. A reader who lands here should
@@ -319,14 +351,34 @@ export function Ask() {
           the first screen and a half of this tab: a visitor met 48 identifiers and their
           paragraphs before reaching the box they came to type in. */}
       <section className="sem__pane">
-        <AskBox
-          examples={ASK_EXAMPLES}
+        <AskConsole
           strings={STRINGS}
+          examples={ASK_EXAMPLES}
+          numeric={NUMERIC}
+          render={RECORD_RENDERERS}
+          askEndpoint="/api/ask"
+          runEndpoint="/api/agent/run-selection"
+          onDrill={drillDealPoint}
           onAsked={(costUsd) => {
             setQuestions((n) => n + 1)
             setSessionCost((total) => total + costUsd)
           }}
-          onDrill={drillDealPoint}
+          refusalHint={(threshold) => (
+            <>
+              Below n={threshold}, no figure here is safe to show. An attorney who narrows until
+              one agreement remains has extracted a single client&rsquo;s negotiated term through
+              the analytics layer, around the ethical wall, without ever retrieving a document.
+              Ask a broader question.
+            </>
+          )}
+          otherGrainNote={(og) => (
+            <>
+              Both are true counts of different things, and only{' '}
+              <span className="mono">{og.asked}</span> answers this question — one row per
+              agreement, against one row per recorded answer, where an agreement carries up to 92.
+              Choosing between these is the mistake a generated query makes silently.
+            </>
+          )}
         />
       </section>
 
