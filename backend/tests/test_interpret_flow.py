@@ -143,7 +143,9 @@ class TestAQuestionTheCorpusCannotAnswerNeverReturnsANumber:
 
     def test_a_genuine_count_question_still_answers(self) -> None:
         """The flag is about whether the CORPUS can answer, not whether a deal point exists."""
-        result = interpret("how many agreements are loaded", choose=lambda q: ("count", None, True, ()))
+        result = interpret(
+            "how many agreements are loaded", choose=lambda q: ("count", None, True, ())
+        )
         assert result.selection is not None
         assert result.selection["measures"] == ["comparable_deals.n"]
 

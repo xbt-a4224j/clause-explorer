@@ -156,6 +156,29 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
     except CubeUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+    # How many agreements the scope actually holds, asked separately and only when a filter pins
+    # a party name. `min_n` reads whatever count the selection chose, and one of the gated counts
+    # counts ANSWER ROWS: filtered to a single named target it reported n=13, cleared a threshold
+    # of 5, and served that party's negotiated terms. The threshold was always about agreements,
+    # so when the answer is knowable it is measured rather than inferred from the wrong grain.
+    records_in_scope: int | None = None
+    if any(f.member in DOMAIN.identifying_dimensions for f in request.filters):
+        try:
+            scope_rows = cube_query(
+                {
+                    "measures": [DOMAIN.record_count],
+                    "dimensions": [],
+                    "filters": selection.get("filters", []),
+                    "limit": 1,
+                }
+            )
+            if scope_rows and scope_rows[0].get(DOMAIN.record_count) is not None:
+                records_in_scope = int(scope_rows[0][DOMAIN.record_count])
+        except CubeUnavailable as exc:
+            # The gate cannot be verified, so the selection is not served. Failing open here
+            # would make an outage the way to read one party's terms.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     # Per-CELL suppression before the whole-result gate, then the gate. Both live in
     # `semantic_explorer_base.gates.min_n` — the control is domain-free even though its justification is not.
     # It reads like a legal-ethics feature (an attorney who filters to n=1 has extracted one
@@ -167,6 +190,7 @@ def run_selection(request: RunSelectionRequest) -> RunSelectionResponse:
         count_measures=COUNT_MEASURES,
         min_n=settings.min_n,
         grouped=bool(request.dimensions),
+        records_in_scope=records_in_scope,
     )
     if gate.refused:
         log.info("run_selection_refused", n=gate.n, threshold=gate.threshold)

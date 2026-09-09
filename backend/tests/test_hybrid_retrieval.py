@@ -16,7 +16,13 @@ import numpy as np
 import psycopg
 import pytest
 from explorer.retrieval.embeddings import EmbeddingCache, content_key
-from explorer.retrieval.hybrid import index_from_postgres, DEFAULT_ALPHA, HybridIndex, normalize, tokenize
+from explorer.retrieval.hybrid import (
+    DEFAULT_ALPHA,
+    HybridIndex,
+    index_from_postgres,
+    normalize,
+    tokenize,
+)
 
 DSN = os.getenv("CLAUSE_EXPLORER_DB", "postgresql://explorer:explorer@localhost:5432/explorer")
 

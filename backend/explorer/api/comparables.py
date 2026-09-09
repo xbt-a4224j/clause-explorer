@@ -195,9 +195,7 @@ def comparables(request: ComparablesRequest) -> ComparablesResponse:
         # free-text query that was not already in the committed npz failed with "OPENAI_API_KEY is
         # not set" while the key was present the whole time. This domain's `default_cache()` is the
         # keyed one. Regression from 4101ebb; found by an adversarial demo review 2026-09-08.
-        index = HybridIndex(
-            [r[0] for r in rows], [r[6] or "" for r in rows], cache=default_cache()
-        )
+        index = HybridIndex([r[0] for r in rows], [r[6] or "" for r in rows], cache=default_cache())
         try:
             for hit in index.search(request.description, alpha=alpha, limit=request.limit):
                 scored[hit.record_id] = (hit.score, hit.vector_score, hit.bm25_score)

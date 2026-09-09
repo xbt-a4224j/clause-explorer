@@ -40,24 +40,23 @@ type Health = { status: string; db: string; cube: string; version: string }
 const ASK_ABLATION: Ablation = {
   outOf: 27,
   answerableOutOf: 20,
+  // NOTE: every row here is from the SHAPE-AWARE /27 table. The doc's other table is scored /24
+  // by a metric that ignored shape, and its rows are NOT comparable — a "free choice over 11
+  // measures scores 4" row from that table sat in this chart until a review caught it. One
+  // chart, one metric.
   steps: [
-    { label: 'free choice over 11 measures', score: 4, answerable: 1 },
-    { label: 'as first shipped (shape-aware grading)', score: 7, answerable: 5 },
+    { label: 'as first shipped', score: 7, answerable: 5 },
     { label: 'drop the coverage shape', score: 8, answerable: 6 },
     { label: 'name distribution the default, list its phrasings', score: 17, answerable: 15 },
     { label: 'decline when the computation is inexpressible', score: 20, answerable: 16 },
-    {
-      label: 'list each deal point with the answers it takes',
-      score: 23,
-      answerable: 17,
-      shipped: true,
-    },
+    { label: 'add a SCOPE section to the prompt', score: 23, answerable: 17, shipped: true },
   ],
   misses: (
     <>
-      <strong>Still wrong at 23 of 27:</strong> one deal-point confusion (ordinary course efforts
-      standard read as buyer consent requirement), two median-versus-distribution mixups, and one
-      of the seven questions that should have been declined.
+      <strong>At 23 of 27:</strong> 17 of 20 answerable and 6 of 7 declines. The misses were
+      catalogued one row earlier, at 20 of 27 — one deal-point confusion (ordinary course efforts
+      standard read as buyer consent requirement), two median-versus-distribution mixups, and
+      three declines missed.
     </>
   ),
   provenance: (

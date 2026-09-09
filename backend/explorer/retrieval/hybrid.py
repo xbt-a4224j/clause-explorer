@@ -14,8 +14,15 @@ from semantic_explorer_base.retrieval.embeddings import EmbeddingCache
 from explorer.api.settings import settings
 from explorer.retrieval.embeddings import default_cache
 
-__all__ = ["DEFAULT_ALPHA", "HybridIndex", "MATTER_SUMMARY_SQL", "Scored", "index_from_postgres",
-           "normalize", "tokenize"]
+__all__ = [
+    "DEFAULT_ALPHA",
+    "MATTER_SUMMARY_SQL",
+    "HybridIndex",
+    "Scored",
+    "index_from_postgres",
+    "normalize",
+    "tokenize",
+]
 
 MATTER_SUMMARY_SQL = """
 SELECT m.id,

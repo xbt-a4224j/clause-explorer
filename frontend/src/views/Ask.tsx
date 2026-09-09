@@ -53,11 +53,23 @@ import { STRINGS } from '../strings'
 /**
  * Starter questions.
  *
- * Every one was run against the live stack and the `expect` line is what came back. Two
- * candidates were cut rather than reworded: "do MAE definitions carve out pandemics" resolved
- * to the *prospects* deal point and returned a confident answer to a different question, and
- * the governing-law phrasing did the same. A tile that quietly answers something else is worse
- * than no tile, and the confirmation chips are the only reason it was visible at all.
+ * Every one was run against the live stack THREE TIMES and the `expect` line is what came back
+ * on all three. The three-run rule is not caution, it is the correction to how this list was
+ * first built: each tile was verified ONCE, and two of the ten were wrong.
+ *
+ * * *"What is the bringdown standard for target representations?"* — the model picks
+ *   `median_numeric_value` on a categorical deal point, so the tile promised
+ *   `accurate at MAE standard, 143` and the app refused at n=0. The data is there; the shape
+ *   was wrong. Reproduced 4 of 4.
+ * * *"How often is there a financing condition?"* — there is no financing-condition deal point
+ *   in MAUD, so the honest 422 it returns is correct behaviour. Its advertised `Yes 140 · No 12`
+ *   came from a run that silently selected `Actions required under transaction agreement`.
+ *
+ * That second one is the whole argument for this product failing loudly, printed on its own
+ * front page, so it is worth saying plainly: a single verifying run of a non-deterministic
+ * pipeline is not verification. Two further candidates were cut for resolving to a *different*
+ * deal point fluently — "do MAE definitions carve out pandemics" landed on `prospects`, which is
+ * why the honest version of that question is on the list instead and names `prospects` outright.
  */
 const ASK_EXAMPLES: AskExample[] = [
   {
@@ -73,16 +85,16 @@ const ASK_EXAMPLES: AskExample[] = [
     expect: 'All Cash 89 · All Stock 39 · Mixed 21',
   },
   {
-    question: 'What is the bringdown standard for target representations?',
-    expect: 'accurate at MAE standard, 143',
+    question: "What's the median initial matching rights period?",
+    expect: 'median 4 business days, n=147',
   },
   {
     question: "How is 'knowledge' defined across these agreements?",
     expect: 'Constructive 84 · Actual 68',
   },
   {
-    question: 'How often is there a financing condition?',
-    expect: 'Yes 140 · No 12',
+    question: "What's the split on whether the MAE definition mentions prospects?",
+    expect: 'No 150 — of 150 answered',
   },
   {
     question: 'How often do deals include a specific performance provision?',

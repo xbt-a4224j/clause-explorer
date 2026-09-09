@@ -94,7 +94,7 @@ class DrillRequest(BaseModel):
     position: str | None = None
 
     @model_validator(mode="after")
-    def _needs_a_scope(self) -> "DrillRequest":
+    def _needs_a_scope(self) -> DrillRequest:
         if not self.record_ids and self.position is None:
             raise ValueError("drill needs either record_ids or a position to scope the gate")
         return self

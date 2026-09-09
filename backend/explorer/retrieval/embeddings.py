@@ -21,8 +21,17 @@ from semantic_explorer_base.retrieval.embeddings import (
 
 from explorer.api.settings import settings
 
-__all__ = ["BATCH_SIZE", "CACHE_FILE", "EMBED_DIMENSIONS", "EMBED_DTYPE", "EMBED_MODEL",
-           "EmbeddingCache", "EmbeddingUnavailable", "content_key", "default_cache"]
+__all__ = [
+    "BATCH_SIZE",
+    "CACHE_FILE",
+    "EMBED_DIMENSIONS",
+    "EMBED_DTYPE",
+    "EMBED_MODEL",
+    "EmbeddingCache",
+    "EmbeddingUnavailable",
+    "content_key",
+    "default_cache",
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 CACHE_FILE = ROOT / "data" / "embeddings" / "vectors.npz"

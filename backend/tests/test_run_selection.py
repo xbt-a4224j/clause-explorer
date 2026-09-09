@@ -396,7 +396,11 @@ class TestWhatActuallyReachesCube:
             "/agent/run-selection",
             json={
                 "measures": ["comparable_deals.n"],
-                "dimensions": ["comparable_deals.target_name"],
+                # Was `target_name` until 2026-09-08. The assertion here is about payload
+                # passthrough, but grouping by a party name is now refused before Cube is
+                # reached (it returned one row per agreement with the parties named), so this
+                # test was passing its own selection through a hole. Fixture changed, claim not.
+                "dimensions": ["comparable_deals.is_inferred_industry"],
                 "filters": [
                     {
                         "member": "comparable_deals.consideration_type",
@@ -408,7 +412,7 @@ class TestWhatActuallyReachesCube:
         )
         assert set(sent[0]) == {"measures", "dimensions", "filters", "limit"}
         assert sent[0]["measures"] == ["comparable_deals.n"]
-        assert sent[0]["dimensions"] == ["comparable_deals.target_name"]
+        assert sent[0]["dimensions"] == ["comparable_deals.is_inferred_industry"]
         assert sent[0]["filters"][0]["values"] == ["All Cash"]
 
     def test_the_response_echoes_the_payload_that_was_sent(

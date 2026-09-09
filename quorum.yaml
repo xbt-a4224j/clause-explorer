@@ -26,6 +26,14 @@ count_measures:
   - deal_points.expert_labelled_n
   - deal_points.with_source_span_n
 
+# Dimensions that name the parties to one agreement. Never a grouping key: grouped by these,
+# every row is a single matter and `min_n` has no count to refuse on. Added 2026-09-08 after an
+# adversarial review pulled 152 rows of named target + named acquirer + negotiated position with
+# `refused: false`. Filtering TO one party still works and still refuses at n=1.
+identifying_dimensions:
+  - comparable_deals.target_name
+  - comparable_deals.acquirer_name
+
 numeric_measures:
   - deal_points.median_numeric_value
   - deal_points.p25_numeric_value

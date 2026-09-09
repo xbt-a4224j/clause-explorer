@@ -308,26 +308,30 @@ the number, because that is the part you can act on. Measured 2026-09-06 against
 `docs/eval/ask_questions.json` — 27 questions written against the MAUD taxonomy, 20 with a
 correct deal point and 7 that must be declined:
 
+All rows below are scored by the same **shape-aware** metric, so they are comparable to each
+other and not to the `/24` table further down this repo's results file, which graded the deal
+point and ignored the shape:
+
 | change | total /27 | answerable /20 |
 |---|---|---|
-| free choice over 11 measures | 4 | 1 |
 | as first shipped | 7 | 5 |
 | drop the `coverage` shape | 8 | 6 |
 | name `distribution` the default and list its phrasings | 17 | 15 |
 | decline when the COMPUTATION is inexpressible | 20 | 16 |
-| **list each deal point with the answers it takes** ← shipped | **23** | **17** |
+| **add a SCOPE section to the prompt** ← shipped | **23** | **17** |
 
-Two decisions account for nearly all of it. Naming `distribution` the default more than doubled
-the score, because described merely as "the usual case" it lost two thirds of the answerable
-questions to `count` and `coverage`. Listing each deal point beside the answers it takes was the
-other: the ABA names are cryptic (`W/N/A/F applies to-Answer`) while their answers say plainly
-what the question is. It costs tokens rather than work, roughly tripling the prompt for
-$0.0007 a question instead of $0.0002.
+One decision accounts for most of it. Naming `distribution` the default more than doubled the
+score, because described merely as "the usual case" it lost two thirds of the answerable questions
+to `count` and `coverage`. Separately, under the older `/24` metric, listing each deal point beside
+the answers it takes moved answerable questions from 18/20 to 20/20 — the ABA names are cryptic
+(`W/N/A/F applies to-Answer`) while their answers say plainly what the question is. That lever is
+in the shipped prompt; its measured effect is on the other metric and is not a row above.
 
 **The 23 is one trial, and temperature 0 is not determinism** — three identical runs of the same
-prompt scored 23, 21 and 22. Still wrong at 23 of 27: one deal-point confusion (ordinary course
-efforts standard read as buyer consent requirement), two median-versus-distribution mixups, and
-one of the seven declines.
+prompt scored 23, 21 and 22. At 23 of 27 it takes 17 of 20 answerable and 6 of 7 declines; the
+named misses were catalogued one row earlier, at 20 of 27 — one deal-point confusion (ordinary
+course efforts standard read as buyer consent requirement), two median-versus-distribution
+mixups, and three declines missed.
 
 Two things this is not. The first headline published here was **23/24 under a metric that graded
 the deal point and ignored the shape**, so a run that found the right term and then returned the
@@ -501,6 +505,12 @@ What the product does not do, stated here rather than discovered later.
 - **The extractor is mostly below its own gate**, as published above. It never applies to MAUD's own
   labels: all 12,937 product rows are lawyer annotations, and gating them on a 0.25-median
   extractor accuracy would suppress gold on the strength of a number describing something else.
+- **Party names are EDGAR registrant strings and 18 of 152 name the same company on both sides**
+  (`QTS ← QTS`, `TIFFANY ← TIFFANY`), 27 carry no acquirer, and 3 show a `contract_NNN` filename
+  where the target should be. The registrant on a merger filing is often the target, so a
+  single-registrant filing yields the target twice rather than a buyer. Deal points are unaffected
+  — they are MAUD's lawyer labels — but the party line on a matter card can read as nonsense, and
+  the health-care slice shows several in its first rows.
 - **Matter entitlements are not modelled.** The corpus is public EDGAR filings, so there is no
   ethical wall to inherit. Inside a firm, both read paths would have to carry the wall from the DMS
   through embedding, retrieval and the rollup; `min_n` is the aggregate-side half of that and is

@@ -326,7 +326,6 @@ def _usage(call: SelectionCall) -> AskUsage:
 # else is this application.
 
 
-
 def _explain_unresolved_scope(message: str) -> str:
     """Replace the resolver's message when the word names an ANSWER rather than a slice.
 
