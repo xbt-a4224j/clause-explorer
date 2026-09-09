@@ -242,6 +242,8 @@ def ask_console(request: AskConsoleRequest) -> AskConsoleResponse:
         meta=cube_meta,
         query=cube_query,
     )
+    if receipt is not None:
+        receipt.other_grain = None  # dropped per Alex's call 2026-09-09, domain-only
     log.info(
         "ask_console",
         refused=gate.refused,
